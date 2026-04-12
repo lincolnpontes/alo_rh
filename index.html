@@ -5,14 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0</title>
+    <title>Alô RH v1.0.2</title>
     <style>
-        /* BASE CSS MANTIDO E ADAPTADO */
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
         input, select, textarea, .modal { user-select: text; -webkit-user-select: text; font-family: inherit; }
         .app-container { width: 100%; max-width: 100%; height: 100%; background-color: #ffffff; display: flex; flex-direction: column; position: absolute; top: 0; left: 0; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         
+        /* SPLASH E LOADING */
+        #splashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #00695C; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.5s ease; }
+        .splash-titulo { font-size: 32px; font-weight: bold; letter-spacing: 1px; }
+        .splash-versao { font-size: 14px; margin-top: 5px; opacity: 0.8; }
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; text-align: center; padding: 20px; box-sizing: border-box; }
+        .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #00695C; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #syncIndicador { position: fixed; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background-color: #4CAF50; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+
         .header { background-color: #00695C; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; color: white; flex-shrink: 0; }
         .header-title { font-size: 20px; font-weight: bold; }
         .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin-left: 15px;}
@@ -65,6 +73,18 @@
 </head>
 <body>
 
+<div id="splashScreen">
+    <div class="splash-titulo">Alô RH</div>
+    <div class="splash-versao">v1.0.2</div>
+    <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização do App</button>
+</div>
+
+<div id="syncIndicador"></div>
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingText">Processando...<br><span style="font-size: 14px; font-weight: normal; margin-top: 10px; display: block;">Por favor, aguarde. Não feche o app.</span></div>
+</div>
+
 <div class="app-container">
     <div class="header">
         <div class="header-title">Alô RH</div>
@@ -92,24 +112,82 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
-        <h2 style="text-align: center; color: #00695C; margin-top: 0;">Menu Alô RH</h2>
-        <button class="btn-outline" onclick="abrirGerenciar('restaurante')">🏢 Dados da Empresa</button>
+        <h2 style="text-align: center; color: #00695C; margin-top: 0; margin-bottom: 20px;">Menu Alô RH</h2>
+        <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
-        <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias (Setores)</button>
         <button class="btn-outline" onclick="abrirGerenciar('configGerais')">⚙️ Configurações Gerais (RH)</button>
         <button class="btn-outline" onclick="abrirGerenciar('administradores')">🛡️ Gerenciar Administradores</button>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
-        <button class="btn-danger" style="width: 100%; margin-bottom: 10px;" onclick="alert('Acesso Avançado (Nuvem, Exportação) mantido na lógica, interface a implementar.')">⚠️ Configurações Avançadas</button>
+        <h3 style="font-size: 16px; color: #d32f2f; margin-top: 15px; margin-bottom: 10px;">Avançado</h3>
+        <button class="btn-danger" style="width: 100%; margin-bottom: 10px;" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPainelUnificado')">Fechar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalSenhaAvancada">
+    <div class="modal">
+        <div class="modal-title" style="color:#d32f2f;">Zona de Risco</div>
+        <div class="form-group"><label>Senha Avançada:</label><input type="password" id="senhaAvancada" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalSenhaAvancada')">Cancelar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalConfigAvancadas">
+    <div class="modal" style="max-height: 90vh; overflow-y: auto;">
+        <div class="modal-title" style="color:#d32f2f;">Zona de Risco</div>
+        <div class="form-group"><label>URL Google Script:</label><input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/..."><button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarURL()">💾 Salvar URL e Puxar Dados</button></div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+            <button class="btn-action" style="margin: 0; width: 100%; font-size: 15px; margin-bottom: 10px;" onclick="forcarEnvioNuvemCompleto()">☁️ Forçar Envio Completo pra Nuvem</button>
+            <div style="display: flex; gap: 8px; width: 100%;">
+                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#00695C; color:#00695C; text-align: center;" onclick="exportarDados()">⬇️ Exportar Dados</button>
+                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#d32f2f; color:#d32f2f; text-align: center;" onclick="document.getElementById('fileImport').click()">⬆️ Importar Dados</button>
+                <input type="file" id="fileImport" style="display:none;" accept=".json" onchange="importarDados(event)">
+            </div>
+        </div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 13px; color: #555; margin-bottom: 5px;">Atenção: A ação abaixo é irreversível.</p>
+        <div class="form-group"><label>Para apagar todos os registros, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()">🗑️ Apagar Todo o Histórico</button></div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <div class="form-group"><label>App travou ou quer puxar versão nova?</label><button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; width: 100%; text-align: center;" onclick="forcarAtualizacao()">🔄 Forçar Atualização do App</button></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalConfigAvancadas'); document.getElementById('modalPainelUnificado').style.display='flex';">Voltar</button></div>
     </div>
 </div>
 
 <div class="modal-overlay" id="modalListagem">
     <div class="modal" style="width: 95%; height: 85vh; display: flex; flex-direction: column;">
-        <div class="modal-title" id="tituloListagem">Gerenciar</div>
-        <button class="btn-action" id="btnNovoListagem" style="width: 100%; margin-bottom: 15px;">+ Novo</button>
+        <div class="modal-title" id="tituloListagem" style="flex-shrink: 0;">Gerenciar</div>
+        
+        <div style="display: flex; justify-content: center; margin-bottom: 15px; flex-shrink: 0;">
+            <button class="btn-action" id="btnNovoListagem" style="padding: 10px 20px; font-size: 14px; border-radius: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px; font-weight: bold; line-height: 1;">+</span> Adicionar Novo
+            </button>
+        </div>
+
         <div id="conteudoListagem" style="flex: 1; overflow-y: auto;"></div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex';" style="width: 100%;">Voltar</button></div>
+        <div class="modal-actions" style="flex-shrink: 0;"><button class="btn-cancel" onclick="fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex';" style="width: 100%;">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormEmpresa">
+    <div class="modal">
+        <div class="modal-title">Dados da Empresa</div>
+        <div class="form-group"><label>Nome Fantasia / Razão Social:</label><input type="text" id="empNome"></div>
+        <div class="form-group"><label>CNPJ:</label><input type="text" id="empCNPJ" placeholder="00.000.000/0000-00"></div>
+        <div class="form-group"><label>Rua:</label><input type="text" id="empRua"></div>
+        <div style="display: flex; gap:10px;"><div class="form-group" style="flex:1;"><label>Número:</label><input type="text" id="empNum" inputmode="numeric"></div><div class="form-group" style="flex:3;"><label>Bairro:</label><input type="text" id="empBairro"></div></div>
+        <div style="display: flex; gap:10px;"><div class="form-group" style="flex:2;"><label>Cidade:</label><input type="text" id="empCidade"></div><div class="form-group" style="flex:1;"><label>UF:</label><select id="empUF"><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div></div>
+        <div class="form-group"><label>Ponto de Referência (Opcional):</label><input type="text" id="empPonto"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display='flex';">Cancelar</button><button class="btn-action" onclick="salvarEmpresa()">Salvar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormAdmin">
+    <div class="modal">
+        <div class="modal-title">Administrador</div>
+        <input type="hidden" id="adminId">
+        <div class="form-group"><label>Nome do Perfil:</label><input type="text" id="adminNome"></div>
+        <div class="form-group"><label>Senha do Perfil:</label><input type="password" id="adminSenha" placeholder="Senha numérica" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormAdmin'); abrirGerenciar('administradores');">Cancelar</button><button class="btn-action" onclick="salvarAdmin()">Salvar</button></div>
     </div>
 </div>
 
@@ -134,9 +212,14 @@
         </div>
 
         <div class="section-title">Vínculo e Financeiro</div>
-        <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:2;"><label>Função/Cargo:</label><input type="text" id="funcFuncao"></div>
-            <div class="form-group" style="flex:1;"><label>Setor (Cat):</label><select id="funcCategoria"></select></div>
+        <div class="form-group"><label>Função/Cargo:</label><input type="text" id="funcFuncao"></div>
+        
+        <div class="form-group">
+            <label>Setor (Classe):</label>
+            <div style="display: flex; gap: 8px;">
+                <select id="funcCategoria" style="flex: 1;"></select>
+                <button class="btn-action" style="padding: 0 15px; font-size: 18px;" onclick="addCategoriaRapida()">+</button>
+            </div>
         </div>
         
         <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:5px;">
@@ -209,34 +292,45 @@
     </div>
 </div>
 
-
 <script>
-    // 1. DADOS BASE (Adaptados para o RH)
+    // 1. DADOS BASE (Lógica de Persistência Mantida)
     let db = carregarBanco(); 
     let categoriaAtual = null; 
     let modoSelecaoAtivo = false; 
     let itensSelecionados = new Set();
+    let isSyncingFundo = false;
 
     function carregarBanco() {
         let base = { 
             app_id: "alorh", 
-            restaurante: { nome: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" }, 
-            categorias: [], // Setores
-            funcionarios: [], // Ex-Produtos
-            administradores: [], // Ex-Colaboradores
+            empresa: { nome: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB", ponto: "" }, 
+            categorias: [], 
+            funcionarios: [], 
+            administradores: [], 
             configGerais: { salarioMinimo: "1412,00", rotasVT: "", motivosAdiantamento: "" },
-            registros: [], // Onde ficarão adiantamentos, faltas, etc.
-            configs: { senhaAdmin: "1999" } 
+            registros: [], 
+            configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, senhaAdmin: "1999" } 
         };
         let salvo = localStorage.getItem('alorh_v1');
-        return salvo ? JSON.parse(salvo) : base;
+        if(salvo) {
+            let parsed = JSON.parse(salvo);
+            if(!parsed.configs) parsed.configs = base.configs;
+            return parsed;
+        }
+        return base;
     }
     
     function salvarBanco() { localStorage.setItem('alorh_v1', JSON.stringify(db)); }
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
+    function marcarMudancaEstrutural() { db.configs.ultimaMudancaLocal = Date.now(); salvarBanco(); sincronizarFundo(false, true); }
+    function getHojeSTR() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
     // 2. INICIALIZAÇÃO
     window.onload = () => { 
+        setTimeout(() => { 
+            document.getElementById('splashScreen').style.opacity = '0'; 
+            setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); 
+        }, 1500);
         document.getElementById('actionBar').style.display = 'flex';
         renderizarFiltros(); 
         renderizarLista(); 
@@ -299,7 +393,6 @@
             else itensSelecionados.add(id);
             renderizarLista();
         } else {
-            // Abrir ações do funcionário
             let f = db.funcionarios.find(x => x.id === id);
             document.getElementById('tituloAcoesFunc').innerText = f.nome;
             document.getElementById('acoesFuncId').value = f.id;
@@ -320,50 +413,149 @@
             return;
         }
 
+        if(tipo === 'empresa') {
+            document.getElementById('empNome').value = db.empresa.nome || '';
+            document.getElementById('empCNPJ').value = db.empresa.cnpj || '';
+            document.getElementById('empRua').value = db.empresa.rua || '';
+            document.getElementById('empNum').value = db.empresa.numero || '';
+            document.getElementById('empBairro').value = db.empresa.bairro || '';
+            document.getElementById('empCidade').value = db.empresa.cidade || '';
+            document.getElementById('empUF').value = db.empresa.uf || 'PB';
+            document.getElementById('empPonto').value = db.empresa.ponto || '';
+            document.getElementById('modalFormEmpresa').style.display = 'flex';
+            return;
+        }
+
         const lista = document.getElementById('conteudoListagem');
-        document.getElementById('btnNovoListagem').onclick = () => alert("Implementar Form específico.");
-        
         let htmlLista = '';
+        
         if(tipo === 'funcionarios') {
             document.getElementById('tituloListagem').innerText = "Funcionários";
             document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
             db.funcionarios.forEach((f) => {
                 htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between;">
-                    <div><strong>${f.nome}</strong><br><small>${f.funcao}</small></div>
-                    <div><button onclick="abrirFormFunc('${f.id}')">✏️</button></div>
+                    <div><strong>${f.nome}</strong><br><small>${f.funcao || 'Sem função'}</small></div>
+                    <div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div>
                 </div>`;
             });
         }
-        
-        // Espaço para implementar listagem de Categorias e Administradores (Mecanica igual ao Alô Feira)
+        else if(tipo === 'administradores') {
+            document.getElementById('tituloListagem').innerText = "Administradores";
+            document.getElementById('btnNovoListagem').onclick = () => abrirFormAdmin(null);
+            db.administradores.forEach((a) => {
+                htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between;">
+                    <div><strong>${a.nome}</strong></div>
+                    <div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormAdmin('${a.id}')">✏️</button></div>
+                </div>`;
+            });
+        }
         
         lista.innerHTML = htmlLista;
         document.getElementById('modalListagem').style.display = 'flex';
     }
 
-    // 5. FUNCIONÁRIOS
-    function abrirFormFunc(id) {
+    // 5. EMPRESA E ADMINS
+    function salvarEmpresa() {
+        db.empresa.nome = document.getElementById('empNome').value;
+        db.empresa.cnpj = document.getElementById('empCNPJ').value;
+        db.empresa.rua = document.getElementById('empRua').value;
+        db.empresa.numero = document.getElementById('empNum').value;
+        db.empresa.bairro = document.getElementById('empBairro').value;
+        db.empresa.cidade = document.getElementById('empCidade').value;
+        db.empresa.uf = document.getElementById('empUF').value;
+        db.empresa.ponto = document.getElementById('empPonto').value;
+        marcarMudancaEstrutural();
+        fecharModal('modalFormEmpresa');
+        document.getElementById('modalPainelUnificado').style.display = 'flex';
+    }
+
+    function abrirFormAdmin(id) {
         fecharModal('modalListagem');
+        if(id) {
+            let a = db.administradores.find(x => x.id === id);
+            document.getElementById('adminId').value = a.id;
+            document.getElementById('adminNome').value = a.nome;
+            document.getElementById('adminSenha').value = a.senha;
+        } else {
+            document.getElementById('adminId').value = '';
+            document.getElementById('adminNome').value = '';
+            document.getElementById('adminSenha').value = '';
+        }
+        document.getElementById('modalFormAdmin').style.display = 'flex';
+    }
+
+    function salvarAdmin() {
+        let id = document.getElementById('adminId').value || 'adm_' + Date.now();
+        let novo = {
+            id: id,
+            nome: document.getElementById('adminNome').value,
+            senha: document.getElementById('adminSenha').value
+        };
+        const idx = db.administradores.findIndex(x => x.id === id);
+        if(idx >= 0) db.administradores[idx] = novo;
+        else db.administradores.push(novo);
+        marcarMudancaEstrutural();
+        fecharModal('modalFormAdmin');
+        abrirGerenciar('administradores');
+    }
+
+    // 6. FUNCIONÁRIOS E SETORES (CATEGORIAS)
+    function carregarComboCategorias(selecionado = '') {
         const combo = document.getElementById('funcCategoria');
         combo.innerHTML = '<option value="">-- Selecione o Setor --</option>';
-        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.id}" ${selecionado === c.id ? 'selected' : ''}>${c.nome}</option>`);
+    }
+
+    function addCategoriaRapida() {
+        let nome = prompt("Digite o nome do novo Setor/Classe (Ex: Cozinha, Atendimento):");
+        if(nome && nome.trim() !== "") {
+            let id = 'c_' + Date.now();
+            db.categorias.push({id: id, nome: nome.trim(), cor: '#00695C', corTexto: '#FFF'});
+            marcarMudancaEstrutural();
+            carregarComboCategorias(id);
+            renderizarFiltros();
+        }
+    }
+
+    function abrirFormFunc(id) {
+        fecharModal('modalListagem');
+        carregarComboCategorias();
         
         if(id) {
             let f = db.funcionarios.find(x => x.id === id);
             document.getElementById('funcId').value = f.id;
             document.getElementById('funcNome').value = f.nome || '';
+            document.getElementById('funcDataNasc').value = f.dataNasc || '';
+            document.getElementById('funcAdmissao').value = f.admissao || '';
             document.getElementById('funcCPF').value = f.cpf || '';
-            // ... (preencher demais campos)
+            document.getElementById('funcRG').value = f.rg || '';
+            document.getElementById('funcCTPS').value = f.ctps || '';
+            document.getElementById('funcTel').value = f.telefone || '';
             document.getElementById('funcFuncao').value = f.funcao || '';
             document.getElementById('funcCategoria').value = f.categoria || '';
             document.getElementById('funcExtra').checked = f.isExtra || false;
+            document.getElementById('funcPix').value = f.pix || '';
             document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo;
+            document.getElementById('funcGratificacao').value = f.gratificacao || '';
+            document.getElementById('funcSalFamilia').value = f.salFamilia || '';
+            document.getElementById('funcUnidentis').value = f.unidentis || '';
         } else {
-            // Limpar form
             document.getElementById('funcId').value = '';
             document.getElementById('funcNome').value = '';
+            document.getElementById('funcDataNasc').value = '';
+            document.getElementById('funcAdmissao').value = '';
+            document.getElementById('funcCPF').value = '';
+            document.getElementById('funcRG').value = '';
+            document.getElementById('funcCTPS').value = '';
+            document.getElementById('funcTel').value = '';
+            document.getElementById('funcFuncao').value = '';
+            document.getElementById('funcCategoria').value = '';
             document.getElementById('funcExtra').checked = false;
+            document.getElementById('funcPix').value = '';
             document.getElementById('funcSalario').value = db.configGerais.salarioMinimo;
+            document.getElementById('funcGratificacao').value = '';
+            document.getElementById('funcSalFamilia').value = '';
+            document.getElementById('funcUnidentis').value = '';
         }
         document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
@@ -373,31 +565,156 @@
         const novo = {
             id: id,
             nome: document.getElementById('funcNome').value,
+            dataNasc: document.getElementById('funcDataNasc').value,
+            admissao: document.getElementById('funcAdmissao').value,
             cpf: document.getElementById('funcCPF').value,
+            rg: document.getElementById('funcRG').value,
+            ctps: document.getElementById('funcCTPS').value,
+            telefone: document.getElementById('funcTel').value,
             funcao: document.getElementById('funcFuncao').value,
             categoria: document.getElementById('funcCategoria').value,
             isExtra: document.getElementById('funcExtra').checked,
-            salario: document.getElementById('funcSalario').value
-            // ... (pegar demais valores dos inputs)
+            pix: document.getElementById('funcPix').value,
+            salario: document.getElementById('funcSalario').value,
+            gratificacao: document.getElementById('funcGratificacao').value,
+            salFamilia: document.getElementById('funcSalFamilia').value,
+            unidentis: document.getElementById('funcUnidentis').value
         };
 
         const idx = db.funcionarios.findIndex(x => x.id === id);
         if(idx >= 0) db.funcionarios[idx] = novo;
         else db.funcionarios.push(novo);
 
-        salvarBanco();
+        marcarMudancaEstrutural();
         fecharModal('modalFormFuncionario');
         renderizarLista();
     }
 
-    // 6. CONFIGS GERAIS
+    // 7. CONFIGS GERAIS E AVANÇADAS
     function salvarConfigGerais() {
         db.configGerais.salarioMinimo = document.getElementById('confSalario').value;
         db.configGerais.rotasVT = document.getElementById('confVT').value;
         db.configGerais.motivosAdiantamento = document.getElementById('confMotivos').value;
-        salvarBanco();
+        marcarMudancaEstrutural();
         fecharModal('modalConfigGerais');
         document.getElementById('modalPainelUnificado').style.display='flex';
+    }
+
+    function solicitarAcessoAvancado() { 
+        fecharModal('modalPainelUnificado'); 
+        document.getElementById('senhaAvancada').value = ''; 
+        document.getElementById('modalSenhaAvancada').style.display = 'flex'; 
+        setTimeout(()=>document.getElementById('senhaAvancada').focus(), 100); 
+    }
+
+    document.getElementById('senhaAvancada').addEventListener('input', function(e) { 
+        if(this.value === db.configs.senhaAdmin) { 
+            this.blur(); 
+            this.value = ''; 
+            fecharModal('modalSenhaAvancada'); 
+            document.getElementById('configUrlApp').value = db.configs.url || ''; 
+            document.getElementById('modalConfigAvancadas').style.display = 'flex'; 
+        } 
+    });
+
+    async function salvarURL() { 
+        const inputUrl = document.getElementById('configUrlApp').value.trim(); 
+        if(!inputUrl) return alert("Digite a URL primeiro!"); 
+        document.getElementById('loadingOverlay').style.display = 'flex'; 
+        try { 
+            let fetchUrl = inputUrl + (inputUrl.includes('?') ? '&' : '?') + 'nocache=' + Date.now(); 
+            let res = await fetch(fetchUrl, { redirect: "follow", cache: "no-store" }); 
+            let nuvemDB = await res.json();
+            if(nuvemDB && nuvemDB.app_id === "alorh") { 
+                nuvemDB.configs = nuvemDB.configs || {}; 
+                nuvemDB.configs.url = inputUrl; 
+                nuvemDB.configs.dadosBaixados = true; 
+                db = nuvemDB; 
+                salvarBanco(); 
+                alert("✅ Dados puxados com sucesso!"); 
+                location.reload(); 
+            } else { 
+                alert("❌ Banco de dados incompatível."); 
+            }
+        } catch(e) { 
+            alert("❌ Falha na conexão."); 
+        } finally { 
+            document.getElementById('loadingOverlay').style.display = 'none'; 
+        }
+    }
+
+    async function sincronizarFundo(forcado = false, apenasEmpurrar = false) {
+        if(!db.configs.url || isSyncingFundo) return; 
+        isSyncingFundo = true; 
+        let indicador = document.getElementById('syncIndicador'); 
+        indicador.style.opacity = '1';
+        try {
+            let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); 
+            if(res.ok) console.log("Sincronizado");
+        } catch(e) { } finally { 
+            isSyncingFundo = false; 
+            indicador.style.opacity = '0'; 
+        }
+    }
+
+    async function forcarEnvioNuvemCompleto() { 
+        if(!db.configs.url) return alert("Configure a URL primeiro!"); 
+        document.getElementById('loadingOverlay').style.display = 'flex'; 
+        try { 
+            let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); 
+            if(!res.ok) throw new Error("Erro"); 
+            alert("✅ Backup na nuvem concluído."); 
+        } catch(e) { alert("❌ Falha na conexão."); } finally { document.getElementById('loadingOverlay').style.display = 'none'; } 
+    }
+
+    function exportarDados() { 
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); 
+        const downloadAnchorNode = document.createElement('a'); 
+        downloadAnchorNode.setAttribute("href", dataStr); 
+        downloadAnchorNode.setAttribute("download", "alorh_bkp_" + getHojeSTR() + ".json"); 
+        document.body.appendChild(downloadAnchorNode); 
+        downloadAnchorNode.click(); 
+        downloadAnchorNode.remove(); 
+    }
+
+    function importarDados(event) { 
+        const file = event.target.files[0]; if(!file) return; 
+        const reader = new FileReader(); 
+        reader.onload = function(e) { 
+            try { 
+                const importedDb = JSON.parse(e.target.result); 
+                if(importedDb && importedDb.app_id === "alorh") { 
+                    db = importedDb; salvarBanco(); 
+                    alert("✅ Restaurado! Force o envio para a nuvem em seguida."); 
+                    location.reload(); 
+                } 
+            } catch(err) { alert("Erro ao ler."); } 
+        }; 
+        reader.readAsText(file); 
+        event.target.value = ''; 
+    }
+
+    async function excluirTodoHistorico() { 
+        let frase = document.getElementById('inputExcluirTudo').value.trim().toLowerCase(); 
+        if(frase === "quero excluir todo o histórico") { 
+            if(!confirm("⚠️ TEM CERTEZA?")) return; 
+            db.registros = []; 
+            marcarMudancaEstrutural(); 
+            document.getElementById('inputExcluirTudo').value = ''; 
+            fecharModal('modalConfigAvancadas'); 
+            alert("✅ Histórico limpo!"); 
+        } else { alert("Frase incorreta."); } 
+    }
+
+    function forcarAtualizacao() { 
+        if(confirm("Deseja forçar a atualização do aplicativo?")) { 
+            if ('serviceWorker' in navigator) { 
+                navigator.serviceWorker.getRegistrations().then(function(registrations) { 
+                    for(let registration of registrations) registration.update(); 
+                }); 
+            } 
+            window.location.href = window.location.pathname + '?nocache=' + new Date().getTime(); 
+        } 
     }
 </script>
 </body>
