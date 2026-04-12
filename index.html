@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.6</title>
+    <title>Alô RH v1.0.7</title>
     <style>
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
@@ -81,7 +81,7 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.6</div>
+    <div class="splash-versao">v1.0.7</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -631,8 +631,55 @@
     function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); } }
 
     // IMPRESSÕES 
-    function imprimirFolhaPonto() { alert('A imprimir folha do ponto. Conexão local em desenvolvimento.'); }
-    function imprimirQuinzena() { alert('A imprimir recibos. Conexão local em desenvolvimento.'); }
+    function imprimirFolhaPonto() {
+        if(itensSelecionados.size === 0) return alert("Selecione os funcionários!");
+        let ids = Array.from(itensSelecionados);
+        let w = window.open('','_blank');
+        let html = `<html><head><title>Folha de Ponto</title><style>body{font-family:Arial,sans-serif;} table{width:100%; border-collapse:collapse; margin-bottom: 20px;} th,td{border:1px solid #000; padding:5px; text-align:center; font-size:12px;} .page-break { page-break-after: always; } h2, h3{margin:5px 0;}</style></head><body>`;
+        ids.forEach((id, idx) => {
+            let f = db.funcionarios.find(x => x.id === id); if(!f) return;
+            html += `<div ${idx !== ids.length-1 ? 'class="page-break"' : ''} style="padding: 20px;">
+                <h2 style="text-align:center;">FOLHA DE PONTO INDIVIDUAL</h2>
+                <h3>Empresa: ${db.empresa.razao || '_________________'} - CNPJ: ${db.empresa.cnpj || '_________________'}</h3>
+                <p><b>Funcionário:</b> ${f.nome} &nbsp;&nbsp;&nbsp; <b>CTPS:</b> ${f.ctps || '______'} &nbsp;&nbsp;&nbsp; <b>Função:</b> ${f.funcao || '______'}</p>
+                <table>
+                    <tr><th>DIA</th><th>ENTRADA</th><th>ASSINATURA</th><th>SAÍDA</th><th>ASSINATURA</th></tr>`;
+            for(let i=1; i<=31; i++) { html += `<tr><td>${String(i).padStart(2,'0')}</td><td></td><td></td><td></td><td></td></tr>`; }
+            html += `</table></div>`;
+        });
+        html += '</body></html>';
+        w.document.write(html); w.document.close();
+        setTimeout(() => { w.print(); }, 500);
+    }
+
+    function imprimirQuinzena() {
+        if(itensSelecionados.size === 0) return alert("Selecione os funcionários!");
+        let ids = Array.from(itensSelecionados);
+        let w = window.open('','_blank');
+        let html = `<html><head><title>Recibo de Quinzena</title><style>body{font-family:Arial,sans-serif;} .recibo{border: 1px dashed #000; padding: 15px; margin-bottom: 20px; width: 45%; display: inline-block; vertical-align: top; margin-right: 2%; box-sizing:border-box;} h3{margin: 0 0 10px 0; text-align:center;} .linha{display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px; border-bottom: 1px dotted #ccc;} .total{font-weight:bold; font-size:16px; border-top: 2px solid #000; padding-top:5px; margin-top:10px; display:flex; justify-content:space-between;}</style></head><body>`;
+        ids.forEach(id => {
+            let f = db.funcionarios.find(x => x.id === id); if(!f) return;
+            let salBase = parseMoeda(f.salario); let quinzena = salBase / 2;
+            let adiantamentos = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === id && r.descontado).reduce((acc, r) => acc + r.valor, 0);
+            let faltas = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarDia).length;
+            let valorFalta = (salBase / 30) * faltas;
+            let total = quinzena - adiantamentos - valorFalta;
+
+            html += `<div class="recibo">
+                <h3>RECIBO DE QUINZENA</h3>
+                <div style="font-size:12px; text-align:center; margin-bottom:10px;">${db.empresa.fantasia || 'Empresa'}</div>
+                <div style="font-size:14px; font-weight:bold; margin-bottom:10px; border-bottom:1px solid #000; padding-bottom:5px;">Funcionário: ${f.nome}</div>
+                <div class="linha"><span>Valor da Quinzena (50% Salário)</span><span>R$ ${formatMoeda(quinzena)}</span></div>
+                <div class="linha" style="color:red;"><span>(-) Adiantamentos do Mês</span><span>R$ ${formatMoeda(adiantamentos)}</span></div>
+                <div class="linha" style="color:red;"><span>(-) Faltas (${faltas} dias)</span><span>R$ ${formatMoeda(valorFalta)}</span></div>
+                <div class="total"><span>LÍQUIDO A RECEBER:</span><span>R$ ${formatMoeda(total)}</span></div>
+                <div style="margin-top: 40px; border-top: 1px solid #000; text-align:center; font-size:12px; width: 80%; margin-left: 10%;">Assinatura do Funcionário</div>
+            </div>`;
+        });
+        html += '</body></html>';
+        w.document.write(html); w.document.close();
+        setTimeout(() => { w.print(); }, 500);
+    }
 
     // AVANÇADO E ATUALIZAÇÃO
     function solicitarAcessoAvancado() { fecharModal('modalPainelUnificado'); document.getElementById('senhaAvancada').value = ''; document.getElementById('modalSenhaAvancada').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAvancada').focus(), 100); }
