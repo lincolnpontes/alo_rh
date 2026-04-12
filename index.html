@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.7</title>
+    <title>Alô RH v1.0.8</title>
     <style>
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
@@ -72,23 +72,26 @@
         
         .list-item-config { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #ddd; padding: 8px 10px; border-radius: 5px; margin-bottom: 5px; font-size: 13px; }
         .list-item-config button { background: #ffcdd2; color: #d32f2f; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: bold; }
+        .btn-edit-small { background: #E0F2F1 !important; color: #00695C !important; margin-right: 5px; }
         
         .radio-custom { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; color: #1565C0; font-weight: bold; }
         .radio-custom input { margin: 0; width: 16px; height: 16px; accent-color: #1565C0; }
+
+        .checkbox-dias { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .checkbox-dias label { display: flex; align-items: center; gap: 3px; font-size: 12px; font-weight: normal; color: #333; }
     </style>
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.7</div>
+    <div class="splash-versao">v1.0.8</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
-<div id="syncIndicador"></div>
 <div id="loadingOverlay">
     <div class="spinner"></div>
-    <div id="loadingText">Processando...<br><span style="font-size: 14px; font-weight: normal; margin-top: 10px; display: block;">Por favor, aguarde.</span></div>
+    <div id="loadingText">Processando...<br><span style="font-size: 14px; font-weight: normal; margin-top: 10px; display: block;">Aguarde.</span></div>
 </div>
 
 <div class="app-container">
@@ -99,10 +102,11 @@
     
     <div class="area-conteudo">
         <div id="actionBar" class="action-bar">
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="btn-action-bar" onclick="toggleModoSelecao()" id="btnModoSelecaoBar">☑️ Selecionar</button>
-                <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="imprimirFolhaPonto()">📄 Ponto</button>
-                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="imprimirQuinzena()">💰 Quinzena</button>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <button class="btn-action-bar" onclick="toggleModoSelecao()" id="btnModoSelecaoBar">☑️ Sel</button>
+                <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
+                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="imprimirQuinzena()">💰 Quinz.</button>
+                <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
             </div>
         </div>
         
@@ -162,11 +166,12 @@
     <div class="modal" style="width: 95%; height: 85vh; display: flex; flex-direction: column;">
         <div class="modal-title" id="tituloListagem" style="flex-shrink: 0;">Gerenciar</div>
         
-        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-shrink: 0;">
+        <div style="display: flex; gap: 5px; margin-bottom: 15px; flex-shrink: 0; flex-wrap:wrap;">
             <button class="btn-action" id="btnNovoListagem" style="flex: 2; padding: 10px; font-size: 14px; border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 8px;">
-                <span style="font-size: 18px; font-weight: bold; line-height: 1;">+</span> Adicionar Novo
+                <span style="font-size: 18px; font-weight: bold; line-height: 1;">+</span> Novo
             </button>
             <button class="btn-outline" id="btnClassesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('categorias')">🏷️ Classes</button>
+            <button class="btn-outline" id="btnFuncoesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('funcoes')">💼 Funções</button>
         </div>
 
         <div id="conteudoListagem" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
@@ -189,7 +194,7 @@
 
 <div class="modal-overlay" id="modalFormClasse">
     <div class="modal">
-        <div class="modal-title">Classe (Setor)</div>
+        <div class="modal-title">Classe</div>
         <input type="hidden" id="classeId">
         <div class="form-group"><label>Nome da Classe:</label><input type="text" id="classeNome" placeholder="Ex: Cozinha, Atendimento"></div>
         <div style="display: flex; gap: 10px;">
@@ -201,6 +206,15 @@
             <span style="font-weight:bold; font-size:12px; color:#E65100;">Funcionários dessa classe recebem por Semana (Extra)</span>
         </div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormClasse'); abrirGerenciar('categorias');">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormFuncao">
+    <div class="modal">
+        <div class="modal-title">Função</div>
+        <input type="hidden" id="funcaoId">
+        <div class="form-group"><label>Nome da Função:</label><input type="text" id="funcaoNome" placeholder="Ex: Garçom, Aux. Cozinha"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFuncao'); abrirGerenciar('funcoes');">Cancelar</button><button class="btn-action" onclick="salvarFuncao()">Salvar</button></div>
     </div>
 </div>
 
@@ -242,9 +256,26 @@
 
         <div class="section-title">Vínculo e Financeiro</div>
         <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:1;"><label>Função/Cargo:</label><input type="text" id="funcFuncao"></div>
-            <div class="form-group" style="flex:2;"><label>Classe:</label><select id="funcCategoria"></select></div>
+            <div class="form-group" style="flex:1.5;"><label>Classe:</label><select id="funcCategoria"></select></div>
+            <div class="form-group" style="flex:1;"><label>Função:</label><select id="funcFuncao"></select></div>
         </div>
+        
+        <div class="form-group">
+            <label>Horários e Expediente:</label>
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                <input type="time" id="funcHoraEntrada" placeholder="Ent" style="flex: 1;" title="Entrada">
+                <input type="time" id="funcHoraSaida" placeholder="Sai" style="flex: 1;" title="Saída">
+                <input type="time" id="funcHoraIntEnt" placeholder="Int. Ent" style="flex: 1;" title="Início Intervalo">
+                <input type="time" id="funcHoraIntSai" placeholder="Int. Sai" style="flex: 1;" title="Fim Intervalo">
+            </div>
+            <select id="funcDiaFolga" style="width: 100%;">
+                <option value="">-- Selecione o Dia de Folga Padrão --</option>
+                <option value="1">Segunda-feira</option><option value="2">Terça-feira</option><option value="3">Quarta-feira</option>
+                <option value="4">Quinta-feira</option><option value="5">Sexta-feira</option><option value="6">Sábado</option><option value="0">Domingo</option>
+            </select>
+        </div>
+
+        <div class="form-group"><label>Rota do Vale Transporte:</label><select id="funcVTRota"></select></div>
         
         <div class="form-group">
             <label>Chaves PIX:</label>
@@ -252,8 +283,8 @@
                 <select id="novoPixTipo" style="width: 90px; padding: 10px 5px;" onchange="document.getElementById('novoPixInput').value=''; document.getElementById('novoPixInput').focus();">
                     <option value="CPF">CPF</option><option value="Celular">Celular</option><option value="E-mail">E-mail</option><option value="Aleatória">Aleatória</option>
                 </select>
-                <input type="text" id="novoPixInput" placeholder="Chave" style="flex: 1;" oninput="mascaraPixDinamica(this)">
-                <button class="btn-action" onclick="addPix()" style="padding: 10px 15px;">+</button>
+                <input type="text" id="novoPixInput" placeholder="Chave PIX" style="flex: 1; min-width: 0;" oninput="mascaraPixDinamica(this)">
+                <button class="btn-action" onclick="addPix()" style="padding: 10px; width: 40px; flex-shrink: 0;">+</button>
             </div>
             <div id="listaPix" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:100px; overflow-y:auto;"></div>
         </div>
@@ -279,22 +310,28 @@
         <div class="modal-title">Configurações Gerais de RH</div>
         
         <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:1;">
-                <label>Salário Mínimo Vigente:</label>
-                <input type="text" id="confSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00">
-            </div>
-            <div class="form-group" style="flex:1;">
-                <label>Adiantamento Quinzena:</label>
-                <input type="text" id="confAdiantamento" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00">
-            </div>
+            <div class="form-group" style="flex:1;"><label>Salário Mínimo:</label><input type="text" id="confSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
+            <div class="form-group" style="flex:1;"><label>Adiant. Quinzena:</label><input type="text" id="confAdiantamento" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
         </div>
         
+        <div class="section-title">Dias de Funcionamento da Empresa</div>
+        <div class="checkbox-dias">
+            <label><input type="checkbox" class="chk-dias-func" value="1"> Seg</label>
+            <label><input type="checkbox" class="chk-dias-func" value="2"> Ter</label>
+            <label><input type="checkbox" class="chk-dias-func" value="3"> Qua</label>
+            <label><input type="checkbox" class="chk-dias-func" value="4"> Qui</label>
+            <label><input type="checkbox" class="chk-dias-func" value="5"> Sex</label>
+            <label><input type="checkbox" class="chk-dias-func" value="6"> Sáb</label>
+            <label><input type="checkbox" class="chk-dias-func" value="0"> Dom</label>
+        </div>
+
         <div class="section-title">Valores de Vale Transporte</div>
+        <input type="hidden" id="editIdxVT" value="">
         <div class="form-group" style="margin-bottom: 5px;">
             <div style="display: flex; gap: 5px;">
                 <input type="text" id="novoVTRota" placeholder="Rota (Ex: Centro)" style="flex: 2;">
                 <input type="text" id="novoVTValor" placeholder="R$ 0,00" inputmode="numeric" oninput="maskMoeda(this)" style="flex: 1.5;">
-                <button class="btn-action" onclick="addVT()" style="padding: 10px 15px; flex-shrink: 0;">+</button>
+                <button class="btn-action" onclick="addVT()" style="padding: 10px 15px; flex-shrink: 0;" id="btnSalvarVT">+</button>
             </div>
         </div>
         <div id="listaVT" style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 15px; max-height: 120px; overflow-y: auto;"></div>
@@ -302,16 +339,13 @@
         <div class="section-title">Motivos de Adiantamento</div>
         <div class="form-group" style="margin-bottom: 5px;">
             <div style="display: flex; gap: 5px;">
-                <input type="text" id="novoMotivo" placeholder="Ex: Farmácia, Dentista" style="flex: 1;">
+                <input type="text" id="novoMotivo" placeholder="Ex: Farmácia" style="flex: 1;">
                 <button class="btn-action" onclick="addMotivo()" style="padding: 10px 15px; flex-shrink: 0;">+</button>
             </div>
         </div>
         <div id="listaMotivos" style="background: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 120px; overflow-y: auto;"></div>
 
-        <div class="modal-actions">
-            <button class="btn-cancel" onclick="fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex';">Cancelar</button>
-            <button class="btn-action" onclick="salvarConfigGerais()">Salvar Tudo</button>
-        </div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex';">Cancelar</button><button class="btn-action" onclick="salvarConfigGerais()">Salvar Tudo</button></div>
     </div>
 </div>
 
@@ -321,7 +355,7 @@
         <input type="hidden" id="acoesFuncId">
         
         <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento()">💸 Lançar Adiantamento</button>
-        <button class="btn-outline" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Falta / Atestado</button>
+        <button class="btn-outline" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Ausência / Atestado</button>
         <button class="btn-outline" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Lançar Férias</button>
         
         <div id="btnPagarExtra" style="display:none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
@@ -352,8 +386,11 @@
         <div class="section-title" style="display:flex; justify-content:space-between;"><span>Pendentes (Ativos)</span> <strong id="totalAdiantPendente" style="color:#D32F2F;">R$ 0,00</strong></div>
         <div id="listaHistoricoAdiantamentos" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px; margin-bottom:10px;"></div>
 
-        <div class="section-title" style="background:#eeeeee; border-left-color:#9e9e9e;">Histórico (Já Descontados)</div>
-        <div id="listaHistoricoAdiantDescontados" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px;"></div>
+        <button class="btn-outline" style="border:none; color:#777; padding:0; font-size:12px; text-decoration:underline;" onclick="toggleDiv('areaHistAdiantDesc')">Ver Histórico de Já Descontados</button>
+        <div id="areaHistAdiantDesc" style="display:none;">
+            <div class="section-title" style="background:#eeeeee; border-left-color:#9e9e9e;">Histórico (Já Descontados)</div>
+            <div id="listaHistoricoAdiantDescontados" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px;"></div>
+        </div>
 
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormAdiantamento'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button></div>
     </div>
@@ -368,7 +405,7 @@
             <div class="form-group" style="flex:1;"><label>Início:</label><input type="date" id="faltaData"></div>
             <div class="form-group" style="flex:1;"><label>Fim (Opc.):</label><input type="date" id="faltaDataFim"></div>
         </div>
-        <div class="form-group"><label>Tipo de Ausência:</label><select id="faltaTipo" onchange="changeTipoFalta()"><option value="Falta">Falta Injustificada</option><option value="Atestado">Atestado Médico</option></select></div>
+        <div class="form-group"><label>Tipo de Ausência:</label><select id="faltaTipo" onchange="changeTipoFalta()"><option value="Falta">Falta Injustificada</option><option value="Atestado">Atestado Médico</option><option value="Folga">Folga Extra</option></select></div>
         
         <div class="form-group" style="display:flex; align-items:center; background:#ffebee; padding:10px; border-radius:5px; margin-bottom: 5px;">
             <label class="switch"><input type="checkbox" id="faltaDescontarDia" checked><span class="slider"></span></label>
@@ -384,7 +421,7 @@
         <button class="btn-danger" style="width: 100%; margin-bottom: 15px; margin-top: 10px;" onclick="salvarFalta()">Gravar Registro</button>
         
         <div class="section-title">Histórico de Ausências</div>
-        <div id="listaHistoricoFaltas" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px;"></div>
+        <div id="listaHistoricoFaltas" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:200px; overflow-y:auto; font-size:12px;"></div>
 
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFalta'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button></div>
     </div>
@@ -411,20 +448,34 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalPrintPonto">
+    <div class="modal">
+        <div class="modal-title">Gerar Folha de Ponto</div>
+        <div class="form-group"><label>Mês Referência:</label><input type="month" id="pontoMesRef"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPrintPonto')">Cancelar</button><button class="btn-action" onclick="executarPrintPonto()">Gerar e Imprimir</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalPrintVT">
+    <div class="modal" style="width: 95%; max-width: 600px;">
+        <div class="modal-title">Ajuste de Vale Transporte</div>
+        <div class="form-group"><label>Mês de Referência (que será pago):</label><input type="month" id="vtMesRef" onchange="gerarListaAjusteVT()"></div>
+        <p style="font-size:11px; color:#666;">*O sistema calcula: Dias úteis do mês - Faltas do mês anterior + Eventuais folgas não tiradas.</p>
+        <div id="areaListaAjusteVT" style="max-height: 400px; overflow-y: auto;"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPrintVT')">Cancelar</button><button class="btn-action" onclick="executarPrintVT()">Gerar Recibos VT</button></div>
+    </div>
+</div>
+
 <script>
+    function toggleDiv(id) { let el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
     // 1. MÁSCARAS
-    function maskCNPJ(el) { 
-        let v = el.value.replace(/\D/g, ""); 
-        if (v.length > 14) v = v.substring(0, 14);
-        v = v.replace(/^(\d{2})(\d)/, "$1.$2"); v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3"); v = v.replace(/\.(\d{3})(\d)/, ".$1/$2"); v = v.replace(/(\d{4})(\d)/, "$1-$2"); 
-        el.value = v; 
-    }
+    function maskCNPJ(el) { let v = el.value.replace(/\D/g, ""); if (v.length > 14) v = v.substring(0, 14); v = v.replace(/^(\d{2})(\d)/, "$1.$2"); v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3"); v = v.replace(/\.(\d{3})(\d)/, ".$1/$2"); v = v.replace(/(\d{4})(\d)/, "$1-$2"); el.value = v; }
     function maskTelefone(el) { let v = el.value.replace(/\D/g,""); if (v.length > 11) v = v.substring(0, 11); v = v.replace(/^(\d{2})(\d)/g,"($1) $2"); v = v.replace(/(\d{5})(\d{4})$/,"$1-$2"); el.value = v; }
     function maskCPF(el) { let v = el.value.replace(/\D/g,""); if (v.length > 11) v = v.substring(0, 11); v = v.replace(/(\d{3})(\d)/,"$1.$2"); v = v.replace(/(\d{3})(\d)/,"$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/,"$1-$2"); el.value = v; }
     function maskCTPS(el) { let v = el.value.replace(/\D/g,""); if (v.length > 12) v = v.substring(0, 12); v = v.replace(/^(\d{7})(\d)/, "$1/$2"); el.value = v; }
     function maskMoeda(el) { let v = el.value.replace(/\D/g, ""); if(!v) { el.value = ""; return; } v = (parseFloat(v) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2}); el.value = v; }
-    function parseMoeda(str) { if(!str) return 0; return parseFloat(str.replace(/\./g, "").replace(",", ".")); }
-    function formatMoeda(val) { return val.toLocaleString('pt-BR', {minimumFractionDigits: 2}); }
+    function parseMoeda(str) { if(!str) return 0; return parseFloat(String(str).replace(/\./g, "").replace(",", ".")); }
+    function formatMoeda(val) { return parseFloat(val).toLocaleString('pt-BR', {minimumFractionDigits: 2}); }
     function formatDataBR(dataStr) { if(!dataStr) return ""; const partes = dataStr.split('-'); if(partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`; return dataStr; }
 
     function mascaraPixDinamica(el) {
@@ -439,9 +490,9 @@
     let isSyncingFundo = false; let tempVT = []; let tempMotivos = []; let tempPix = [];
 
     function carregarBanco() {
-        let base = { app_id: "alorh", empresa: { razao: "", fantasia: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" }, categorias: [], funcionarios: [], administradores: [], configGerais: { salarioMinimo: "1412,00", adiantamentoQuinzena: "500,00", valesTransporte: [], motivosAdiantamento: [] }, registros: [], configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, senhaAdmin: "1999" } };
+        let base = { app_id: "alorh", empresa: { razao: "", fantasia: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" }, categorias: [], funcoes: [], funcionarios: [], administradores: [], configGerais: { salarioMinimo: "1412,00", adiantamentoQuinzena: "500,00", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [] }, registros: [], configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, senhaAdmin: "1999" } };
         let salvo = localStorage.getItem('alorh_v1');
-        if(salvo) { let parsed = JSON.parse(salvo); if(!parsed.configs) parsed.configs = base.configs; return parsed; } return base;
+        if(salvo) { let parsed = JSON.parse(salvo); if(!parsed.configs) parsed.configs = base.configs; if(!parsed.funcoes) parsed.funcoes = []; if(!parsed.configGerais.diasFuncionamento) parsed.configGerais.diasFuncionamento = ['1','2','3','4','5','6']; return parsed; } return base;
     }
     function salvarBanco() { localStorage.setItem('alorh_v1', JSON.stringify(db)); }
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -453,7 +504,7 @@
     function toggleModoSelecao() { 
         modoSelecaoAtivo = !modoSelecaoAtivo; 
         document.getElementById('btnModoSelecaoBar').style.backgroundColor = modoSelecaoAtivo ? '#00695C' : 'rgba(255,255,255,0.15)'; 
-        document.getElementById('btnAcaoMassa1').style.display = modoSelecaoAtivo ? 'flex' : 'none'; document.getElementById('btnAcaoMassa2').style.display = modoSelecaoAtivo ? 'flex' : 'none';
+        document.getElementById('btnAcaoMassa1').style.display = modoSelecaoAtivo ? 'flex' : 'none'; document.getElementById('btnAcaoMassa2').style.display = modoSelecaoAtivo ? 'flex' : 'none'; document.getElementById('btnAcaoMassa3').style.display = modoSelecaoAtivo ? 'flex' : 'none';
         if(!modoSelecaoAtivo) itensSelecionados.clear(); renderizarLista(); 
     }
 
@@ -471,8 +522,9 @@
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Setor', semanal: false };
             let isSelected = itensSelecionados.has(f.id); let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
             let badgeExtra = catObj.semanal ? '<span style="background:#E65100; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">SEMANAL</span>' : '';
-            let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : '';
-            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info"><div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funcCodStr}${f.funcao || 'Sem função'} • ${catObj.nome}</div></div></div></li>`;
+            let funcCodStr = f.codigo ? `<div style="color:#00695C; font-size:11px; font-weight:bold; margin-bottom:1px;">[${f.codigo}]</div>` : '';
+            let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função';
+            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info">${funcCodStr}<div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funName} • ${catObj.nome}</div></div></div></li>`;
         });
         if(funcs.length === 0) html = `<li style="padding: 20px; text-align: center; color: #999;">Nenhum funcionário encontrado.</li>`;
         lista.innerHTML = html;
@@ -486,58 +538,76 @@
     // 3. GERENCIAMENTO CRUD
     function abrirGerenciar(tipo) {
         fecharModal('modalPainelUnificado');
-        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
+        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
         if(tipo === 'empresa') { document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
         
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
         if(tipo === 'funcionarios') {
-            document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = 'flex'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
+            document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = 'flex'; document.getElementById('btnFuncoesListagem').style.display = 'flex'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
             let funcs = [...db.funcionarios].sort((a,b) => a.nome.localeCompare(b.nome));
-            funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${f.nome}</strong><br><small style="color:#666;">${f.funcao || 'Sem função'}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div></div>`; });
+            funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : ''; let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função'; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${f.nome}</strong><br><small style="color:#666;">${funName}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div></div>`; });
         } else if(tipo === 'categorias') {
-            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes (Setores)"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
+            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes (Setores)"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
             db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${c.cor}; color:${c.corTexto || '#fff'}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${c.nome}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse('${c.id}')">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias','${c.id}')">🗑️</button></div></div>`; });
+        } else if(tipo === 'funcoes') {
+            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Funções/Cargos"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFuncao(null);
+            db.funcoes.forEach((fn) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${fn.nome}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFuncao('${fn.id}')">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('funcoes','${fn.id}')">🗑️</button></div></div>`; });
         } else if(tipo === 'administradores') {
-            document.getElementById('tituloListagem').innerText = "Administradores"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormAdmin(null);
+            document.getElementById('tituloListagem').innerText = "Administradores"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormAdmin(null);
             db.administradores.forEach((a) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${a.nome}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormAdmin('${a.id}')">✏️</button></div></div>`; });
         }
         lista.innerHTML = htmlLista; document.getElementById('modalListagem').style.display = 'flex';
     }
 
-    function excluirItem(tipo, id) { if(confirm("Deseja realmente excluir?")) { db[tipo] = db[tipo].filter(x => x.id !== id); salvarBanco(); abrirGerenciar(tipo); renderizarFiltros(); } }
+    function excluirItem(tipo, id) { if(confirm("Deseja realmente excluir?")) { db[tipo] = db[tipo].filter(x => x.id !== id); salvarBanco(); abrirGerenciar(tipo); if(tipo==='categorias') renderizarFiltros(); } }
 
-    function salvarEmpresa() { db.empresa.razao = document.getElementById('empRazao').value; db.empresa.fantasia = document.getElementById('empFantasia').value; db.empresa.cnpj = document.getElementById('empCNPJ').value; db.empresa.rua = document.getElementById('empRua').value; db.empresa.numero = document.getElementById('empNum').value; db.empresa.bairro = document.getElementById('empBairro').value; db.empresa.cidade = document.getElementById('empCidade').value; db.empresa.uf = document.getElementById('empUF').value; salvarBanco(); fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display = 'flex'; }
+    function salvarEmpresa() { 
+        let cnpj = document.getElementById('empCNPJ').value; if(cnpj && cnpj.length < 18) return alert("CNPJ incompleto. Digite os 14 números.");
+        db.empresa.razao = document.getElementById('empRazao').value; db.empresa.fantasia = document.getElementById('empFantasia').value; db.empresa.cnpj = cnpj; db.empresa.rua = document.getElementById('empRua').value; db.empresa.numero = document.getElementById('empNum').value; db.empresa.bairro = document.getElementById('empBairro').value; db.empresa.cidade = document.getElementById('empCidade').value; db.empresa.uf = document.getElementById('empUF').value; salvarBanco(); fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display = 'flex'; 
+    }
+    
     function abrirFormAdmin(id) { fecharModal('modalListagem'); if(id) { let a = db.administradores.find(x => x.id === id); document.getElementById('adminId').value = a.id; document.getElementById('adminNome').value = a.nome; document.getElementById('adminSenha').value = a.senha; } else { document.getElementById('adminId').value = ''; document.getElementById('adminNome').value = ''; document.getElementById('adminSenha').value = ''; } document.getElementById('modalFormAdmin').style.display = 'flex'; }
     function salvarAdmin() { let id = document.getElementById('adminId').value || 'adm_' + Date.now(); let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value }; const idx = db.administradores.findIndex(x => x.id === id); if(idx >= 0) db.administradores[idx] = novo; else db.administradores.push(novo); salvarBanco(); fecharModal('modalFormAdmin'); abrirGerenciar('administradores'); }
 
     function abrirFormClasse(id) { fecharModal('modalListagem'); if(id) { let c = db.categorias.find(x => x.id === id); document.getElementById('classeId').value = c.id; document.getElementById('classeNome').value = c.nome; document.getElementById('classeCorFundo').value = c.cor || '#00695C'; document.getElementById('classeCorTexto').value = c.corTexto || '#ffffff'; document.getElementById('classeSemanal').checked = c.semanal || false; } else { document.getElementById('classeId').value = ''; document.getElementById('classeNome').value = ''; document.getElementById('classeCorFundo').value = '#00695C'; document.getElementById('classeCorTexto').value = '#ffffff'; document.getElementById('classeSemanal').checked = false; } document.getElementById('modalFormClasse').style.display = 'flex'; }
     function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); abrirGerenciar('categorias'); renderizarFiltros(); renderizarLista(); }
 
-    function carregarComboCategorias(selecionado = '') { const combo = document.getElementById('funcCategoria'); combo.innerHTML = '<option value="">-- Selecione a Classe --</option>'; db.categorias.forEach(c => combo.innerHTML += `<option value="${c.id}" ${selecionado === c.id ? 'selected' : ''}>${c.nome}</option>`); }
+    function abrirFormFuncao(id) { fecharModal('modalListagem'); if(id) { let fn = db.funcoes.find(x => x.id === id); document.getElementById('funcaoId').value = fn.id; document.getElementById('funcaoNome').value = fn.nome; } else { document.getElementById('funcaoId').value = ''; document.getElementById('funcaoNome').value = ''; } document.getElementById('modalFormFuncao').style.display = 'flex'; }
+    function salvarFuncao() { let id = document.getElementById('funcaoId').value || 'fn_' + Date.now(); let novo = { id: id, nome: document.getElementById('funcaoNome').value }; const idx = db.funcoes.findIndex(x => x.id === id); if(idx >= 0) db.funcoes[idx] = novo; else db.funcoes.push(novo); salvarBanco(); fecharModal('modalFormFuncao'); abrirGerenciar('funcoes'); }
+
+    function carregarComboCategorias(selCat = '', selFun = '', selVt = '') { 
+        const cCat = document.getElementById('funcCategoria'); cCat.innerHTML = '<option value="">-- Selecione a Classe --</option>'; db.categorias.forEach(c => cCat.innerHTML += `<option value="${c.id}" ${selCat === c.id ? 'selected' : ''}>${c.nome}</option>`); 
+        const cFun = document.getElementById('funcFuncao'); cFun.innerHTML = '<option value="">-- Função --</option>'; db.funcoes.forEach(fn => cFun.innerHTML += `<option value="${fn.id}" ${selFun === fn.id ? 'selected' : ''}>${fn.nome}</option>`);
+        const cVt = document.getElementById('funcVTRota'); cVt.innerHTML = '<option value="">-- Rota (Nenhuma) --</option>'; (db.configGerais.valesTransporte || []).forEach(v => cVt.innerHTML += `<option value="${v.rota}" ${selVt === v.rota ? 'selected' : ''}>${v.rota}</option>`);
+    }
 
     function abrirFormFunc(id) {
-        fecharModal('modalListagem'); carregarComboCategorias(); tempPix = [];
+        fecharModal('modalListagem'); tempPix = [];
         if(id) {
-            let f = db.funcionarios.find(x => x.id === id); document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcFuncao').value = f.funcao || ''; document.getElementById('funcCategoria').value = f.categoria || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
+            let f = db.funcionarios.find(x => x.id === id); carregarComboCategorias(f.categoria, f.funcao, f.vtRota);
+            document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
+            document.getElementById('funcHoraEntrada').value = (f.horarios && f.horarios.entrada) ? f.horarios.entrada : '07:00'; document.getElementById('funcHoraSaida').value = (f.horarios && f.horarios.saida) ? f.horarios.saida : '17:00'; document.getElementById('funcHoraIntEnt').value = (f.horarios && f.horarios.intEnt) ? f.horarios.intEnt : '11:00'; document.getElementById('funcHoraIntSai').value = (f.horarios && f.horarios.intSai) ? f.horarios.intSai : '12:00'; document.getElementById('funcDiaFolga').value = (f.horarios && f.horarios.folga !== undefined) ? f.horarios.folga : '';
             if(f.pixList) tempPix = JSON.parse(JSON.stringify(f.pixList));
         } else {
-            document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcFuncao').value = ''; document.getElementById('funcCategoria').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
+            carregarComboCategorias(); document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
+            document.getElementById('funcHoraEntrada').value = '07:00'; document.getElementById('funcHoraSaida').value = '17:00'; document.getElementById('funcHoraIntEnt').value = '11:00'; document.getElementById('funcHoraIntSai').value = '12:00'; document.getElementById('funcDiaFolga').value = '';
         }
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
-    function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config"><div><span>${p.chave}</span><br><label class="radio-custom"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label></div><button onclick="removerPix(${i})">X</button></div>`).join(''); }
+    function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config" style="align-items:flex-start;"><div><span style="word-break: break-all;">${p.chave}</span><br><label class="radio-custom"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label></div><button onclick="removerPix(${i})" style="margin-top:5px;">X</button></div>`).join(''); }
     function addPix() { let chv = document.getElementById('novoPixInput').value.trim(); if(chv) { tempPix.push({ chave: chv, principal: tempPix.length === 0 }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } }
     function removerPix(idx) { tempPix.splice(idx, 1); if(tempPix.length > 0 && !tempPix.some(p => p.principal)) tempPix[0].principal = true; renderListaPix(); }
     function setPixPrincipal(idx) { tempPix.forEach((p, i) => p.principal = (i === idx)); }
-    function salvarFuncionario() { const id = document.getElementById('funcId').value || 'f_'+Date.now(); const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value }; const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); renderizarLista(); }
+    function salvarFuncionario() { const id = document.getElementById('funcId').value || 'f_'+Date.now(); const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folga: document.getElementById('funcDiaFolga').value } }; const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); renderizarLista(); }
 
     // CONFIGS
-    function renderListasConfig() { const listVT = document.getElementById('listaVT'); const listMot = document.getElementById('listaMotivos'); listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${v.rota} - <b style="color:#00695C;">R$ ${v.valor}</b></span><button onclick="removerVT(${i})">X</button></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>'; listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${m}</span><button onclick="removerMotivo(${i})">X</button></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>'; }
-    function addVT() { let r = document.getElementById('novoVTRota').value.trim(); let v = document.getElementById('novoVTValor').value.trim(); if(r && v) { tempVT.push({rota: r, valor: v}); document.getElementById('novoVTRota').value = ''; document.getElementById('novoVTValor').value = ''; renderListasConfig(); } }
+    function renderListasConfig() { const listVT = document.getElementById('listaVT'); const listMot = document.getElementById('listaMotivos'); listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${v.rota} - <b style="color:#00695C;">R$ ${v.valor}</b></span><div><button class="btn-edit-small" onclick="editarVT(${i})">✏️</button><button onclick="removerVT(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>'; listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${m}</span><button onclick="removerMotivo(${i})">X</button></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>'; }
+    function addVT() { let r = document.getElementById('novoVTRota').value.trim(); let v = document.getElementById('novoVTValor').value.trim(); let editIdx = document.getElementById('editIdxVT').value; if(r && v) { if(editIdx !== "") { tempVT[editIdx] = {rota: r, valor: v}; document.getElementById('editIdxVT').value = ""; document.getElementById('btnSalvarVT').innerText = "+"; } else { tempVT.push({rota: r, valor: v}); } document.getElementById('novoVTRota').value = ''; document.getElementById('novoVTValor').value = ''; renderListasConfig(); } }
+    function editarVT(idx) { let v = tempVT[idx]; document.getElementById('novoVTRota').value = v.rota; document.getElementById('novoVTValor').value = v.valor; document.getElementById('editIdxVT').value = idx; document.getElementById('btnSalvarVT').innerText = "OK"; }
     function removerVT(idx) { tempVT.splice(idx, 1); renderListasConfig(); }
     function addMotivo() { let mot = document.getElementById('novoMotivo').value.trim(); if(mot) { tempMotivos.push(mot); document.getElementById('novoMotivo').value = ''; renderListasConfig(); } }
     function removerMotivo(idx) { tempMotivos.splice(idx, 1); renderListasConfig(); }
-    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
+    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
 
     // POPULAR ADMIN SELECT
     function getAdminOptions(selectedId = '') { let html = '<option value="">-- Selecione --</option>'; db.administradores.forEach(a => { html += `<option value="${a.id}" ${selectedId === a.id ? 'selected' : ''}>${a.nome}</option>`; }); return html; }
@@ -549,11 +619,8 @@
         let selMotivo = document.getElementById('adiantMotivo'); selMotivo.innerHTML = ''; db.configGerais.motivosAdiantamento.forEach(m => selMotivo.innerHTML += `<option value="${m}">${m}</option>`); if(db.configGerais.motivosAdiantamento.length === 0) selMotivo.innerHTML = '<option value="Vale">Vale</option>';
         document.getElementById('adiantAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
         
-        if(editId) {
-            let r = db.registros.find(x => x.id === editId); document.getElementById('adiantEditId').value = editId; document.getElementById('adiantData').value = r.data; document.getElementById('adiantValor').value = formatMoeda(r.valor); document.getElementById('adiantMotivo').value = r.motivo; document.getElementById('adiantForma').value = r.forma; document.getElementById('adiantAdmin').value = r.adminId;
-        } else {
-            document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = '';
-        }
+        if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('adiantEditId').value = editId; document.getElementById('adiantData').value = r.data; document.getElementById('adiantValor').value = formatMoeda(r.valor); document.getElementById('adiantMotivo').value = r.motivo; document.getElementById('adiantForma').value = r.forma; document.getElementById('adiantAdmin').value = r.adminId; } 
+        else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; }
         renderizarHistAdiantamento(funcId); document.getElementById('modalFormAdiantamento').style.display = 'flex';
     }
     function salvarAdiantamento() {
@@ -568,26 +635,17 @@
     function estornarDesconto(id) { let r = db.registros.find(x => x.id === id); if(!r) return; r.descontado = false; salvarBanco(); renderizarHistAdiantamento(r.funcId); }
 
     function renderizarHistAdiantamento(funcId) {
-        let boxPend = document.getElementById('listaHistoricoAdiantamentos'); let boxDesc = document.getElementById('listaHistoricoAdiantDescontados'); let hPend = ''; let hDesc = '';
-        let regs = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
-        let totalPend = 0;
+        let boxPend = document.getElementById('listaHistoricoAdiantamentos'); let boxDesc = document.getElementById('listaHistoricoAdiantDescontados'); let hPend = ''; let hDesc = ''; let regs = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); let totalPend = 0;
         regs.forEach(r => { 
             let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
-            if(r.descontado) {
-                hDesc += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;"><div><b style="color:#777;">${formatDataBR(r.data)}</b> - ${r.motivo} ${msgEdit}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center;"><b style="color:#777;">R$ ${formatMoeda(r.valor)}</b> <button style="background:#eee; border:none; border-radius:4px; padding:2px 5px; cursor:pointer; font-size:10px;" onclick="estornarDesconto('${r.id}')">Desfazer</button></div></div>`;
-            } else {
-                totalPend += r.valor;
-                let btnAcao = r.aguardandoDesconto ? `<button style="background:#Fbc02d; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="desfazerDescontoTemp('${r.id}')">Desfazer (10s)</button>` : `<button style="background:#2e7d32; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="marcarDesconto('${r.id}')">Descontar</button>`;
-                hPend += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0; align-items:center;"><div><b>${formatDataBR(r.data)}</b> - ${r.motivo} ${msgEdit}<br><span style="color:#666; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center;"><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAdiantamento('${r.id}')">✏️</button> ${btnAcao} <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'adiantamento')">🗑️</button></div></div>`;
-            }
+            if(r.descontado) { hDesc += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;"><div><b style="color:#777;">${formatDataBR(r.data)}</b> - ${r.motivo} ${msgEdit}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center;"><b style="color:#777;">R$ ${formatMoeda(r.valor)}</b> <button style="background:#eee; border:none; border-radius:4px; padding:2px 5px; cursor:pointer; font-size:10px;" onclick="estornarDesconto('${r.id}')">Desfazer</button></div></div>`; } 
+            else { totalPend += r.valor; let btnAcao = r.aguardandoDesconto ? `<button style="background:#Fbc02d; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="desfazerDescontoTemp('${r.id}')">Desfazer (10s)</button>` : `<button style="background:#2e7d32; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="marcarDesconto('${r.id}')">Descontar</button>`; hPend += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0; align-items:center;"><div><b>${formatDataBR(r.data)}</b> - ${r.motivo} ${msgEdit}<br><span style="color:#666; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center;"><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAdiantamento('${r.id}')">✏️</button> ${btnAcao} <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'adiantamento')">🗑️</button></div></div>`; }
         });
-        document.getElementById('totalAdiantPendente').innerText = `R$ ${formatMoeda(totalPend)}`;
-        boxPend.innerHTML = hPend || '<div style="color:#999; text-align:center;">Nenhum pendente.</div>';
-        boxDesc.innerHTML = hDesc || '<div style="color:#999; text-align:center;">Nenhum histórico.</div>';
+        document.getElementById('totalAdiantPendente').innerText = `R$ ${formatMoeda(totalPend)}`; boxPend.innerHTML = hPend || '<div style="color:#999; text-align:center;">Nenhum pendente.</div>'; boxDesc.innerHTML = hDesc || '<div style="color:#999; text-align:center;">Nenhum histórico.</div>';
     }
 
     // FALTAS E FÉRIAS
-    function changeTipoFalta() { let t = document.getElementById('faltaTipo').value; if(t === 'Atestado') document.getElementById('faltaDescontarDia').checked = false; else document.getElementById('faltaDescontarDia').checked = true; }
+    function changeTipoFalta() { let t = document.getElementById('faltaTipo').value; if(t === 'Atestado' || t === 'Folga') document.getElementById('faltaDescontarDia').checked = false; else document.getElementById('faltaDescontarDia').checked = true; }
     
     function abrirModalFalta(editId = null) {
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value;
@@ -605,7 +663,21 @@
     function renderizarHistFaltas(funcId) {
         let box = document.getElementById('listaHistoricoFaltas'); let html = ''; let regs = db.registros.filter(r => r.type === 'falta' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
         if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhuma ausência.</div>'; return; }
-        regs.forEach(r => { let dFim = r.dataFim ? ` a ${formatDataBR(r.dataFim)}` : ''; let descDia = r.descontarDia ? '<span style="color:#D32F2F;">-Dia</span>' : ''; let descPas = r.descontarPassagem ? '<span style="color:#00695C;">-Pass</span>' : ''; let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div><b>${formatDataBR(r.data)}${dFim}</b> - ${r.tipo}<br><div style="font-size:10px; gap:5px; display:flex;">${descDia} ${descPas}</div>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFalta('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'falta')">🗑️</button></div></div>`; });
+        
+        let groups = {};
+        regs.forEach(r => {
+            let mY = r.data.substring(0,7); if(!groups[mY]) groups[mY] = { records: [], diasDesc: 0, passDesc: 0 };
+            groups[mY].records.push(r);
+            let d1 = new Date(r.data); let d2 = r.dataFim ? new Date(r.dataFim) : d1;
+            let diffDias = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+            if(r.descontarDia) groups[mY].diasDesc += diffDias; if(r.descontarPassagem) groups[mY].passDesc += diffDias;
+        });
+
+        for (const [mY, g] of Object.entries(groups)) {
+            let mYStr = formatDataBR(mY+'-01').substring(3);
+            html += `<div style="background:#e0e0e0; padding:4px 8px; font-weight:bold; margin-top:5px; border-radius:4px; display:flex; justify-content:space-between;"><span>Mês: ${mYStr}</span><span style="color:#D32F2F;">-${g.diasDesc} Dias | -${g.passDesc} Passagens</span></div>`;
+            g.records.forEach(r => { let dFim = r.dataFim ? ` a ${formatDataBR(r.dataFim)}` : ''; let descDia = r.descontarDia ? '<span style="color:#D32F2F;">-Dia</span>' : ''; let descPas = r.descontarPassagem ? '<span style="color:#00695C;">-Pass</span>' : ''; let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div><b>${formatDataBR(r.data)}${dFim}</b> - ${r.tipo}<br><div style="font-size:10px; gap:5px; display:flex;">${descDia} ${descPas}</div>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFalta('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'falta')">🗑️</button></div></div>`; });
+        }
         box.innerHTML = html;
     }
 
@@ -615,83 +687,132 @@
         else { document.getElementById('feriasEditId').value = ''; document.getElementById('feriasData').value = getHojeSTR(); document.getElementById('feriasDataFim').value = ''; document.getElementById('feriasRetorno').value = ''; }
         renderizarHistFerias(funcId); document.getElementById('modalFormFerias').style.display = 'flex';
     }
-    function salvarFerias() {
-        const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value;
-        const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value };
-        if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); }
-        salvarBanco(); document.getElementById('feriasEditId').value = ''; renderizarHistFerias(funcId);
-    }
-    function renderizarHistFerias(funcId) {
-        let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
-        if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; }
-        regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; });
-        box.innerHTML = html;
-    }
+    function salvarFerias() { const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); document.getElementById('feriasEditId').value = ''; renderizarHistFerias(funcId); }
+    function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
     function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); } }
 
-    // IMPRESSÕES 
-    function imprimirFolhaPonto() {
-        if(itensSelecionados.size === 0) return alert("Selecione os funcionários!");
-        let ids = Array.from(itensSelecionados);
-        let w = window.open('','_blank');
-        let html = `<html><head><title>Folha de Ponto</title><style>body{font-family:Arial,sans-serif;} table{width:100%; border-collapse:collapse; margin-bottom: 20px;} th,td{border:1px solid #000; padding:5px; text-align:center; font-size:12px;} .page-break { page-break-after: always; } h2, h3{margin:5px 0;}</style></head><body>`;
-        ids.forEach((id, idx) => {
-            let f = db.funcionarios.find(x => x.id === id); if(!f) return;
-            html += `<div ${idx !== ids.length-1 ? 'class="page-break"' : ''} style="padding: 20px;">
-                <h2 style="text-align:center;">FOLHA DE PONTO INDIVIDUAL</h2>
-                <h3>Empresa: ${db.empresa.razao || '_________________'} - CNPJ: ${db.empresa.cnpj || '_________________'}</h3>
-                <p><b>Funcionário:</b> ${f.nome} &nbsp;&nbsp;&nbsp; <b>CTPS:</b> ${f.ctps || '______'} &nbsp;&nbsp;&nbsp; <b>Função:</b> ${f.funcao || '______'}</p>
-                <table>
-                    <tr><th>DIA</th><th>ENTRADA</th><th>ASSINATURA</th><th>SAÍDA</th><th>ASSINATURA</th></tr>`;
-            for(let i=1; i<=31; i++) { html += `<tr><td>${String(i).padStart(2,'0')}</td><td></td><td></td><td></td><td></td></tr>`; }
-            html += `</table></div>`;
-        });
-        html += '</body></html>';
-        w.document.write(html); w.document.close();
-        setTimeout(() => { w.print(); }, 500);
-    }
-
+    // IMPRESSÕES E VT
     function imprimirQuinzena() {
-        if(itensSelecionados.size === 0) return alert("Selecione os funcionários!");
-        let ids = Array.from(itensSelecionados);
-        let w = window.open('','_blank');
-        let html = `<html><head><title>Recibo de Quinzena</title><style>body{font-family:Arial,sans-serif;} .recibo{border: 1px dashed #000; padding: 15px; margin-bottom: 20px; width: 45%; display: inline-block; vertical-align: top; margin-right: 2%; box-sizing:border-box;} h3{margin: 0 0 10px 0; text-align:center;} .linha{display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px; border-bottom: 1px dotted #ccc;} .total{font-weight:bold; font-size:16px; border-top: 2px solid #000; padding-top:5px; margin-top:10px; display:flex; justify-content:space-between;}</style></head><body>`;
+        if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); let ids = Array.from(itensSelecionados); let w = window.open('','_blank'); let html = `<html><head><title>Recibo de Quinzena</title><style>body{font-family:Arial,sans-serif;} .recibo{border: 1px dashed #000; padding: 15px; margin-bottom: 20px; width: 45%; display: inline-block; vertical-align: top; margin-right: 2%; box-sizing:border-box;} h3{margin: 0 0 10px 0; text-align:center;} .linha{display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px; border-bottom: 1px dotted #ccc;} .total{font-weight:bold; font-size:16px; border-top: 2px solid #000; padding-top:5px; margin-top:10px; display:flex; justify-content:space-between;}</style></head><body>`;
         ids.forEach(id => {
             let f = db.funcionarios.find(x => x.id === id); if(!f) return;
-            let salBase = parseMoeda(f.salario); let quinzena = salBase / 2;
+            let salBase = parseMoeda(f.salario); let quinzena = parseMoeda(db.configGerais.adiantamentoQuinzena || "0");
             let adiantamentos = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === id && r.descontado).reduce((acc, r) => acc + r.valor, 0);
-            let faltas = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarDia).length;
-            let valorFalta = (salBase / 30) * faltas;
-            let total = quinzena - adiantamentos - valorFalta;
-
-            html += `<div class="recibo">
-                <h3>RECIBO DE QUINZENA</h3>
-                <div style="font-size:12px; text-align:center; margin-bottom:10px;">${db.empresa.fantasia || 'Empresa'}</div>
-                <div style="font-size:14px; font-weight:bold; margin-bottom:10px; border-bottom:1px solid #000; padding-bottom:5px;">Funcionário: ${f.nome}</div>
-                <div class="linha"><span>Valor da Quinzena (50% Salário)</span><span>R$ ${formatMoeda(quinzena)}</span></div>
-                <div class="linha" style="color:red;"><span>(-) Adiantamentos do Mês</span><span>R$ ${formatMoeda(adiantamentos)}</span></div>
-                <div class="linha" style="color:red;"><span>(-) Faltas (${faltas} dias)</span><span>R$ ${formatMoeda(valorFalta)}</span></div>
-                <div class="total"><span>LÍQUIDO A RECEBER:</span><span>R$ ${formatMoeda(total)}</span></div>
-                <div style="margin-top: 40px; border-top: 1px solid #000; text-align:center; font-size:12px; width: 80%; margin-left: 10%;">Assinatura do Funcionário</div>
-            </div>`;
+            let faltas = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarDia).reduce((acc, r) => { let d1 = new Date(r.data); let d2 = r.dataFim ? new Date(r.dataFim) : d1; return acc + Math.max(1, Math.round((d2 - d1) / 86400000) + 1); }, 0);
+            let valorFalta = (salBase / 30) * faltas; let total = quinzena - adiantamentos - valorFalta;
+            html += `<div class="recibo"><h3>RECIBO DE QUINZENA</h3><div style="font-size:12px; text-align:center; margin-bottom:10px;">${db.empresa.fantasia || 'Empresa'}</div><div style="font-size:14px; font-weight:bold; margin-bottom:10px; border-bottom:1px solid #000; padding-bottom:5px;">Funcionário: ${f.nome}</div><div class="linha"><span>Valor da Quinzena</span><span>R$ ${formatMoeda(quinzena)}</span></div><div class="linha" style="color:red;"><span>(-) Adiantamentos Pagos</span><span>R$ ${formatMoeda(adiantamentos)}</span></div><div class="linha" style="color:red;"><span>(-) Faltas (${faltas} dias)</span><span>R$ ${formatMoeda(valorFalta)}</span></div><div class="total"><span>LÍQUIDO A RECEBER:</span><span>R$ ${formatMoeda(total)}</span></div><div style="margin-top: 40px; border-top: 1px solid #000; text-align:center; font-size:12px; width: 80%; margin-left: 10%;">Assinatura do Funcionário</div></div>`;
         });
-        html += '</body></html>';
-        w.document.write(html); w.document.close();
-        setTimeout(() => { w.print(); }, 500);
+        html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500);
     }
 
-    // AVANÇADO E ATUALIZAÇÃO
+    let arrVTParaImprimir = [];
+    function abrirAjusteVT() { if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
+    function gerarListaAjusteVT() {
+        let box = document.getElementById('areaListaAjusteVT'); let html = ''; arrVTParaImprimir = [];
+        let mesRef = document.getElementById('vtMesRef').value; if(!mesRef) return;
+        let ano = parseInt(mesRef.split('-')[0]); let mes = parseInt(mesRef.split('-')[1]);
+        let diasNoMes = new Date(ano, mes, 0).getDate();
+        let diasUteis = 0; for(let d=1; d<=diasNoMes; d++) { let dt = new Date(ano, mes-1, d); if(db.configGerais.diasFuncionamento.includes(dt.getDay().toString())) diasUteis++; }
+        
+        let mesAnt = mes - 1; let anoAnt = ano; if(mesAnt === 0) { mesAnt = 12; anoAnt = ano - 1; }
+        let mesAntStr = `${anoAnt}-${String(mesAnt).padStart(2,'0')}`;
+
+        Array.from(itensSelecionados).forEach(id => {
+            let f = db.funcionarios.find(x => x.id === id); if(!f || !f.vtRota) return;
+            let rotaObj = (db.configGerais.valesTransporte || []).find(v => v.rota === f.vtRota); if(!rotaObj) return;
+            let passagensPorDia = 2; let passagensMes = diasUteis * passagensPorDia;
+            let faltasAnt = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarPassagem && r.data.startsWith(mesAntStr)).reduce((acc, r) => { let d1 = new Date(r.data); let d2 = r.dataFim ? new Date(r.dataFim) : d1; return acc + Math.max(1, Math.round((d2 - d1) / 86400000) + 1); }, 0);
+            let descontoPassagens = faltasAnt * passagensPorDia;
+            let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
+            arrVTParaImprimir.push({ id: f.id, nome: f.nome, rota: rotaObj.rota, valorUnit: parseMoeda(rotaObj.valor), passagens: passagensFinais });
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ddd;"><div><strong>${f.nome}</strong><br><small>${rotaObj.rota} (R$ ${rotaObj.valor}) - Base: ${passagensMes} pass | Desc Mês Ant: -${descontoPassagens} pass</small></div><div><input type="number" id="vt_pass_${f.id}" value="${passagensFinais}" style="width:60px; padding:5px; text-align:center;" onchange="atualizarArrVT('${f.id}', this.value)"></div></div>`;
+        });
+        if(arrVTParaImprimir.length === 0) html = "<div style='padding:15px;'>Nenhum funcionário selecionado possui rota de VT configurada.</div>";
+        box.innerHTML = html;
+    }
+    function atualizarArrVT(id, val) { let obj = arrVTParaImprimir.find(x => x.id === id); if(obj) obj.passagens = parseInt(val) || 0; }
+    function executarPrintVT() {
+        if(arrVTParaImprimir.length === 0) return alert("Nada para imprimir."); let mesStr = document.getElementById('vtMesRef').value.split('-').reverse().join('/');
+        let w = window.open('','_blank'); let html = `<html><head><title>Recibo VT</title><style>body{font-family:Arial,sans-serif;} .recibo{border: 1px solid #000; padding: 15px; margin-bottom: 20px; width: 45%; display: inline-block; vertical-align: top; margin-right: 2%; box-sizing:border-box;} h3{margin: 0 0 10px 0; text-align:center;} .linha{display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px; border-bottom: 1px dotted #ccc;} .page-break { page-break-after: always; }</style></head><body>`;
+        arrVTParaImprimir.forEach((item, idx) => {
+            let total = item.passagens * item.valorUnit; let brk = (idx > 0 && idx % 4 === 0) ? 'class="page-break"' : '';
+            html += `<div class="recibo" ${brk}><h3>RECIBO DE VALE TRANSPORTE</h3><div style="font-size:12px; text-align:center; margin-bottom:10px;">Referência: ${mesStr}</div><div style="font-size:14px; font-weight:bold; margin-bottom:10px; border-bottom:1px solid #000; padding-bottom:5px;">${item.nome}</div><div class="linha"><span>Rota</span><span>${item.rota}</span></div><div class="linha"><span>Qtd. Passagens</span><span>${item.passagens}</span></div><div class="linha"><span>Valor Unitário</span><span>R$ ${formatMoeda(item.valorUnit)}</span></div><div style="font-weight:bold; font-size:16px; border-top: 2px solid #000; padding-top:5px; margin-top:10px; display:flex; justify-content:space-between;"><span>TOTAL:</span><span>R$ ${formatMoeda(total)}</span></div><br><div style="margin-top: 30px; border-top: 1px solid #000; text-align:center; font-size:12px; width: 80%; margin-left: 10%;">Assinatura do Funcionário</div></div>`;
+        });
+        html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintVT');
+    }
+
+    function abrirConfigPonto() { if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('pontoMesRef').value = getHojeSTR().substring(0,7); document.getElementById('modalPrintPonto').style.display = 'flex'; }
+    function executarPrintPonto() {
+        let mesRef = document.getElementById('pontoMesRef').value; if(!mesRef) return;
+        let ano = parseInt(mesRef.split('-')[0]); let mes = parseInt(mesRef.split('-')[1]);
+        let diasNoMes = new Date(ano, mes, 0).getDate(); let w = window.open('','_blank');
+        let html = `<html><head><title>Folha de Ponto</title><style>body{font-family:Arial,sans-serif; margin:0; padding:10px;} table{width:100%; border-collapse:collapse; margin-bottom: 20px;} th,td{border:1px solid #000; padding:4px; text-align:center; font-size:11px;} .page-break { page-break-after: always; } .cabecalho{display:flex; border:1px solid #000; margin-bottom:5px;} .cab-left{flex:6; padding:5px; border-right:1px solid #000;} .cab-right{flex:4; padding:5px;} .bold{font-weight:bold;} .dias-sem{width:100%; border-collapse:collapse;} .dias-sem td{border:none; text-align:left; font-size:10px; padding:1px;} .tr-off td{background-color:#f0f0f0; color:#555;} </style></head><body>`;
+        const diasSemanaNome = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]; const diasSemanaFull = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+        
+        Array.from(itensSelecionados).forEach((id, idx) => {
+            let f = db.funcionarios.find(x => x.id === id); if(!f) return;
+            let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : '';
+            let hs = f.horarios || { entrada: '07:00', saida: '17:00', intEnt: '11:00', intSai: '12:00', folga: '' };
+            let expedHtml = '<table class="dias-sem">';
+            for(let dw=1; dw<=7; dw++) {
+                let realDw = dw === 7 ? 0 : dw; 
+                let isAberto = db.configGerais.diasFuncionamento.includes(realDw.toString());
+                let isFolga = hs.folga === realDw.toString();
+                let textoH = (!isAberto || isFolga) ? 'Folga' : `${hs.entrada} às ${hs.saida} | Int: ${hs.intEnt} às ${hs.intSai}`;
+                expedHtml += `<tr><td>${diasSemanaFull[realDw]}</td><td align="right">${textoH}</td></tr>`;
+            } expedHtml += '</table>';
+
+            html += `<div ${idx !== itensSelecionados.size-1 ? 'class="page-break"' : ''}>
+                <div class="cabecalho">
+                    <div class="cab-left">
+                        <div style="background:#ddd; font-weight:bold; text-align:center; padding:2px; border-bottom:1px solid #000; margin:-5px -5px 5px -5px;">FOLHA DE PONTO DIÁRIA</div>
+                        <div><span class="bold">Empresa:</span> ${db.empresa.razao || ''}</div>
+                        <div><span class="bold">CNPJ:</span> ${db.empresa.cnpj || ''}</div>
+                        <div><span class="bold">Endereço:</span> ${db.empresa.rua || ''}, ${db.empresa.numero || ''} - ${db.empresa.bairro || ''}</div>
+                        <div><span class="bold">Cidade/UF:</span> ${db.empresa.cidade || ''} / ${db.empresa.uf || ''}</div>
+                        <div style="border-top:1px solid #000; margin:5px -5px 5px -5px;"></div>
+                        <div><span class="bold">${f.codigo ? f.codigo+' - ' : ''}${f.nome}</span></div>
+                        <div><span class="bold">Função:</span> ${funName} &nbsp;&nbsp; <span class="bold">Serviço:</span> ${db.empresa.fantasia || ''}</div>
+                        <div><span class="bold">CTPS:</span> ${f.ctps || ''} &nbsp;&nbsp; <span class="bold">Admissão:</span> ${formatDataBR(f.admissao)}</div>
+                    </div>
+                    <div class="cab-right">
+                        <div><span class="bold">Período:</span> 01/${String(mes).padStart(2,'0')}/${ano} a ${diasNoMes}/${String(mes).padStart(2,'0')}/${ano}</div>
+                        <div style="border-top:1px solid #000; margin:5px -5px 5px -5px;"></div>
+                        ${expedHtml}
+                    </div>
+                </div>
+                <table>
+                    <tr><th rowspan="2" colspan="2">Dias</th><th rowspan="2">Entrada</th><th colspan="2">Intervalo</th><th rowspan="2">Saída</th><th colspan="2">Hora Extra</th><th rowspan="2">Assinatura</th></tr>
+                    <tr><th>Saída</th><th>Entrada</th><th>Entrada</th><th>Saída</th></tr>`;
+            for(let d=1; d<=diasNoMes; d++) {
+                let dt = new Date(ano, mes-1, d); let diaW = dt.getDay();
+                let isAberto = db.configGerais.diasFuncionamento.includes(diaW.toString());
+                let isFolga = hs.folga === diaW.toString();
+                if(!isAberto || isFolga) {
+                    html += `<tr class="tr-off"><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td></tr>`;
+                } else {
+                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+                }
+            }
+            html += `</table>
+                <div style="margin-top:20px; text-align:center;">Reconheço a exatidão destas anotações.<br><br>
+                <div style="display:flex; justify-content:space-between; margin-top:30px; padding:0 20px;">
+                    <div>Data: ___/___/______</div><div style="width:250px; border-top:1px solid #000; padding-top:5px;">Assinatura do Diretor</div>
+                </div></div></div>`;
+        });
+        html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintPonto');
+    }
+
+    // AVANÇADO
     function solicitarAcessoAvancado() { fecharModal('modalPainelUnificado'); document.getElementById('senhaAvancada').value = ''; document.getElementById('modalSenhaAvancada').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAvancada').focus(), 100); }
     document.getElementById('senhaAvancada').addEventListener('input', function(e) { if(this.value === db.configs.senhaAdmin) { this.blur(); this.value = ''; fecharModal('modalSenhaAvancada'); document.getElementById('configUrlApp').value = db.configs.url || ''; document.getElementById('modalConfigAvancadas').style.display = 'flex'; } });
-    
-    async function salvarURL() { const inputUrl = document.getElementById('configUrlApp').value.trim(); if(!inputUrl) return alert("Digite a URL primeiro!"); document.getElementById('loadingOverlay').style.display = 'flex'; document.getElementById('loadingText').innerHTML = "Conectando à nuvem...<br><span style='font-size: 14px; font-weight: normal; margin-top: 10px; display: block;'>Aguarde.</span>"; try { let fetchUrl = inputUrl + (inputUrl.includes('?') ? '&' : '?') + 'nocache=' + Date.now(); let res = await fetch(fetchUrl, { redirect: "follow", cache: "no-store" }); let nuvemDB = await res.json(); if(nuvemDB && nuvemDB.app_id === "alorh") { nuvemDB.configs = nuvemDB.configs || {}; nuvemDB.configs.url = inputUrl; nuvemDB.configs.dadosBaixados = true; db = nuvemDB; salvarBanco(); alert("✅ Dados puxados com sucesso!"); location.reload(); } else { alert("❌ Banco de dados incompatível."); } } catch(e) { alert("❌ Falha na conexão."); } finally { document.getElementById('loadingOverlay').style.display = 'none'; } }
-    async function sincronizarFundo(forcado = false, apenasEmpurrar = false) { if(!db.configs.url) return; if(isSyncingFundo) return; isSyncingFundo = true; let indicador = document.getElementById('syncIndicador'); indicador.style.opacity = '1'; try { let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); if(res.ok) console.log("Sincronizado"); } catch(e) { } finally { isSyncingFundo = false; indicador.style.opacity = '0'; } }
-    async function forcarEnvioNuvemCompleto() { if(!db.configs.url) return alert("Configure a URL primeiro!"); document.getElementById('loadingOverlay').style.display = 'flex'; document.getElementById('loadingText').innerHTML = "Empurrando para a nuvem...<br><span style='font-size: 14px; font-weight: normal; margin-top: 10px; display: block;'>Aguarde.</span>"; try { let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); if(!res.ok) throw new Error("Erro"); alert("✅ Backup na nuvem concluído."); } catch(e) { alert("❌ Falha na conexão."); } finally { document.getElementById('loadingOverlay').style.display = 'none'; } }
-    function exportarDados() { db.app_id = "alorh"; const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "alorh_bkp_" + getHojeSTR() + ".json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); }
-    function importarDados(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedDb = JSON.parse(e.target.result); if(importedDb && importedDb.app_id === "alorh") { let urlSalva = db.configs.url; db = importedDb; if(urlSalva) db.configs.url = urlSalva; salvarBanco(); alert("✅ Restaurado! Force o envio para a nuvem em seguida."); location.reload(); } else { alert("Arquivo de backup inválido."); } } catch(err) { alert("Erro ao ler."); } }; reader.readAsText(file); event.target.value = ''; }
-    
-    async function excluirTodoHistorico() { let frase = document.getElementById('inputExcluirTudo').value.trim().toLowerCase(); if(frase === "quero excluir todo o histórico") { if(!confirm("⚠️ TEM CERTEZA?")) return; db.registros = []; marcarMudancaEstrutural(); document.getElementById('inputExcluirTudo').value = ''; fecharModal('modalConfigAvancadas'); alert("✅ Histórico limpo!"); } else { alert("Frase incorreta."); } }
+    async function salvarURL() { const inputUrl = document.getElementById('configUrlApp').value.trim(); if(!inputUrl) return alert("Digite a URL!"); document.getElementById('loadingOverlay').style.display = 'flex'; try { let fetchUrl = inputUrl + (inputUrl.includes('?') ? '&' : '?') + 'nocache=' + Date.now(); let res = await fetch(fetchUrl, { redirect: "follow", cache: "no-store" }); let nuvemDB = await res.json(); if(nuvemDB && nuvemDB.app_id === "alorh") { nuvemDB.configs = nuvemDB.configs || {}; nuvemDB.configs.url = inputUrl; nuvemDB.configs.dadosBaixados = true; db = nuvemDB; salvarBanco(); alert("✅ Concluído!"); location.reload(); } } catch(e) { alert("❌ Falha."); } finally { document.getElementById('loadingOverlay').style.display = 'none'; } }
+    async function sincronizarFundo(forcado = false, apenasEmpurrar = false) { if(!db.configs.url || isSyncingFundo) return; isSyncingFundo = true; let indicador = document.getElementById('syncIndicador'); indicador.style.opacity = '1'; try { await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); } catch(e) { } finally { isSyncingFundo = false; indicador.style.opacity = '0'; } }
+    async function forcarEnvioNuvemCompleto() { if(!db.configs.url) return alert("Configure a URL!"); document.getElementById('loadingOverlay').style.display = 'flex'; try { let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); if(!res.ok) throw new Error("Erro"); alert("✅ Backup salvo!"); } catch(e) { alert("❌ Falha."); } finally { document.getElementById('loadingOverlay').style.display = 'none'; } }
+    function exportarDados() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "alorh_bkp_" + getHojeSTR() + ".json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); }
+    function importarDados(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedDb = JSON.parse(e.target.result); if(importedDb && importedDb.app_id === "alorh") { let urlSalva = db.configs.url; db = importedDb; if(urlSalva) db.configs.url = urlSalva; salvarBanco(); alert("✅ Restaurado!"); location.reload(); } } catch(err) { alert("Erro ao ler."); } }; reader.readAsText(file); event.target.value = ''; }
+    async function excluirTodoHistorico() { let frase = document.getElementById('inputExcluirTudo').value.trim().toLowerCase(); if(frase === "quero excluir todo o histórico") { if(!confirm("⚠️ TEM CERTEZA?")) return; db.registros = []; marcarMudancaEstrutural(); document.getElementById('inputExcluirTudo').value = ''; fecharModal('modalConfigAvancadas'); alert("✅ Limpo!"); } else { alert("Frase incorreta."); } }
     function forcarAtualizacao() { if(confirm("Deseja forçar a atualização do aplicativo?")) { if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(function(registrations) { for(let registration of registrations) registration.update(); }); } window.location.href = window.location.pathname + '?nocache=' + new Date().getTime(); } }
 </script>
 </body>
