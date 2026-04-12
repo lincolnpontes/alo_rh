@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#00695C" id="metaThemeColor">
+    <title>Alô RH v1.0</title>
+    <style>
+        /* BASE CSS MANTIDO E ADAPTADO */
+        html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
+        input, select, textarea, .modal { user-select: text; -webkit-user-select: text; font-family: inherit; }
+        .app-container { width: 100%; max-width: 100%; height: 100%; background-color: #ffffff; display: flex; flex-direction: column; position: absolute; top: 0; left: 0; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
+        .header { background-color: #00695C; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; color: white; flex-shrink: 0; }
+        .header-title { font-size: 20px; font-weight: bold; }
+        .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin-left: 15px;}
+        
+        .action-bar { display: none; justify-content: space-between; padding: 8px 10px; background: #37474F; align-items: center; flex-shrink: 0; gap: 4px; }
+        .btn-action-bar { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 6px; padding: 6px 10px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;}
+        
+        .area-conteudo { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .scroll-area { overflow-y: auto; flex: 1; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
+        
+        .filters { padding: 10px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #eee; background: white; flex-shrink: 0; }
+        .chip { background-color: #e0e0e0; color: #333; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; border: 2px solid transparent; }
+        .chip.active { border-color: #333; opacity: 0.9; }
+        
+        .list { padding: 0; margin: 0; list-style: none; }
+        .item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; position: relative; user-select: none; }
+        .item.selecionado { background-color: #E0F2F1; }
+        .item-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; color: white; font-size: 16px; background-color: #00695C; }
+        .item-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .item-title { font-weight: bold; font-size: 15px; margin-bottom: 2px; color: #333;}
+        .item-subtitle { color: #666; font-size: 12px; }
+        
+        .checkbox-selecao { width: 24px; height: 24px; border: 2px solid #00695C; border-radius: 4px; display: inline-block; vertical-align: middle; margin-right: 12px; position: relative; pointer-events: none; }
+        .item.selecionado .checkbox-selecao::after { content: '✓'; color: #00695C; position: absolute; font-size: 18px; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; }
+        
+        /* MODAIS E FORMS */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 2px solid #00695C; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 4px; color: #555; font-weight: bold; font-size: 12px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
+        .btn-cancel, .btn-action, .btn-danger, .btn-outline { padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; text-align: center; border: none; font-size: 14px; }
+        .btn-cancel { background: #eee; color: #333; }
+        .btn-action { background: #00695C; color: white; }
+        .btn-danger { background: #d32f2f; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #00695C; color: #00695C; width: 100%; margin-bottom: 8px; text-align: left; }
+        
+        .section-title { background: #e0f2f1; padding: 8px; font-size: 13px; font-weight: bold; color: #004d40; border-radius: 4px; margin: 15px 0 10px 0; border-left: 4px solid #00695C;}
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; margin-right: 8px; vertical-align: middle; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        input:checked + .slider { background-color: #00695C; }
+        input:checked + .slider:before { transform: translateX(20px); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <div class="header-title">Alô RH</div>
+        <div class="header-actions">
+            <button onclick="document.getElementById('modalPainelUnificado').style.display='flex'">⚙️</button>
+        </div>
+    </div>
+    
+    <div class="area-conteudo">
+        <div id="actionBar" class="action-bar">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-action-bar" onclick="toggleModoSelecao()" id="btnModoSelecaoBar">☑️ Selecionar</button>
+                <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="alert('Função Imprimir Folha de Ponto (Em breve)')">📄 Ponto</button>
+                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="alert('Função Imprimir Quinzena (Em breve)')">💰 Quinzena</button>
+            </div>
+        </div>
+        
+        <div class="filters" id="containerFiltros"></div>
+        
+        <div class="scroll-area">
+            <ul class="list" id="listaPrincipal"></ul>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalPainelUnificado">
+    <div class="modal" style="padding-top: 25px;">
+        <h2 style="text-align: center; color: #00695C; margin-top: 0;">Menu Alô RH</h2>
+        <button class="btn-outline" onclick="abrirGerenciar('restaurante')">🏢 Dados da Empresa</button>
+        <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
+        <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias (Setores)</button>
+        <button class="btn-outline" onclick="abrirGerenciar('configGerais')">⚙️ Configurações Gerais (RH)</button>
+        <button class="btn-outline" onclick="abrirGerenciar('administradores')">🛡️ Gerenciar Administradores</button>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+        <button class="btn-danger" style="width: 100%; margin-bottom: 10px;" onclick="alert('Acesso Avançado (Nuvem, Exportação) mantido na lógica, interface a implementar.')">⚠️ Configurações Avançadas</button>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPainelUnificado')">Fechar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalListagem">
+    <div class="modal" style="width: 95%; height: 85vh; display: flex; flex-direction: column;">
+        <div class="modal-title" id="tituloListagem">Gerenciar</div>
+        <button class="btn-action" id="btnNovoListagem" style="width: 100%; margin-bottom: 15px;">+ Novo</button>
+        <div id="conteudoListagem" style="flex: 1; overflow-y: auto;"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex';" style="width: 100%;">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormFuncionario">
+    <div class="modal">
+        <div class="modal-title">Cadastro de Funcionário</div>
+        <input type="hidden" id="funcId">
+        
+        <div class="section-title">Dados Pessoais</div>
+        <div class="form-group"><label>Nome Completo:</label><input type="text" id="funcNome"></div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>Data Nasc.:</label><input type="date" id="funcDataNasc"></div>
+            <div class="form-group" style="flex:1;"><label>Admissão:</label><input type="date" id="funcAdmissao"></div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>CPF:</label><input type="text" id="funcCPF" placeholder="000.000.000-00"></div>
+            <div class="form-group" style="flex:1;"><label>RG:</label><input type="text" id="funcRG"></div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>CTPS:</label><input type="text" id="funcCTPS"></div>
+            <div class="form-group" style="flex:1;"><label>Celular (WhatsApp):</label><input type="text" id="funcTel" placeholder="(00) 00000-0000"></div>
+        </div>
+
+        <div class="section-title">Vínculo e Financeiro</div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:2;"><label>Função/Cargo:</label><input type="text" id="funcFuncao"></div>
+            <div class="form-group" style="flex:1;"><label>Setor (Cat):</label><select id="funcCategoria"></select></div>
+        </div>
+        
+        <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:5px;">
+            <label class="switch"><input type="checkbox" id="funcExtra"><span class="slider"></span></label>
+            <span style="font-weight:bold; font-size:12px; color:#E65100;">Funcionário Extra (Recebe por semana)</span>
+        </div>
+
+        <div class="form-group"><label>Chave PIX:</label><input type="text" id="funcPix"></div>
+        
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>Salário Base (R$):</label><input type="text" id="funcSalario" placeholder="Ex: 1412,00"></div>
+            <div class="form-group" style="flex:1;"><label>Gratificação (R$):</label><input type="text" id="funcGratificacao" placeholder="Opcional"></div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>Sal. Família (R$):</label><input type="text" id="funcSalFamilia" placeholder="Opcional"></div>
+            <div class="form-group" style="flex:1;"><label>Desc. Unidentis (R$):</label><input type="text" id="funcUnidentis" placeholder="Opcional"></div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalFormFuncionario'); abrirGerenciar('funcionarios');">Cancelar</button>
+            <button class="btn-action" onclick="salvarFuncionario()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalConfigGerais">
+    <div class="modal">
+        <div class="modal-title">Configurações Gerais de RH</div>
+        
+        <div class="form-group">
+            <label>Salário Mínimo Vigente (R$):</label>
+            <input type="text" id="confSalario" placeholder="Ex: 1412,00">
+            <small style="color:#666; font-size:10px;">*Será o padrão sugerido nos novos cadastros.</small>
+        </div>
+        
+        <div class="section-title">Valores de Vale Transporte</div>
+        <div class="form-group">
+            <label>Cadastre as rotas separadas por vírgula (Ex: Cidade A - R$ 5,00, Cidade B - R$ 7,00):</label>
+            <textarea id="confVT" rows="3" placeholder="João Pessoa - R$ 5,00, Cabedelo - R$ 6,00"></textarea>
+        </div>
+
+        <div class="section-title">Motivos de Adiantamento</div>
+        <div class="form-group">
+            <label>Cadastre os motivos separados por vírgula (Ex: Farmácia, Vale, Empréstimo):</label>
+            <textarea id="confMotivos" rows="3" placeholder="Vale, Farmácia, Dentista"></textarea>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex';">Cancelar</button>
+            <button class="btn-action" onclick="salvarConfigGerais()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalAcoesFunc">
+    <div class="modal">
+        <div class="modal-title" id="tituloAcoesFunc">Nome do Funcionário</div>
+        <input type="hidden" id="acoesFuncId">
+        
+        <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="alert('Tela de Adiantamentos em Breve!')">💸 Lançar Adiantamento</button>
+        <button class="btn-outline" style="border-color:#D32F2F; color:#D32F2F;" onclick="alert('Tela de Faltas/Atestados em Breve!')">❌ Registrar Falta / Atestado</button>
+        
+        <div id="btnPagarExtra" style="display:none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
+            <button class="btn-action" style="width: 100%; background:#E65100;" onclick="alert('Tela de Pagamento Semanal em Breve!')">✅ Confirmar Pagto da Semana</button>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalAcoesFunc')">Voltar</button>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    // 1. DADOS BASE (Adaptados para o RH)
+    let db = carregarBanco(); 
+    let categoriaAtual = null; 
+    let modoSelecaoAtivo = false; 
+    let itensSelecionados = new Set();
+
+    function carregarBanco() {
+        let base = { 
+            app_id: "alorh", 
+            restaurante: { nome: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" }, 
+            categorias: [], // Setores
+            funcionarios: [], // Ex-Produtos
+            administradores: [], // Ex-Colaboradores
+            configGerais: { salarioMinimo: "1412,00", rotasVT: "", motivosAdiantamento: "" },
+            registros: [], // Onde ficarão adiantamentos, faltas, etc.
+            configs: { senhaAdmin: "1999" } 
+        };
+        let salvo = localStorage.getItem('alorh_v1');
+        return salvo ? JSON.parse(salvo) : base;
+    }
+    
+    function salvarBanco() { localStorage.setItem('alorh_v1', JSON.stringify(db)); }
+    function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // 2. INICIALIZAÇÃO
+    window.onload = () => { 
+        document.getElementById('actionBar').style.display = 'flex';
+        renderizarFiltros(); 
+        renderizarLista(); 
+    };
+
+    function toggleModoSelecao() { 
+        modoSelecaoAtivo = !modoSelecaoAtivo; 
+        document.getElementById('btnModoSelecaoBar').style.backgroundColor = modoSelecaoAtivo ? '#00695C' : 'rgba(255,255,255,0.15)'; 
+        document.getElementById('btnAcaoMassa1').style.display = modoSelecaoAtivo ? 'flex' : 'none';
+        document.getElementById('btnAcaoMassa2').style.display = modoSelecaoAtivo ? 'flex' : 'none';
+        if(!modoSelecaoAtivo) itensSelecionados.clear(); 
+        renderizarLista(); 
+    }
+
+    // 3. RENDERIZAÇÃO DA LISTA PRINCIPAL
+    function renderizarFiltros() { 
+        let html = `<div class="chip ${categoriaAtual === null ? 'active' : ''}" onclick="filtrarCat(null)">TODOS</div>`; 
+        db.categorias.forEach(cat => { 
+            html += `<div class="chip ${categoriaAtual === cat.id ? 'active' : ''}" style="background-color: ${cat.cor || '#00695C'}; color: ${cat.corTexto || '#FFF'};" onclick="filtrarCat('${cat.id}')">${cat.nome}</div>`; 
+        }); 
+        document.getElementById('containerFiltros').innerHTML = html; 
+    }
+
+    function filtrarCat(id) { categoriaAtual = id; renderizarFiltros(); renderizarLista(); }
+
+    function renderizarLista() {
+        const lista = document.getElementById('listaPrincipal'); 
+        let html = '';
+        
+        let funcs = [...db.funcionarios];
+        if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual);
+
+        funcs.forEach(f => {
+            let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Setor' };
+            let isSelected = itensSelecionados.has(f.id); 
+            let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
+            
+            let badgeExtra = f.isExtra ? '<span style="background:#E65100; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">EXTRA</span>' : '';
+
+            html += `
+            <li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">
+                ${htmlSelecao}
+                <div style="display: flex; align-items: center; flex: 1;">
+                    <div class="item-avatar" style="background-color: ${catObj.cor};">${f.nome.charAt(0).toUpperCase()}</div>
+                    <div class="item-info">
+                        <div class="item-title">${f.nome} ${badgeExtra}</div>
+                        <div class="item-subtitle">${f.funcao || 'Função não informada'} • ${catObj.nome}</div>
+                    </div>
+                </div>
+            </li>`;
+        });
+        
+        if(funcs.length === 0) html = `<li style="padding: 20px; text-align: center; color: #999;">Nenhum funcionário encontrado.</li>`;
+        lista.innerHTML = html;
+    }
+
+    function cliqueItem(id) {
+        if (modoSelecaoAtivo) {
+            if (itensSelecionados.has(id)) itensSelecionados.delete(id);
+            else itensSelecionados.add(id);
+            renderizarLista();
+        } else {
+            // Abrir ações do funcionário
+            let f = db.funcionarios.find(x => x.id === id);
+            document.getElementById('tituloAcoesFunc').innerText = f.nome;
+            document.getElementById('acoesFuncId').value = f.id;
+            document.getElementById('btnPagarExtra').style.display = f.isExtra ? 'block' : 'none';
+            document.getElementById('modalAcoesFunc').style.display = 'flex';
+        }
+    }
+
+    // 4. GERENCIAMENTO CRUD
+    function abrirGerenciar(tipo) {
+        fecharModal('modalPainelUnificado');
+        
+        if(tipo === 'configGerais') {
+            document.getElementById('confSalario').value = db.configGerais.salarioMinimo || '';
+            document.getElementById('confVT').value = db.configGerais.rotasVT || '';
+            document.getElementById('confMotivos').value = db.configGerais.motivosAdiantamento || '';
+            document.getElementById('modalConfigGerais').style.display = 'flex';
+            return;
+        }
+
+        const lista = document.getElementById('conteudoListagem');
+        document.getElementById('btnNovoListagem').onclick = () => alert("Implementar Form específico.");
+        
+        let htmlLista = '';
+        if(tipo === 'funcionarios') {
+            document.getElementById('tituloListagem').innerText = "Funcionários";
+            document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
+            db.funcionarios.forEach((f) => {
+                htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between;">
+                    <div><strong>${f.nome}</strong><br><small>${f.funcao}</small></div>
+                    <div><button onclick="abrirFormFunc('${f.id}')">✏️</button></div>
+                </div>`;
+            });
+        }
+        
+        // Espaço para implementar listagem de Categorias e Administradores (Mecanica igual ao Alô Feira)
+        
+        lista.innerHTML = htmlLista;
+        document.getElementById('modalListagem').style.display = 'flex';
+    }
+
+    // 5. FUNCIONÁRIOS
+    function abrirFormFunc(id) {
+        fecharModal('modalListagem');
+        const combo = document.getElementById('funcCategoria');
+        combo.innerHTML = '<option value="">-- Selecione o Setor --</option>';
+        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+        
+        if(id) {
+            let f = db.funcionarios.find(x => x.id === id);
+            document.getElementById('funcId').value = f.id;
+            document.getElementById('funcNome').value = f.nome || '';
+            document.getElementById('funcCPF').value = f.cpf || '';
+            // ... (preencher demais campos)
+            document.getElementById('funcFuncao').value = f.funcao || '';
+            document.getElementById('funcCategoria').value = f.categoria || '';
+            document.getElementById('funcExtra').checked = f.isExtra || false;
+            document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo;
+        } else {
+            // Limpar form
+            document.getElementById('funcId').value = '';
+            document.getElementById('funcNome').value = '';
+            document.getElementById('funcExtra').checked = false;
+            document.getElementById('funcSalario').value = db.configGerais.salarioMinimo;
+        }
+        document.getElementById('modalFormFuncionario').style.display = 'flex';
+    }
+
+    function salvarFuncionario() {
+        const id = document.getElementById('funcId').value || 'f_'+Date.now();
+        const novo = {
+            id: id,
+            nome: document.getElementById('funcNome').value,
+            cpf: document.getElementById('funcCPF').value,
+            funcao: document.getElementById('funcFuncao').value,
+            categoria: document.getElementById('funcCategoria').value,
+            isExtra: document.getElementById('funcExtra').checked,
+            salario: document.getElementById('funcSalario').value
+            // ... (pegar demais valores dos inputs)
+        };
+
+        const idx = db.funcionarios.findIndex(x => x.id === id);
+        if(idx >= 0) db.funcionarios[idx] = novo;
+        else db.funcionarios.push(novo);
+
+        salvarBanco();
+        fecharModal('modalFormFuncionario');
+        renderizarLista();
+    }
+
+    // 6. CONFIGS GERAIS
+    function salvarConfigGerais() {
+        db.configGerais.salarioMinimo = document.getElementById('confSalario').value;
+        db.configGerais.rotasVT = document.getElementById('confVT').value;
+        db.configGerais.motivosAdiantamento = document.getElementById('confMotivos').value;
+        salvarBanco();
+        fecharModal('modalConfigGerais');
+        document.getElementById('modalPainelUnificado').style.display='flex';
+    }
+</script>
+</body>
+</html>
