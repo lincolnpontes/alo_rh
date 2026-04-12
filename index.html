@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.3</title>
+    <title>Alô RH v1.0.4</title>
     <style>
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
@@ -18,8 +18,7 @@
         #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; text-align: center; padding: 20px; box-sizing: border-box; }
         .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #00695C; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #syncIndicador { position: fixed; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background-color: #4CAF50; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
-
+        
         .header { background-color: #00695C; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; color: white; flex-shrink: 0; }
         .header-title { font-size: 20px; font-weight: bold; }
         .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin-left: 15px;}
@@ -37,10 +36,10 @@
         .list { padding: 0; margin: 0; list-style: none; }
         .item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; position: relative; user-select: none; }
         .item.selecionado { background-color: #E0F2F1; }
-        .item-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; color: white; font-size: 16px; background-color: #00695C; flex-shrink: 0;}
+        .item-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; color: white; font-size: 16px; flex-shrink: 0;}
         .item-info { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden;}
         .item-title { font-weight: bold; font-size: 15px; margin-bottom: 2px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-        .item-subtitle { color: #666; font-size: 12px; }
+        .item-subtitle { color: #666; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         
         .checkbox-selecao { width: 24px; height: 24px; border: 2px solid #00695C; border-radius: 4px; display: inline-block; vertical-align: middle; margin-right: 12px; position: relative; pointer-events: none; flex-shrink: 0;}
         .item.selecionado .checkbox-selecao::after { content: '✓'; color: #00695C; position: absolute; font-size: 18px; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; }
@@ -52,6 +51,7 @@
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; margin-bottom: 4px; color: #555; font-weight: bold; font-size: 12px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .input-cor { height: 40px; padding: 0; border: 1px solid #ddd; cursor: pointer; width: 100%; border-radius: 5px; }
         
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
         .btn-cancel, .btn-action, .btn-danger, .btn-outline { padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; text-align: center; border: none; font-size: 14px; }
@@ -70,20 +70,23 @@
         
         .list-item-config { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #ddd; padding: 8px 10px; border-radius: 5px; margin-bottom: 5px; font-size: 13px; }
         .list-item-config button { background: #ffcdd2; color: #d32f2f; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: bold; }
+        
+        /* Radios customizados PIX */
+        .radio-custom { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; color: #1565C0; font-weight: bold; }
+        .radio-custom input { margin: 0; width: 16px; height: 16px; accent-color: #1565C0; }
     </style>
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.3</div>
-    <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização do App</button>
+    <div class="splash-versao">v1.0.4</div>
+    <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
-<div id="syncIndicador"></div>
 <div id="loadingOverlay">
     <div class="spinner"></div>
-    <div id="loadingText">Processando...<br><span style="font-size: 14px; font-weight: normal; margin-top: 10px; display: block;">Por favor, aguarde. Não feche o app.</span></div>
+    <div id="loadingText">Processando...<br><span style="font-size: 14px; font-weight: normal; margin-top: 10px; display: block;">Por favor, aguarde.</span></div>
 </div>
 
 <div class="app-container">
@@ -98,16 +101,13 @@
         <div id="actionBar" class="action-bar">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button class="btn-action-bar" onclick="toggleModoSelecao()" id="btnModoSelecaoBar">☑️ Selecionar</button>
-                <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="alert('Função Imprimir Folha de Ponto (Em breve)')">📄 Ponto</button>
-                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="alert('Função Imprimir Quinzena (Em breve)')">💰 Quinzena</button>
+                <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="imprimirFolhaPonto()">📄 Ponto</button>
+                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="imprimirQuinzena()">💰 Quinzena</button>
             </div>
         </div>
         
         <div class="filters" id="containerFiltros"></div>
-        
-        <div class="scroll-area">
-            <ul class="list" id="listaPrincipal"></ul>
-        </div>
+        <div class="scroll-area"><ul class="list" id="listaPrincipal"></ul></div>
     </div>
 </div>
 
@@ -136,20 +136,8 @@
 <div class="modal-overlay" id="modalConfigAvancadas">
     <div class="modal" style="max-height: 90vh; overflow-y: auto;">
         <div class="modal-title" style="color:#d32f2f;">Zona de Risco</div>
-        <div class="form-group"><label>URL Google Script:</label><input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/..."><button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarURL()">💾 Salvar URL e Puxar Dados</button></div>
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
-            <button class="btn-action" style="margin: 0; width: 100%; font-size: 15px; margin-bottom: 10px;" onclick="forcarEnvioNuvemCompleto()">☁️ Forçar Envio Completo pra Nuvem</button>
-            <div style="display: flex; gap: 8px; width: 100%;">
-                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#00695C; color:#00695C; text-align: center;" onclick="exportarDados()">⬇️ Exportar Dados</button>
-                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#d32f2f; color:#d32f2f; text-align: center;" onclick="document.getElementById('fileImport').click()">⬆️ Importar Dados</button>
-                <input type="file" id="fileImport" style="display:none;" accept=".json" onchange="importarDados(event)">
-            </div>
-        </div>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 13px; color: #555; margin-bottom: 5px;">Atenção: A ação abaixo é irreversível.</p>
-        <div class="form-group"><label>Para apagar todos os registros, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()">🗑️ Apagar Todo o Histórico</button></div>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <div class="form-group"><label>App travou ou quer puxar versão nova?</label><button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; width: 100%; text-align: center;" onclick="forcarAtualizacao()">🔄 Forçar Atualização do App</button></div>
+        <div class="form-group"><label>Para apagar todo o histórico de lançamentos, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()">🗑️ Apagar Todo o Histórico</button></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalConfigAvancadas'); document.getElementById('modalPainelUnificado').style.display='flex';">Voltar</button></div>
     </div>
 </div>
@@ -173,13 +161,30 @@
 <div class="modal-overlay" id="modalFormEmpresa">
     <div class="modal">
         <div class="modal-title">Dados da Empresa</div>
-        <div class="form-group"><label>Nome Fantasia / Razão Social:</label><input type="text" id="empNome"></div>
+        <div class="form-group"><label>Razão Social:</label><input type="text" id="empRazao"></div>
+        <div class="form-group"><label>Nome Fantasia:</label><input type="text" id="empFantasia"></div>
         <div class="form-group"><label>CNPJ:</label><input type="text" id="empCNPJ" inputmode="numeric" oninput="maskCNPJ(this)" maxlength="18" placeholder="00.000.000/0000-00"></div>
         <div class="form-group"><label>Rua:</label><input type="text" id="empRua"></div>
         <div style="display: flex; gap:10px;"><div class="form-group" style="flex:1;"><label>Número:</label><input type="text" id="empNum" inputmode="numeric"></div><div class="form-group" style="flex:3;"><label>Bairro:</label><input type="text" id="empBairro"></div></div>
-        <div style="display: flex; gap:10px;"><div class="form-group" style="flex:2;"><label>Cidade:</label><input type="text" id="empCidade"></div><div class="form-group" style="flex:1;"><label>UF:</label><select id="empUF"><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div></div>
-        <div class="form-group"><label>Ponto de Referência (Opcional):</label><input type="text" id="empPonto"></div>
+        <div style="display: flex; gap:10px;"><div class="form-group" style="flex:2;"><label>Cidade:</label><input type="text" id="empCidade"></div><div class="form-group" style="flex:1;"><label>UF:</label><select id="empUF"><option value="PB">PB</option><option value="PE">PE</option><option value="RN">RN</option><option value="CE">CE</option><option value="SP">SP</option><option value="RJ">RJ</option></select></div></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display='flex';">Cancelar</button><button class="btn-action" onclick="salvarEmpresa()">Salvar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormClasse">
+    <div class="modal">
+        <div class="modal-title">Classe (Setor)</div>
+        <input type="hidden" id="classeId">
+        <div class="form-group"><label>Nome da Classe:</label><input type="text" id="classeNome" placeholder="Ex: Cozinha, Atendimento"></div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>Cor do Fundo:</label><input type="color" class="input-cor" id="classeCorFundo" value="#00695C"></div>
+            <div class="form-group" style="flex:1;"><label>Cor do Texto:</label><input type="color" class="input-cor" id="classeCorTexto" value="#ffffff"></div>
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:5px; margin-top: 10px;">
+            <label class="switch"><input type="checkbox" id="classeSemanal"><span class="slider"></span></label>
+            <span style="font-weight:bold; font-size:12px; color:#E65100;">Funcionários dessa classe recebem por Semana (Extra)</span>
+        </div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormClasse'); abrirGerenciar('categorias');">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
     </div>
 </div>
 
@@ -210,39 +215,29 @@
         <div style="display: flex; gap: 10px;">
             <div class="form-group" style="flex:1;"><label>CPF:</label><input type="text" id="funcCPF" inputmode="numeric" oninput="maskCPF(this)" maxlength="14" placeholder="000.000.000-00"></div>
             <div class="form-group" style="flex:1.5; display: flex; gap: 5px;">
-                <div style="flex:2;"><label>RG:</label><input type="text" id="funcRG" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="Apenas N°"></div>
-                <div style="flex:1;"><label>UF:</label>
-                    <select id="funcRGUF" style="padding: 10px 5px;">
-                        <option value="PB">PB</option><option value="PE">PE</option><option value="RN">RN</option>
-                        <option value="CE">CE</option><option value="SP">SP</option><option value="RJ">RJ</option>
-                        <option value="MG">MG</option><option value="BA">BA</option><option value="AC">AC</option>
-                        <option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
-                        <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
-                        <option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-                        <option value="PA">PA</option><option value="PR">PR</option><option value="PI">PI</option>
-                        <option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
-                        <option value="SE">SE</option><option value="TO">TO</option>
-                    </select>
-                </div>
+                <div style="flex:2;"><label>RG:</label><input type="text" id="funcRG" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+                <div style="flex:1;"><label>UF:</label><select id="funcRGUF" style="padding: 10px 5px;"><option value="PB">PB</option><option value="PE">PE</option><option value="RN">RN</option><option value="CE">CE</option></select></div>
             </div>
         </div>
         <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:1;"><label>CTPS:</label><input type="text" id="funcCTPS" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+            <div class="form-group" style="flex:1;"><label>CTPS:</label><input type="text" id="funcCTPS" inputmode="numeric" oninput="maskCTPS(this)" maxlength="13" placeholder="0000000/00000"></div>
             <div class="form-group" style="flex:1;"><label>WhatsApp:</label><input type="text" id="funcTel" inputmode="numeric" oninput="maskTelefone(this)" placeholder="(00) 00000-0000" maxlength="15"></div>
         </div>
 
         <div class="section-title">Vínculo e Financeiro</div>
         <div style="display: flex; gap: 10px;">
             <div class="form-group" style="flex:2;"><label>Função/Cargo:</label><input type="text" id="funcFuncao"></div>
-            <div class="form-group" style="flex:1;"><label>Setor (Classe):</label><select id="funcCategoria"></select></div>
+            <div class="form-group" style="flex:1;"><label>Classe:</label><select id="funcCategoria"></select></div>
         </div>
         
-        <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:5px;">
-            <label class="switch"><input type="checkbox" id="funcExtra"><span class="slider"></span></label>
-            <span style="font-weight:bold; font-size:12px; color:#E65100;">Funcionário Extra (Recebe por semana)</span>
+        <div class="form-group">
+            <label>Chaves PIX:</label>
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                <input type="text" id="novoPixInput" placeholder="Chave PIX (Celular, CPF, Email...)">
+                <button class="btn-action" onclick="addPix()" style="padding: 10px 15px;">+</button>
+            </div>
+            <div id="listaPix" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:100px; overflow-y:auto;"></div>
         </div>
-
-        <div class="form-group"><label>Chave PIX:</label><input type="text" id="funcPix"></div>
         
         <div style="display: flex; gap: 10px;">
             <div class="form-group" style="flex:1;"><label>Salário Base:</label><input type="text" id="funcSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
@@ -283,7 +278,7 @@
         <div class="section-title">Motivos de Adiantamento</div>
         <div class="form-group" style="margin-bottom: 5px;">
             <div style="display: flex; gap: 5px;">
-                <input type="text" id="novoMotivo" placeholder="Ex: Farmácia, Dentista, etc" style="flex: 1;">
+                <input type="text" id="novoMotivo" placeholder="Ex: Farmácia, Dentista" style="flex: 1;">
                 <button class="btn-action" onclick="addMotivo()" style="padding: 10px 15px; flex-shrink: 0;">+</button>
             </div>
         </div>
@@ -301,8 +296,8 @@
         <div class="modal-title" id="tituloAcoesFunc">Nome do Funcionário</div>
         <input type="hidden" id="acoesFuncId">
         
-        <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="alert('Tela de Adiantamentos em Breve!')">💸 Lançar Adiantamento</button>
-        <button class="btn-outline" style="border-color:#D32F2F; color:#D32F2F;" onclick="alert('Tela de Faltas/Atestados em Breve!')">❌ Registrar Falta / Atestado</button>
+        <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento()">💸 Lançar Adiantamento</button>
+        <button class="btn-outline" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Falta / Atestado</button>
         
         <div id="btnPagarExtra" style="display:none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
             <button class="btn-action" style="width: 100%; background:#E65100;" onclick="alert('Tela de Pagamento Semanal em Breve!')">✅ Confirmar Pagto da Semana</button>
@@ -314,64 +309,91 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalFormAdiantamento">
+    <div class="modal">
+        <div class="modal-title" style="color:#1565C0; border-color:#1565C0;">Lançar Adiantamento</div>
+        
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>Data:</label><input type="date" id="adiantData"></div>
+            <div class="form-group" style="flex:1;"><label>Valor (R$):</label><input type="text" id="adiantValor" inputmode="numeric" oninput="maskMoeda(this)"></div>
+        </div>
+        
+        <div class="form-group"><label>Motivo:</label><select id="adiantMotivo"></select></div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>Forma Pagto:</label><select id="adiantForma"><option value="Dinheiro">Dinheiro</option><option value="PIX">PIX</option></select></div>
+            <div class="form-group" style="flex:1;"><label>Quem Pagou:</label><select id="adiantAdmin"></select></div>
+        </div>
+        
+        <button class="btn-action" style="width: 100%; margin-bottom: 15px; background-color:#1565C0;" onclick="salvarAdiantamento()">Confirmar Lançamento</button>
+        
+        <div class="section-title">Histórico de Adiantamentos</div>
+        <div id="listaHistoricoAdiantamentos" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px;"></div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalFormAdiantamento'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormFalta">
+    <div class="modal">
+        <div class="modal-title" style="color:#D32F2F; border-color:#D32F2F;">Registrar Falta/Atestado</div>
+        
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>Data da Ausência:</label><input type="date" id="faltaData"></div>
+            <div class="form-group" style="flex:1;"><label>Tipo:</label><select id="faltaTipo"><option value="Falta">Falta Injustificada</option><option value="Atestado">Atestado Médico</option></select></div>
+        </div>
+        
+        <div class="form-group" style="display:flex; align-items:center; background:#ffebee; padding:10px; border-radius:5px; margin-bottom: 5px;">
+            <label class="switch"><input type="checkbox" id="faltaDescontarDia" checked><span class="slider"></span></label>
+            <span style="font-weight:bold; font-size:12px; color:#D32F2F;">Descontar o Dia (Salário)</span>
+        </div>
+        
+        <div class="form-group" style="display:flex; align-items:center; background:#E0F2F1; padding:10px; border-radius:5px;">
+            <label class="switch"><input type="checkbox" id="faltaDescontarPassagem" checked><span class="slider"></span></label>
+            <span style="font-weight:bold; font-size:12px; color:#00695C;">Descontar Passagem de Ônibus</span>
+        </div>
+
+        <button class="btn-danger" style="width: 100%; margin-bottom: 15px; margin-top: 10px;" onclick="salvarFalta()">Confirmar Registro</button>
+        
+        <div class="section-title">Histórico de Ausências</div>
+        <div id="listaHistoricoFaltas" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px;"></div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalFormFalta'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // 1. MÁSCARAS
     function maskCNPJ(el) { let v = el.value.replace(/\D/g,""); v = v.replace(/^(\d{2})(\d)/,"$1.$2"); v = v.replace(/^(\d{2})\.(\d{3})(\d)/,"$1.$2.$3"); v = v.replace(/\.(\d{3})(\d)/,".$1/$2"); v = v.replace(/(\d{4})(\d)/,"$1-$2"); el.value = v; }
     function maskTelefone(el) { let v = el.value.replace(/\D/g,""); v = v.replace(/^(\d{2})(\d)/g,"($1) $2"); v = v.replace(/(\d)(\d{4})$/,"$1-$2"); el.value = v; }
     function maskCPF(el) { let v = el.value.replace(/\D/g,""); v = v.replace(/(\d{3})(\d)/,"$1.$2"); v = v.replace(/(\d{3})(\d)/,"$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/,"$1-$2"); el.value = v; }
-    function maskMoeda(el) { 
-        let v = el.value.replace(/\D/g, ""); 
-        if(!v) { el.value = ""; return; } 
-        v = (parseFloat(v) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2}); 
-        el.value = v; 
-    }
+    function maskCTPS(el) { let v = el.value.replace(/\D/g,""); v = v.replace(/^(\d{7})(\d)/, "$1/$2"); el.value = v; }
+    function maskMoeda(el) { let v = el.value.replace(/\D/g, ""); if(!v) { el.value = ""; return; } v = (parseFloat(v) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2}); el.value = v; }
+    function parseMoeda(str) { if(!str) return 0; return parseFloat(str.replace(/\./g, "").replace(",", ".")); }
+    function formatMoeda(val) { return val.toLocaleString('pt-BR', {minimumFractionDigits: 2}); }
+    function formatDataBR(dataStr) { if(!dataStr) return ""; const partes = dataStr.split('-'); if(partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`; return dataStr; }
 
     // 2. DADOS BASE
     let db = carregarBanco(); 
     let categoriaAtual = null; 
     let modoSelecaoAtivo = false; 
     let itensSelecionados = new Set();
-    let isSyncingFundo = false;
-    let tempVT = [];
-    let tempMotivos = [];
+    let tempVT = []; let tempMotivos = []; let tempPix = [];
 
     function carregarBanco() {
-        let base = { 
-            app_id: "alorh", 
-            empresa: { nome: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB", ponto: "" }, 
-            categorias: [], 
-            funcionarios: [], 
-            administradores: [], 
-            configGerais: { salarioMinimo: "1412,00", valesTransporte: [], motivosAdiantamento: [] },
-            registros: [], 
-            configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, senhaAdmin: "1999" } 
-        };
+        let base = { app_id: "alorh", empresa: { razao: "", fantasia: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" }, categorias: [], funcionarios: [], administradores: [], configGerais: { salarioMinimo: "1412,00", valesTransporte: [], motivosAdiantamento: [] }, registros: [], configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, senhaAdmin: "1999" } };
         let salvo = localStorage.getItem('alorh_v1');
-        if(salvo) {
-            let parsed = JSON.parse(salvo);
-            if(!parsed.configs) parsed.configs = base.configs;
-            // migração de dados velhos
-            if(!parsed.configGerais.valesTransporte) parsed.configGerais.valesTransporte = [];
-            if(!parsed.configGerais.motivosAdiantamento) parsed.configGerais.motivosAdiantamento = [];
-            return parsed;
-        }
+        if(salvo) { let parsed = JSON.parse(salvo); if(!parsed.configs) parsed.configs = base.configs; return parsed; }
         return base;
     }
-    
     function salvarBanco() { localStorage.setItem('alorh_v1', JSON.stringify(db)); }
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
-    function marcarMudancaEstrutural() { db.configs.ultimaMudancaLocal = Date.now(); salvarBanco(); sincronizarFundo(false, true); }
     function getHojeSTR() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
-    window.onload = () => { 
-        setTimeout(() => { 
-            document.getElementById('splashScreen').style.opacity = '0'; 
-            setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); 
-        }, 1500);
-        document.getElementById('actionBar').style.display = 'flex';
-        renderizarFiltros(); 
-        renderizarLista(); 
-    };
+    window.onload = () => { setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'flex'; renderizarFiltros(); renderizarLista(); };
 
     function toggleModoSelecao() { 
         modoSelecaoAtivo = !modoSelecaoAtivo; 
@@ -384,56 +406,39 @@
 
     function renderizarFiltros() { 
         let html = `<div class="chip ${categoriaAtual === null ? 'active' : ''}" onclick="filtrarCat(null)">TODOS</div>`; 
-        db.categorias.forEach(cat => { 
-            html += `<div class="chip ${categoriaAtual === cat.id ? 'active' : ''}" style="background-color: ${cat.cor || '#00695C'}; color: ${cat.corTexto || '#FFF'};" onclick="filtrarCat('${cat.id}')">${cat.nome}</div>`; 
-        }); 
+        db.categorias.forEach(cat => { html += `<div class="chip ${categoriaAtual === cat.id ? 'active' : ''}" style="background-color: ${cat.cor || '#00695C'}; color: ${cat.corTexto || '#FFF'};" onclick="filtrarCat('${cat.id}')">${cat.nome}</div>`; }); 
         document.getElementById('containerFiltros').innerHTML = html; 
     }
 
     function filtrarCat(id) { categoriaAtual = id; renderizarFiltros(); renderizarLista(); }
 
     function renderizarLista() {
-        const lista = document.getElementById('listaPrincipal'); 
-        let html = '';
-        
+        const lista = document.getElementById('listaPrincipal'); let html = '';
         let funcs = [...db.funcionarios];
         if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual);
+        funcs.sort((a,b) => a.nome.localeCompare(b.nome));
 
         funcs.forEach(f => {
-            let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Setor' };
-            let isSelected = itensSelecionados.has(f.id); 
-            let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
-            
-            let badgeExtra = f.isExtra ? '<span style="background:#E65100; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">EXTRA</span>' : '';
-            let funcCodStr = f.codigo ? `<strong style="color:#00695C; font-size:13px;">[${f.codigo}]</strong> ` : '';
-
-            html += `
-            <li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">
-                ${htmlSelecao}
-                <div style="display: flex; align-items: center; flex: 1; overflow:hidden;">
-                    <div class="item-avatar" style="background-color: ${catObj.cor};">${f.nome.charAt(0).toUpperCase()}</div>
-                    <div class="item-info">
-                        <div class="item-title">${funcCodStr}${f.nome} ${badgeExtra}</div>
-                        <div class="item-subtitle">${f.funcao || 'Função não informada'} • ${catObj.nome}</div>
-                    </div>
-                </div>
-            </li>`;
+            let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Setor', semanal: false };
+            let isSelected = itensSelecionados.has(f.id); let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
+            let badgeExtra = catObj.semanal ? '<span style="background:#E65100; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">SEMANAL</span>' : '';
+            let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : '';
+            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info"><div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funcCodStr}${f.funcao || 'Função não informada'} • ${catObj.nome}</div></div></div></li>`;
         });
-        
         if(funcs.length === 0) html = `<li style="padding: 20px; text-align: center; color: #999;">Nenhum funcionário encontrado.</li>`;
         lista.innerHTML = html;
     }
 
     function cliqueItem(id) {
         if (modoSelecaoAtivo) {
-            if (itensSelecionados.has(id)) itensSelecionados.delete(id);
-            else itensSelecionados.add(id);
+            if (itensSelecionados.has(id)) itensSelecionados.delete(id); else itensSelecionados.add(id);
             renderizarLista();
         } else {
             let f = db.funcionarios.find(x => x.id === id);
+            let catObj = db.categorias.find(c => c.id === f.categoria);
             document.getElementById('tituloAcoesFunc').innerText = f.nome;
             document.getElementById('acoesFuncId').value = f.id;
-            document.getElementById('btnPagarExtra').style.display = f.isExtra ? 'block' : 'none';
+            document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none';
             document.getElementById('modalAcoesFunc').style.display = 'flex';
         }
     }
@@ -441,370 +446,182 @@
     // 3. GERENCIAMENTO CRUD
     function abrirGerenciar(tipo) {
         fecharModal('modalPainelUnificado');
-        
-        if(tipo === 'configGerais') {
-            document.getElementById('confSalario').value = db.configGerais.salarioMinimo || '';
-            tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : [];
-            tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : [];
-            renderListasConfig();
-            document.getElementById('modalConfigGerais').style.display = 'flex';
-            return;
-        }
-
-        if(tipo === 'empresa') {
-            document.getElementById('empNome').value = db.empresa.nome || '';
-            document.getElementById('empCNPJ').value = db.empresa.cnpj || '';
-            document.getElementById('empRua').value = db.empresa.rua || '';
-            document.getElementById('empNum').value = db.empresa.numero || '';
-            document.getElementById('empBairro').value = db.empresa.bairro || '';
-            document.getElementById('empCidade').value = db.empresa.cidade || '';
-            document.getElementById('empUF').value = db.empresa.uf || 'PB';
-            document.getElementById('empPonto').value = db.empresa.ponto || '';
-            document.getElementById('modalFormEmpresa').style.display = 'flex';
-            return;
-        }
-
-        const lista = document.getElementById('conteudoListagem');
-        let htmlLista = '';
-        
+        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
+        if(tipo === 'empresa') { document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
+        const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
         if(tipo === 'funcionarios') {
-            document.getElementById('tituloListagem').innerText = "Funcionários";
-            document.getElementById('btnClassesListagem').style.display = 'flex';
-            document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
-            db.funcionarios.forEach((f) => {
-                let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : '';
-                htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${f.nome}</strong><br><small style="color:#666;">${f.funcao || 'Sem função'}</small></div>
-                    <div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div>
-                </div>`;
-            });
+            document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = 'flex'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
+            let funcs = [...db.funcionarios].sort((a,b) => a.nome.localeCompare(b.nome));
+            funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${f.nome}</strong><br><small style="color:#666;">${f.funcao || 'Sem função'}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div></div>`; });
+        } else if(tipo === 'categorias') {
+            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes (Setores)"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
+            db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${c.cor}; color:${c.corTexto || '#fff'}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${c.nome}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse('${c.id}')">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias','${c.id}')">🗑️</button></div></div>`; });
+        } else if(tipo === 'administradores') {
+            document.getElementById('tituloListagem').innerText = "Administradores"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormAdmin(null);
+            db.administradores.forEach((a) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${a.nome}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormAdmin('${a.id}')">✏️</button></div></div>`; });
         }
-        else if(tipo === 'categorias') { // Setores/Classes
-            fecharModal('modalListagem'); // Para reiniciar com o título certo
-            document.getElementById('tituloListagem').innerText = "Setores / Classes";
-            document.getElementById('btnClassesListagem').style.display = 'none';
-            document.getElementById('btnNovoListagem').onclick = () => {
-                let nome = prompt("Nome da nova Classe/Setor:");
-                if(nome && nome.trim()) {
-                    db.categorias.push({id: 'c_'+Date.now(), nome: nome.trim(), cor: '#00695C', corTexto: '#FFF'});
-                    salvarBanco(); abrirGerenciar('categorias'); renderizarFiltros();
-                }
-            };
-            db.categorias.forEach((c) => {
-                htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
-                    <div><strong>${c.nome}</strong></div>
-                    <div><button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias','${c.id}')">🗑️</button></div>
-                </div>`;
-            });
-        }
-        else if(tipo === 'administradores') {
-            document.getElementById('tituloListagem').innerText = "Administradores";
-            document.getElementById('btnClassesListagem').style.display = 'none';
-            document.getElementById('btnNovoListagem').onclick = () => abrirFormAdmin(null);
-            db.administradores.forEach((a) => {
-                htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
-                    <div><strong>${a.nome}</strong></div>
-                    <div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormAdmin('${a.id}')">✏️</button></div>
-                </div>`;
-            });
-        }
-        
-        lista.innerHTML = htmlLista;
-        document.getElementById('modalListagem').style.display = 'flex';
+        lista.innerHTML = htmlLista; document.getElementById('modalListagem').style.display = 'flex';
     }
 
-    function excluirItem(tipo, id) {
-        if(confirm("Deseja realmente excluir?")) {
-            db[tipo] = db[tipo].filter(x => x.id !== id);
-            salvarBanco(); abrirGerenciar(tipo); renderizarFiltros();
-        }
-    }
+    function excluirItem(tipo, id) { if(confirm("Deseja realmente excluir?")) { db[tipo] = db[tipo].filter(x => x.id !== id); salvarBanco(); abrirGerenciar(tipo); renderizarFiltros(); } }
 
-    // 4. EMPRESA E ADMINS
-    function salvarEmpresa() {
-        db.empresa.nome = document.getElementById('empNome').value;
-        db.empresa.cnpj = document.getElementById('empCNPJ').value;
-        db.empresa.rua = document.getElementById('empRua').value;
-        db.empresa.numero = document.getElementById('empNum').value;
-        db.empresa.bairro = document.getElementById('empBairro').value;
-        db.empresa.cidade = document.getElementById('empCidade').value;
-        db.empresa.uf = document.getElementById('empUF').value;
-        db.empresa.ponto = document.getElementById('empPonto').value;
-        marcarMudancaEstrutural();
-        fecharModal('modalFormEmpresa');
-        document.getElementById('modalPainelUnificado').style.display = 'flex';
-    }
+    function salvarEmpresa() { db.empresa.razao = document.getElementById('empRazao').value; db.empresa.fantasia = document.getElementById('empFantasia').value; db.empresa.cnpj = document.getElementById('empCNPJ').value; db.empresa.rua = document.getElementById('empRua').value; db.empresa.numero = document.getElementById('empNum').value; db.empresa.bairro = document.getElementById('empBairro').value; db.empresa.cidade = document.getElementById('empCidade').value; db.empresa.uf = document.getElementById('empUF').value; salvarBanco(); fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display = 'flex'; }
+    function abrirFormAdmin(id) { fecharModal('modalListagem'); if(id) { let a = db.administradores.find(x => x.id === id); document.getElementById('adminId').value = a.id; document.getElementById('adminNome').value = a.nome; document.getElementById('adminSenha').value = a.senha; } else { document.getElementById('adminId').value = ''; document.getElementById('adminNome').value = ''; document.getElementById('adminSenha').value = ''; } document.getElementById('modalFormAdmin').style.display = 'flex'; }
+    function salvarAdmin() { let id = document.getElementById('adminId').value || 'adm_' + Date.now(); let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value }; const idx = db.administradores.findIndex(x => x.id === id); if(idx >= 0) db.administradores[idx] = novo; else db.administradores.push(novo); salvarBanco(); fecharModal('modalFormAdmin'); abrirGerenciar('administradores'); }
 
-    function abrirFormAdmin(id) {
-        fecharModal('modalListagem');
-        if(id) {
-            let a = db.administradores.find(x => x.id === id);
-            document.getElementById('adminId').value = a.id;
-            document.getElementById('adminNome').value = a.nome;
-            document.getElementById('adminSenha').value = a.senha;
-        } else {
-            document.getElementById('adminId').value = '';
-            document.getElementById('adminNome').value = '';
-            document.getElementById('adminSenha').value = '';
-        }
-        document.getElementById('modalFormAdmin').style.display = 'flex';
-    }
+    function abrirFormClasse(id) { fecharModal('modalListagem'); if(id) { let c = db.categorias.find(x => x.id === id); document.getElementById('classeId').value = c.id; document.getElementById('classeNome').value = c.nome; document.getElementById('classeCorFundo').value = c.cor || '#00695C'; document.getElementById('classeCorTexto').value = c.corTexto || '#ffffff'; document.getElementById('classeSemanal').checked = c.semanal || false; } else { document.getElementById('classeId').value = ''; document.getElementById('classeNome').value = ''; document.getElementById('classeCorFundo').value = '#00695C'; document.getElementById('classeCorTexto').value = '#ffffff'; document.getElementById('classeSemanal').checked = false; } document.getElementById('modalFormClasse').style.display = 'flex'; }
+    function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); abrirGerenciar('categorias'); renderizarFiltros(); renderizarLista(); }
 
-    function salvarAdmin() {
-        let id = document.getElementById('adminId').value || 'adm_' + Date.now();
-        let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value };
-        const idx = db.administradores.findIndex(x => x.id === id);
-        if(idx >= 0) db.administradores[idx] = novo;
-        else db.administradores.push(novo);
-        marcarMudancaEstrutural();
-        fecharModal('modalFormAdmin');
-        abrirGerenciar('administradores');
-    }
-
-    // 5. FUNCIONÁRIOS
-    function carregarComboCategorias(selecionado = '') {
-        const combo = document.getElementById('funcCategoria');
-        combo.innerHTML = '<option value="">-- Selecione o Setor --</option>';
-        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.id}" ${selecionado === c.id ? 'selected' : ''}>${c.nome}</option>`);
-    }
+    function carregarComboCategorias(selecionado = '') { const combo = document.getElementById('funcCategoria'); combo.innerHTML = '<option value="">-- Selecione a Classe --</option>'; db.categorias.forEach(c => combo.innerHTML += `<option value="${c.id}" ${selecionado === c.id ? 'selected' : ''}>${c.nome}</option>`); }
 
     function abrirFormFunc(id) {
-        fecharModal('modalListagem');
-        carregarComboCategorias();
-        
+        fecharModal('modalListagem'); carregarComboCategorias(); tempPix = [];
         if(id) {
             let f = db.funcionarios.find(x => x.id === id);
-            document.getElementById('funcId').value = f.id;
-            document.getElementById('funcCodigo').value = f.codigo || '';
-            document.getElementById('funcNome').value = f.nome || '';
-            document.getElementById('funcDataNasc').value = f.dataNasc || '';
-            document.getElementById('funcAdmissao').value = f.admissao || '';
-            document.getElementById('funcCPF').value = f.cpf || '';
-            document.getElementById('funcRG').value = f.rg || '';
-            document.getElementById('funcRGUF').value = f.rgUF || 'PB';
-            document.getElementById('funcCTPS').value = f.ctps || '';
-            document.getElementById('funcTel').value = f.telefone || '';
-            document.getElementById('funcFuncao').value = f.funcao || '';
-            document.getElementById('funcCategoria').value = f.categoria || '';
-            document.getElementById('funcExtra').checked = f.isExtra || false;
-            document.getElementById('funcPix').value = f.pix || '';
-            document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo;
-            document.getElementById('funcGratificacao').value = f.gratificacao || '';
-            document.getElementById('funcSalFamilia').value = f.salFamilia || '';
-            document.getElementById('funcUnidentis').value = f.unidentis || '';
+            document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcFuncao').value = f.funcao || ''; document.getElementById('funcCategoria').value = f.categoria || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
+            if(f.pixList) tempPix = JSON.parse(JSON.stringify(f.pixList));
         } else {
-            document.getElementById('funcId').value = '';
-            document.getElementById('funcCodigo').value = '';
-            document.getElementById('funcNome').value = '';
-            document.getElementById('funcDataNasc').value = '';
-            document.getElementById('funcAdmissao').value = '';
-            document.getElementById('funcCPF').value = '';
-            document.getElementById('funcRG').value = '';
-            document.getElementById('funcRGUF').value = 'PB';
-            document.getElementById('funcCTPS').value = '';
-            document.getElementById('funcTel').value = '';
-            document.getElementById('funcFuncao').value = '';
-            document.getElementById('funcCategoria').value = '';
-            document.getElementById('funcExtra').checked = false;
-            document.getElementById('funcPix').value = '';
-            document.getElementById('funcSalario').value = db.configGerais.salarioMinimo;
-            document.getElementById('funcGratificacao').value = '';
-            document.getElementById('funcSalFamilia').value = '';
-            document.getElementById('funcUnidentis').value = '';
+            document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcFuncao').value = ''; document.getElementById('funcCategoria').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
         }
-        document.getElementById('modalFormFuncionario').style.display = 'flex';
+        renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
+
+    function renderListaPix() {
+        const box = document.getElementById('listaPix');
+        if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; }
+        box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config"><div><span>${p.chave}</span><br><label class="radio-custom"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label></div><button onclick="removerPix(${i})">X</button></div>`).join('');
+    }
+    function addPix() { let chv = document.getElementById('novoPixInput').value.trim(); if(chv) { tempPix.push({ chave: chv, principal: tempPix.length === 0 }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } }
+    function removerPix(idx) { tempPix.splice(idx, 1); if(tempPix.length > 0 && !tempPix.some(p => p.principal)) tempPix[0].principal = true; renderListaPix(); }
+    function setPixPrincipal(idx) { tempPix.forEach((p, i) => p.principal = (i === idx)); }
 
     function salvarFuncionario() {
         const id = document.getElementById('funcId').value || 'f_'+Date.now();
-        const novo = {
-            id: id,
-            codigo: document.getElementById('funcCodigo').value,
-            nome: document.getElementById('funcNome').value,
-            dataNasc: document.getElementById('funcDataNasc').value,
-            admissao: document.getElementById('funcAdmissao').value,
-            cpf: document.getElementById('funcCPF').value,
-            rg: document.getElementById('funcRG').value,
-            rgUF: document.getElementById('funcRGUF').value,
-            ctps: document.getElementById('funcCTPS').value,
-            telefone: document.getElementById('funcTel').value,
-            funcao: document.getElementById('funcFuncao').value,
-            categoria: document.getElementById('funcCategoria').value,
-            isExtra: document.getElementById('funcExtra').checked,
-            pix: document.getElementById('funcPix').value,
-            salario: document.getElementById('funcSalario').value,
-            gratificacao: document.getElementById('funcGratificacao').value,
-            salFamilia: document.getElementById('funcSalFamilia').value,
-            unidentis: document.getElementById('funcUnidentis').value
-        };
-
-        const idx = db.funcionarios.findIndex(x => x.id === id);
-        if(idx >= 0) db.funcionarios[idx] = novo;
-        else db.funcionarios.push(novo);
-
-        marcarMudancaEstrutural();
-        fecharModal('modalFormFuncionario');
-        renderizarLista();
+        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value };
+        const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo);
+        salvarBanco(); fecharModal('modalFormFuncionario'); renderizarLista();
     }
 
-    // 6. CONFIGS GERAIS E AVANÇADAS
     function renderListasConfig() {
-        const listVT = document.getElementById('listaVT');
-        const listMot = document.getElementById('listaMotivos');
-        
+        const listVT = document.getElementById('listaVT'); const listMot = document.getElementById('listaMotivos');
         listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${v.rota} - <b style="color:#00695C;">R$ ${v.valor}</b></span><button onclick="removerVT(${i})">X</button></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota cadastrada.</div>';
-        
         listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${m}</span><button onclick="removerMotivo(${i})">X</button></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo cadastrado.</div>';
     }
-
-    function addVT() {
-        let rota = document.getElementById('novoVTRota').value.trim();
-        let valor = document.getElementById('novoVTValor').value.trim();
-        if(rota && valor) {
-            tempVT.push({rota, valor});
-            document.getElementById('novoVTRota').value = '';
-            document.getElementById('novoVTValor').value = '';
-            renderListasConfig();
-        }
-    }
-
+    function addVT() { let r = document.getElementById('novoVTRota').value.trim(); let v = document.getElementById('novoVTValor').value.trim(); if(r && v) { tempVT.push({rota: r, valor: v}); document.getElementById('novoVTRota').value = ''; document.getElementById('novoVTValor').value = ''; renderListasConfig(); } }
     function removerVT(idx) { tempVT.splice(idx, 1); renderListasConfig(); }
-
-    function addMotivo() {
-        let mot = document.getElementById('novoMotivo').value.trim();
-        if(mot) {
-            tempMotivos.push(mot);
-            document.getElementById('novoMotivo').value = '';
-            renderListasConfig();
-        }
-    }
-
+    function addMotivo() { let mot = document.getElementById('novoMotivo').value.trim(); if(mot) { tempMotivos.push(mot); document.getElementById('novoMotivo').value = ''; renderListasConfig(); } }
     function removerMotivo(idx) { tempMotivos.splice(idx, 1); renderListasConfig(); }
+    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
 
-    function salvarConfigGerais() {
-        db.configGerais.salarioMinimo = document.getElementById('confSalario').value;
-        db.configGerais.valesTransporte = tempVT;
-        db.configGerais.motivosAdiantamento = tempMotivos;
-        marcarMudancaEstrutural();
-        fecharModal('modalConfigGerais');
-        document.getElementById('modalPainelUnificado').style.display='flex';
+    // ADIANTAMENTOS
+    function abrirModalAdiantamento() {
+        fecharModal('modalAcoesFunc');
+        const funcId = document.getElementById('acoesFuncId').value;
+        document.getElementById('adiantData').value = getHojeSTR();
+        document.getElementById('adiantValor').value = '';
+        
+        let selMotivo = document.getElementById('adiantMotivo'); selMotivo.innerHTML = '';
+        db.configGerais.motivosAdiantamento.forEach(m => selMotivo.innerHTML += `<option value="${m}">${m}</option>`);
+        if(db.configGerais.motivosAdiantamento.length === 0) selMotivo.innerHTML = '<option value="Vale">Vale</option>';
+        
+        let selAdmin = document.getElementById('adiantAdmin'); selAdmin.innerHTML = '<option value="">-- Selecione --</option>';
+        db.administradores.forEach(a => selAdmin.innerHTML += `<option value="${a.id}">${a.nome}</option>`);
+        
+        renderizarHistAdiantamento(funcId);
+        document.getElementById('modalFormAdiantamento').style.display = 'flex';
+    }
+    function salvarAdiantamento() {
+        const funcId = document.getElementById('acoesFuncId').value;
+        const valorStr = document.getElementById('adiantValor').value;
+        if(!valorStr) return alert("Digite um valor.");
+        const novo = { id: 'reg_'+Date.now(), type: 'adiantamento', funcId: funcId, data: document.getElementById('adiantData').value, valor: parseMoeda(valorStr), motivo: document.getElementById('adiantMotivo').value, forma: document.getElementById('adiantForma').value, adminId: document.getElementById('adiantAdmin').value };
+        db.registros.push(novo); salvarBanco();
+        document.getElementById('adiantValor').value = '';
+        renderizarHistAdiantamento(funcId);
+    }
+    function renderizarHistAdiantamento(funcId) {
+        let box = document.getElementById('listaHistoricoAdiantamentos'); let html = '';
+        let regs = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
+        if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum lançamento.</div>'; return; }
+        regs.forEach(r => { let adm = db.administradores.find(a => a.id === r.adminId); let admNome = adm ? adm.nome : 'N/I'; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div><b>${formatDataBR(r.data)}</b> - ${r.motivo} (${r.forma})<br><span style="color:#666; font-size:10px;">Resp: ${admNome}</span></div><div><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; color:#d32f2f; cursor:pointer;" onclick="excluirRegistro('${r.id}')">🗑️</button></div></div>`; });
+        box.innerHTML = html;
     }
 
-    function solicitarAcessoAvancado() { 
-        fecharModal('modalPainelUnificado'); 
-        document.getElementById('senhaAvancada').value = ''; 
-        document.getElementById('modalSenhaAvancada').style.display = 'flex'; 
-        setTimeout(()=>document.getElementById('senhaAvancada').focus(), 100); 
+    // FALTAS
+    function abrirModalFalta() {
+        fecharModal('modalAcoesFunc');
+        const funcId = document.getElementById('acoesFuncId').value;
+        document.getElementById('faltaData').value = getHojeSTR();
+        document.getElementById('faltaDescontarDia').checked = true;
+        document.getElementById('faltaDescontarPassagem').checked = true;
+        renderizarHistFaltas(funcId);
+        document.getElementById('modalFormFalta').style.display = 'flex';
+    }
+    function salvarFalta() {
+        const funcId = document.getElementById('acoesFuncId').value;
+        const novo = { id: 'reg_'+Date.now(), type: 'falta', funcId: funcId, data: document.getElementById('faltaData').value, tipo: document.getElementById('faltaTipo').value, descontarDia: document.getElementById('faltaDescontarDia').checked, descontarPassagem: document.getElementById('faltaDescontarPassagem').checked };
+        db.registros.push(novo); salvarBanco();
+        renderizarHistFaltas(funcId);
+    }
+    function renderizarHistFaltas(funcId) {
+        let box = document.getElementById('listaHistoricoFaltas'); let html = '';
+        let regs = db.registros.filter(r => r.type === 'falta' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
+        if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhuma ausência.</div>'; return; }
+        regs.forEach(r => { let descDia = r.descontarDia ? '<span style="color:#D32F2F;">-Dia</span>' : ''; let descPas = r.descontarPassagem ? '<span style="color:#00695C;">-Pass</span>' : ''; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div><b>${formatDataBR(r.data)}</b> - ${r.tipo}<br><div style="font-size:10px; gap:5px; display:flex;">${descDia} ${descPas}</div></div><div><button style="background:none; border:none; color:#d32f2f; cursor:pointer;" onclick="excluirRegistro('${r.id}')">🗑️</button></div></div>`; });
+        box.innerHTML = html;
     }
 
-    document.getElementById('senhaAvancada').addEventListener('input', function(e) { 
-        if(this.value === db.configs.senhaAdmin) { 
-            this.blur(); 
-            this.value = ''; 
-            fecharModal('modalSenhaAvancada'); 
-            document.getElementById('configUrlApp').value = db.configs.url || ''; 
-            document.getElementById('modalConfigAvancadas').style.display = 'flex'; 
-        } 
-    });
+    function excluirRegistro(id) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(document.getElementById('modalFormAdiantamento').style.display === 'flex') renderizarHistAdiantamento(funcId); else renderizarHistFaltas(funcId); } }
 
-    async function salvarURL() { 
-        const inputUrl = document.getElementById('configUrlApp').value.trim(); 
-        if(!inputUrl) return alert("Digite a URL primeiro!"); 
-        document.getElementById('loadingOverlay').style.display = 'flex'; 
-        try { 
-            let fetchUrl = inputUrl + (inputUrl.includes('?') ? '&' : '?') + 'nocache=' + Date.now(); 
-            let res = await fetch(fetchUrl, { redirect: "follow", cache: "no-store" }); 
-            let nuvemDB = await res.json();
-            if(nuvemDB && nuvemDB.app_id === "alorh") { 
-                nuvemDB.configs = nuvemDB.configs || {}; 
-                nuvemDB.configs.url = inputUrl; 
-                nuvemDB.configs.dadosBaixados = true; 
-                db = nuvemDB; 
-                salvarBanco(); 
-                alert("✅ Dados puxados com sucesso!"); 
-                location.reload(); 
-            } else { 
-                alert("❌ Banco de dados incompatível."); 
-            }
-        } catch(e) { 
-            alert("❌ Falha na conexão."); 
-        } finally { 
-            document.getElementById('loadingOverlay').style.display = 'none'; 
-        }
+    // IMPRESSÕES (Básico)
+    function imprimirFolhaPonto() {
+        if(itensSelecionados.size === 0) return alert("Selecione os funcionários!");
+        let ids = Array.from(itensSelecionados);
+        let w = window.open('','_blank');
+        let html = `<html><head><title>Folha de Ponto</title><style>body{font-family:Arial,sans-serif;} table{width:100%; border-collapse:collapse; margin-bottom: 20px;} th,td{border:1px solid #000; padding:5px; text-align:center; font-size:12px;} .page-break { page-break-after: always; } h2, h3{margin:5px 0;}</style></head><body>`;
+        ids.forEach((id, idx) => {
+            let f = db.funcionarios.find(x => x.id === id); if(!f) return;
+            html += `<div ${idx !== ids.length-1 ? 'class="page-break"' : ''} style="padding: 20px;">
+                <h2 style="text-align:center;">FOLHA DE PONTO INDIVIDUAL</h2>
+                <h3>Empresa: ${db.empresa.razao || '_________________'} - CNPJ: ${db.empresa.cnpj || '_________________'}</h3>
+                <p><b>Funcionário:</b> ${f.nome} &nbsp;&nbsp;&nbsp; <b>CTPS:</b> ${f.ctps || '______'} &nbsp;&nbsp;&nbsp; <b>Função:</b> ${f.funcao || '______'}</p>
+                <table>
+                    <tr><th>DIA</th><th>ENTRADA</th><th>ASSINATURA</th><th>SAÍDA</th><th>ASSINATURA</th></tr>`;
+            for(let i=1; i<=31; i++) { html += `<tr><td>${String(i).padStart(2,'0')}</td><td></td><td></td><td></td><td></td></tr>`; }
+            html += `</table></div>`;
+        });
+        html += '</body></html>';
+        w.document.write(html); w.document.close();
+        setTimeout(() => { w.print(); }, 500);
     }
 
-    async function sincronizarFundo(forcado = false, apenasEmpurrar = false) {
-        if(!db.configs.url || isSyncingFundo) return; 
-        isSyncingFundo = true; 
-        let indicador = document.getElementById('syncIndicador'); 
-        indicador.style.opacity = '1';
-        try {
-            let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); 
-            if(res.ok) console.log("Sincronizado");
-        } catch(e) { } finally { 
-            isSyncingFundo = false; 
-            indicador.style.opacity = '0'; 
-        }
-    }
+    function imprimirQuinzena() {
+        if(itensSelecionados.size === 0) return alert("Selecione os funcionários!");
+        let ids = Array.from(itensSelecionados);
+        let w = window.open('','_blank');
+        let html = `<html><head><title>Recibo de Quinzena</title><style>body{font-family:Arial,sans-serif;} .recibo{border: 1px dashed #000; padding: 15px; margin-bottom: 20px; width: 45%; display: inline-block; vertical-align: top; margin-right: 2%; box-sizing:border-box;} h3{margin: 0 0 10px 0; text-align:center;} .linha{display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px; border-bottom: 1px dotted #ccc;} .total{font-weight:bold; font-size:16px; border-top: 2px solid #000; padding-top:5px; margin-top:10px; display:flex; justify-content:space-between;}</style></head><body>`;
+        ids.forEach(id => {
+            let f = db.funcionarios.find(x => x.id === id); if(!f) return;
+            let salBase = parseMoeda(f.salario); let quinzena = salBase / 2;
+            let adiantamentos = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === id).reduce((acc, r) => acc + r.valor, 0);
+            let faltas = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarDia).length;
+            let valorFalta = (salBase / 30) * faltas;
+            let total = quinzena - adiantamentos - valorFalta;
 
-    async function forcarEnvioNuvemCompleto() { 
-        if(!db.configs.url) return alert("Configure a URL primeiro!"); 
-        document.getElementById('loadingOverlay').style.display = 'flex'; 
-        try { 
-            let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); 
-            if(!res.ok) throw new Error("Erro"); 
-            alert("✅ Backup na nuvem concluído."); 
-        } catch(e) { alert("❌ Falha na conexão."); } finally { document.getElementById('loadingOverlay').style.display = 'none'; } 
-    }
-
-    function exportarDados() { 
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); 
-        const downloadAnchorNode = document.createElement('a'); 
-        downloadAnchorNode.setAttribute("href", dataStr); 
-        downloadAnchorNode.setAttribute("download", "alorh_bkp_" + getHojeSTR() + ".json"); 
-        document.body.appendChild(downloadAnchorNode); 
-        downloadAnchorNode.click(); 
-        downloadAnchorNode.remove(); 
-    }
-
-    function importarDados(event) { 
-        const file = event.target.files[0]; if(!file) return; 
-        const reader = new FileReader(); 
-        reader.onload = function(e) { 
-            try { 
-                const importedDb = JSON.parse(e.target.result); 
-                if(importedDb && importedDb.app_id === "alorh") { 
-                    db = importedDb; salvarBanco(); 
-                    alert("✅ Restaurado! Force o envio para a nuvem em seguida."); 
-                    location.reload(); 
-                } 
-            } catch(err) { alert("Erro ao ler."); } 
-        }; 
-        reader.readAsText(file); 
-        event.target.value = ''; 
-    }
-
-    async function excluirTodoHistorico() { 
-        let frase = document.getElementById('inputExcluirTudo').value.trim().toLowerCase(); 
-        if(frase === "quero excluir todo o histórico") { 
-            if(!confirm("⚠️ TEM CERTEZA?")) return; 
-            db.registros = []; 
-            marcarMudancaEstrutural(); 
-            document.getElementById('inputExcluirTudo').value = ''; 
-            fecharModal('modalConfigAvancadas'); 
-            alert("✅ Histórico limpo!"); 
-        } else { alert("Frase incorreta."); } 
-    }
-
-    function forcarAtualizacao() { 
-        if(confirm("Deseja forçar a atualização do aplicativo?")) { 
-            if ('serviceWorker' in navigator) { 
-                navigator.serviceWorker.getRegistrations().then(function(registrations) { 
-                    for(let registration of registrations) registration.update(); 
-                }); 
-            } 
-            window.location.href = window.location.pathname + '?nocache=' + new Date().getTime(); 
-        } 
+            html += `<div class="recibo">
+                <h3>RECIBO DE QUINZENA</h3>
+                <div style="font-size:12px; text-align:center; margin-bottom:10px;">${db.empresa.fantasia || 'Empresa'}</div>
+                <div style="font-size:14px; font-weight:bold; margin-bottom:10px; border-bottom:1px solid #000; padding-bottom:5px;">Funcionário: ${f.nome}</div>
+                <div class="linha"><span>Valor da Quinzena (50% Salário)</span><span>R$ ${formatMoeda(quinzena)}</span></div>
+                <div class="linha" style="color:red;"><span>(-) Adiantamentos do Mês</span><span>R$ ${formatMoeda(adiantamentos)}</span></div>
+                <div class="linha" style="color:red;"><span>(-) Faltas (${faltas} dias)</span><span>R$ ${formatMoeda(valorFalta)}</span></div>
+                <div class="total"><span>LÍQUIDO A RECEBER:</span><span>R$ ${formatMoeda(total)}</span></div>
+                <div style="margin-top: 40px; border-top: 1px solid #000; text-align:center; font-size:12px; width: 80%; margin-left: 10%;">Assinatura do Funcionário</div>
+            </div>`;
+        });
+        html += '</body></html>';
+        w.document.write(html); w.document.close();
+        setTimeout(() => { w.print(); }, 500);
     }
 </script>
 </body>
