@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.5</title>
+    <title>Alô RH v1.0.6</title>
     <style>
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
@@ -81,10 +81,11 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.5</div>
+    <div class="splash-versao">v1.0.6</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
+<div id="syncIndicador"></div>
 <div id="loadingOverlay">
     <div class="spinner"></div>
     <div id="loadingText">Processando...<br><span style="font-size: 14px; font-weight: normal; margin-top: 10px; display: block;">Por favor, aguarde.</span></div>
@@ -135,8 +136,24 @@
 <div class="modal-overlay" id="modalConfigAvancadas">
     <div class="modal" style="max-height: 90vh; overflow-y: auto;">
         <div class="modal-title" style="color:#d32f2f;">Zona de Risco</div>
+        <div class="form-group">
+            <label>URL Google Script:</label>
+            <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/...">
+            <button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarURL()">💾 Salvar URL e Puxar Dados</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+            <button class="btn-action" style="margin: 0; width: 100%; font-size: 15px; margin-bottom: 10px;" onclick="forcarEnvioNuvemCompleto()">☁️ Forçar Envio Completo pra Nuvem</button>
+            <div style="display: flex; gap: 8px; width: 100%;">
+                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#00695C; color:#00695C; text-align: center;" onclick="exportarDados()">⬇️ Exportar Dados</button>
+                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#d32f2f; color:#d32f2f; text-align: center;" onclick="document.getElementById('fileImport').click()">⬆️ Importar Dados</button>
+                <input type="file" id="fileImport" style="display:none;" accept=".json" onchange="importarDados(event)">
+            </div>
+        </div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 13px; color: #555; margin-bottom: 5px;">Atenção: A ação abaixo é irreversível.</p>
         <div class="form-group"><label>Para apagar todo o histórico de lançamentos, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()">🗑️ Apagar Todo o Histórico</button></div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <div class="form-group"><label>App travou ou quer puxar versão nova?</label><button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; width: 100%; text-align: center;" onclick="forcarAtualizacao()">🔄 Forçar Atualização do App</button></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalConfigAvancadas'); document.getElementById('modalPainelUnificado').style.display='flex';">Voltar</button></div>
     </div>
 </div>
@@ -419,7 +436,7 @@
     // 2. DADOS BASE
     let db = carregarBanco(); 
     let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set();
-    let tempVT = []; let tempMotivos = []; let tempPix = [];
+    let isSyncingFundo = false; let tempVT = []; let tempMotivos = []; let tempPix = [];
 
     function carregarBanco() {
         let base = { app_id: "alorh", empresa: { razao: "", fantasia: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" }, categorias: [], funcionarios: [], administradores: [], configGerais: { salarioMinimo: "1412,00", adiantamentoQuinzena: "500,00", valesTransporte: [], motivosAdiantamento: [] }, registros: [], configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, senhaAdmin: "1999" } };
@@ -428,6 +445,7 @@
     }
     function salvarBanco() { localStorage.setItem('alorh_v1', JSON.stringify(db)); }
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
+    function marcarMudancaEstrutural() { db.configs.ultimaMudancaLocal = Date.now(); salvarBanco(); sincronizarFundo(false, true); }
     function getHojeSTR() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
     window.onload = () => { setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'flex'; renderizarFiltros(); renderizarLista(); };
@@ -618,7 +636,14 @@
 
     // AVANÇADO E ATUALIZAÇÃO
     function solicitarAcessoAvancado() { fecharModal('modalPainelUnificado'); document.getElementById('senhaAvancada').value = ''; document.getElementById('modalSenhaAvancada').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAvancada').focus(), 100); }
-    document.getElementById('senhaAvancada').addEventListener('input', function(e) { if(this.value === db.configs.senhaAdmin) { this.blur(); this.value = ''; fecharModal('modalSenhaAvancada'); document.getElementById('modalConfigAvancadas').style.display = 'flex'; } });
+    document.getElementById('senhaAvancada').addEventListener('input', function(e) { if(this.value === db.configs.senhaAdmin) { this.blur(); this.value = ''; fecharModal('modalSenhaAvancada'); document.getElementById('configUrlApp').value = db.configs.url || ''; document.getElementById('modalConfigAvancadas').style.display = 'flex'; } });
+    
+    async function salvarURL() { const inputUrl = document.getElementById('configUrlApp').value.trim(); if(!inputUrl) return alert("Digite a URL primeiro!"); document.getElementById('loadingOverlay').style.display = 'flex'; document.getElementById('loadingText').innerHTML = "Conectando à nuvem...<br><span style='font-size: 14px; font-weight: normal; margin-top: 10px; display: block;'>Aguarde.</span>"; try { let fetchUrl = inputUrl + (inputUrl.includes('?') ? '&' : '?') + 'nocache=' + Date.now(); let res = await fetch(fetchUrl, { redirect: "follow", cache: "no-store" }); let nuvemDB = await res.json(); if(nuvemDB && nuvemDB.app_id === "alorh") { nuvemDB.configs = nuvemDB.configs || {}; nuvemDB.configs.url = inputUrl; nuvemDB.configs.dadosBaixados = true; db = nuvemDB; salvarBanco(); alert("✅ Dados puxados com sucesso!"); location.reload(); } else { alert("❌ Banco de dados incompatível."); } } catch(e) { alert("❌ Falha na conexão."); } finally { document.getElementById('loadingOverlay').style.display = 'none'; } }
+    async function sincronizarFundo(forcado = false, apenasEmpurrar = false) { if(!db.configs.url) return; if(isSyncingFundo) return; isSyncingFundo = true; let indicador = document.getElementById('syncIndicador'); indicador.style.opacity = '1'; try { let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); if(res.ok) console.log("Sincronizado"); } catch(e) { } finally { isSyncingFundo = false; indicador.style.opacity = '0'; } }
+    async function forcarEnvioNuvemCompleto() { if(!db.configs.url) return alert("Configure a URL primeiro!"); document.getElementById('loadingOverlay').style.display = 'flex'; document.getElementById('loadingText').innerHTML = "Empurrando para a nuvem...<br><span style='font-size: 14px; font-weight: normal; margin-top: 10px; display: block;'>Aguarde.</span>"; try { let res = await fetch(db.configs.url, { method: 'POST', redirect: "follow", headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'salvar_banco', dados: db }) }); if(!res.ok) throw new Error("Erro"); alert("✅ Backup na nuvem concluído."); } catch(e) { alert("❌ Falha na conexão."); } finally { document.getElementById('loadingOverlay').style.display = 'none'; } }
+    function exportarDados() { db.app_id = "alorh"; const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "alorh_bkp_" + getHojeSTR() + ".json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); }
+    function importarDados(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedDb = JSON.parse(e.target.result); if(importedDb && importedDb.app_id === "alorh") { let urlSalva = db.configs.url; db = importedDb; if(urlSalva) db.configs.url = urlSalva; salvarBanco(); alert("✅ Restaurado! Force o envio para a nuvem em seguida."); location.reload(); } else { alert("Arquivo de backup inválido."); } } catch(err) { alert("Erro ao ler."); } }; reader.readAsText(file); event.target.value = ''; }
+    
     async function excluirTodoHistorico() { let frase = document.getElementById('inputExcluirTudo').value.trim().toLowerCase(); if(frase === "quero excluir todo o histórico") { if(!confirm("⚠️ TEM CERTEZA?")) return; db.registros = []; marcarMudancaEstrutural(); document.getElementById('inputExcluirTudo').value = ''; fecharModal('modalConfigAvancadas'); alert("✅ Histórico limpo!"); } else { alert("Frase incorreta."); } }
     function forcarAtualizacao() { if(confirm("Deseja forçar a atualização do aplicativo?")) { if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(function(registrations) { for(let registration of registrations) registration.update(); }); } window.location.href = window.location.pathname + '?nocache=' + new Date().getTime(); } }
 </script>
