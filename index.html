@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.9</title>
+    <title>Alô RH v1.0.10</title>
     <style>
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
@@ -87,7 +87,7 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.9</div>
+    <div class="splash-versao">v1.0.10</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -161,7 +161,7 @@
         </div>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 13px; color: #555; margin-bottom: 5px;">Atenção: A ação abaixo é irreversível.</p>
-        <div class="form-group"><label>Para apagar todo o histórico, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()">🗑️ Apagar Todo o Histórico</button></div>
+        <div class="form-group"><label>Para apagar todo o histórico de lançamentos, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()">🗑️ Apagar Todo o Histórico</button></div>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <div class="form-group"><label>App travou ou quer puxar versão nova?</label><button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; width: 100%; text-align: center;" onclick="forcarAtualizacao()">🔄 Forçar Atualização do App</button></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalConfigAvancadas'); document.getElementById('modalPainelUnificado').style.display='flex';">Voltar</button></div>
@@ -268,8 +268,8 @@
 
         <div class="section-title">Vínculo e Financeiro</div>
         <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:1;"><label>Função:</label><select id="funcFuncao"></select></div>
             <div class="form-group" style="flex:1;"><label>Classe:</label><select id="funcCategoria"></select></div>
+            <div class="form-group" style="flex:1;"><label>Função:</label><select id="funcFuncao"></select></div>
         </div>
         
         <div class="form-group">
@@ -299,7 +299,7 @@
                     <option value="CPF">CPF</option><option value="Celular">Celular</option><option value="E-mail">E-mail</option><option value="Aleatória">Aleatória</option>
                 </select>
                 <input type="text" id="novoPixInput" placeholder="Chave PIX" style="flex: 1; min-width: 0;" oninput="mascaraPixDinamica(this)">
-                <button class="btn-action" onclick="addPix()" style="padding: 5px; width: 30px; font-size: 18px; flex-shrink: 0;">+</button>
+                <button class="btn-action" onclick="addPix()" style="padding: 5px 10px; width: auto; font-size: 14px; flex-shrink: 0;">+</button>
             </div>
             <div id="listaPix" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:100px; overflow-y:auto;"></div>
         </div>
@@ -530,6 +530,7 @@
         let tipo = document.getElementById('novoPixTipo').value; let v = el.value;
         if(tipo === 'CPF') { v = v.replace(/\D/g,""); if (v.length > 11) v = v.substring(0, 11); v = v.replace(/(\d{3})(\d)/,"$1.$2"); v = v.replace(/(\d{3})(\d)/,"$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/,"$1-$2"); el.value = v; } 
         else if (tipo === 'Celular') { v = v.replace(/\D/g,""); if (v.length > 11) v = v.substring(0, 11); v = v.replace(/^(\d{2})(\d)/g,"($1) $2"); v = v.replace(/(\d{5})(\d{4})$/,"$1-$2"); el.value = v; }
+        else if (tipo === 'E-mail') { el.value = el.value.toLowerCase(); }
     }
 
     // 2. DADOS BASE
@@ -567,13 +568,24 @@
     function renderizarLista() {
         const lista = document.getElementById('listaPrincipal'); let html = '';
         let funcs = [...db.funcionarios]; if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual); funcs.sort((a,b) => a.nome.localeCompare(b.nome));
+        let hj = new Date(); hj.setHours(0,0,0,0);
+        
         funcs.forEach(f => {
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Classe', semanal: false };
             let isSelected = itensSelecionados.has(f.id); let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
             let badgeExtra = catObj.semanal ? '<span style="background:#E65100; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">SEMANAL</span>' : '';
-            let funcCodStr = f.codigo ? `<div style="color:#00695C; font-size:11px; font-weight:bold; margin-bottom:1px;">[${f.codigo}]</div>` : '';
+            let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : '';
             let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função';
-            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info">${funcCodStr}<div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funName} • ${catObj.nome}</div></div></div></li>`;
+            
+            let feriasMsg = '';
+            let feriasList = db.registros.filter(r => r.type === 'ferias' && r.funcId === f.id);
+            for(let r of feriasList) {
+                let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1;
+                if(hj >= d1 && hj <= d2) { feriasMsg = `<div style="color:#1565C0; font-size:11px; font-weight:bold; white-space:nowrap;">Em férias</div>`; break; } 
+                else if (d1 > hj) { let diff = (d1 - hj) / 86400000; if(diff <= 15) { feriasMsg = `<div style="color:#F57F17; font-size:11px; font-weight:bold; white-space:nowrap;">Férias em breve</div>`; break; } }
+            }
+
+            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info"><div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funcCodStr}${funName} • ${catObj.nome}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${feriasMsg}</div></li>`;
         });
         if(funcs.length === 0) html = `<li style="padding: 20px; text-align: center; color: #999;">Nenhum funcionário encontrado.</li>`;
         lista.innerHTML = html;
@@ -596,7 +608,7 @@
             let funcs = [...db.funcionarios].sort((a,b) => a.nome.localeCompare(b.nome));
             funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : ''; let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função'; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${f.nome}</strong><br><small style="color:#666;">${funName}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div></div>`; });
         } else if(tipo === 'categorias') {
-            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
+            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes (Setores)"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
             db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${c.cor}; color:${c.corTexto || '#fff'}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${c.nome}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse('${c.id}')">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias','${c.id}')">🗑️</button></div></div>`; });
         } else if(tipo === 'funcoes') {
             fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Funções/Cargos"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFuncao(null);
@@ -634,7 +646,7 @@
         fecharModal('modalListagem'); tempPix = [];
         if(id) {
             let f = db.funcionarios.find(x => x.id === id); carregarComboCategorias(f.categoria, f.funcao, f.vtRota);
-            document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
+            document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcFuncao').value = f.funcao || ''; document.getElementById('funcCategoria').value = f.categoria || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
             document.getElementById('funcHoraEntrada').value = (f.horarios && f.horarios.entrada) ? f.horarios.entrada : '07:00'; document.getElementById('funcHoraSaida').value = (f.horarios && f.horarios.saida) ? f.horarios.saida : '17:00'; document.getElementById('funcHoraIntEnt').value = (f.horarios && f.horarios.intEnt) ? f.horarios.intEnt : '11:00'; document.getElementById('funcHoraIntSai').value = (f.horarios && f.horarios.intSai) ? f.horarios.intSai : '12:00'; document.getElementById('funcDiaFolga').value = (f.horarios && f.horarios.folga !== undefined) ? f.horarios.folga : '';
             if(f.pixList) tempPix = JSON.parse(JSON.stringify(f.pixList));
         } else {
@@ -644,7 +656,12 @@
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
     function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config" style="align-items:flex-start;"><div><span style="word-break: break-all;">${p.chave}</span><br><label class="radio-custom"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label></div><button onclick="removerPix(${i})" style="margin-top:5px;">X</button></div>`).join(''); }
-    function addPix() { let chv = document.getElementById('novoPixInput').value.trim(); if(chv) { tempPix.push({ chave: chv, principal: tempPix.length === 0 }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } }
+    function addPix() { 
+        let tipo = document.getElementById('novoPixTipo').value;
+        let chv = document.getElementById('novoPixInput').value.trim(); 
+        if(tipo === 'E-mail') { chv = chv.toLowerCase(); if(!chv.includes('@') || !chv.includes('.')) return alert('Digite um e-mail válido com @ e domínio.'); }
+        if(chv) { tempPix.push({ chave: chv, principal: tempPix.length === 0 }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } 
+    }
     function removerPix(idx) { tempPix.splice(idx, 1); if(tempPix.length > 0 && !tempPix.some(p => p.principal)) tempPix[0].principal = true; renderListaPix(); }
     function setPixPrincipal(idx) { tempPix.forEach((p, i) => p.principal = (i === idx)); }
     function salvarFuncionario() { const id = document.getElementById('funcId').value || 'f_'+Date.now(); const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folga: document.getElementById('funcDiaFolga').value } }; const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); renderizarLista(); }
@@ -709,6 +726,12 @@
     function salvarFalta() {
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('faltaEditId').value;
         let dataIni = document.getElementById('faltaData').value; let dataFim = document.getElementById('faltaDataFim').value || dataIni;
+        
+        let temDiaUtil = false;
+        let d1Valid = new Date(dataIni + "T00:00:00"); let d2Valid = new Date(dataFim + "T00:00:00");
+        for(let d = new Date(d1Valid); d <= d2Valid; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { temDiaUtil = true; break; } }
+        if(!temDiaUtil) return alert("O período selecionado não contém dias úteis de trabalho. Verifique as configurações da empresa.");
+
         let conflito = db.registros.some(r => { if(r.type !== 'falta' || r.funcId !== funcId || r.id === editId) return false; let rIni = r.data; let rFim = r.dataFim || r.data; return (dataIni <= rFim && dataFim >= rIni); });
         if(conflito) return alert("Já existe uma ausência registrada nestes dias para este funcionário.");
         
@@ -725,9 +748,12 @@
             let mY = r.data.substring(0,7); if(!groups[mY]) groups[mY] = { records: [], diasDesc: 0, passDesc: 0, dsrSemanas: new Set() };
             groups[mY].records.push(r);
             let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1;
-            let diffDias = Math.max(1, Math.round((d2 - d1) / 86400000) + 1);
-            if(r.descontarDia) { groups[mY].diasDesc += diffDias; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { groups[mY].dsrSemanas.add(getWeekNumber(d)); } }
-            if(r.descontarPassagem) groups[mY].passDesc += diffDias;
+            let diasUteisFalta = 0;
+            for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) {
+                if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; groups[mY].dsrSemanas.add(getWeekNumber(d)); }
+            }
+            if(r.descontarDia) { groups[mY].diasDesc += diasUteisFalta; }
+            if(r.descontarPassagem) groups[mY].passDesc += diasUteisFalta;
         });
 
         for (const [mY, g] of Object.entries(groups)) {
@@ -745,7 +771,7 @@
         else { document.getElementById('feriasEditId').value = ''; document.getElementById('feriasData').value = getHojeSTR(); document.getElementById('feriasDataFim').value = ''; document.getElementById('feriasRetorno').value = ''; document.getElementById('btnSalvarFerias').innerText = "Gravar Férias"; document.getElementById('btnCancelEditFerias').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistFerias(funcId); document.getElementById('modalFormFerias').style.display = 'flex';
     }
-    function salvarFerias() { const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); }
+    function salvarFerias() { const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); }
     function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
     function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); } }
@@ -778,12 +804,19 @@
         Array.from(itensSelecionados).forEach(id => {
             let f = db.funcionarios.find(x => x.id === id); if(!f || !f.vtRota) return;
             let rotaObj = (db.configGerais.valesTransporte || []).find(v => v.rota === f.vtRota); if(!rotaObj) return;
+            
             let passagensPorDia = 2; let passagensMes = diasUteis * passagensPorDia;
-            let faltasAnt = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarPassagem && r.data.startsWith(mesAntStr)).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; return acc + Math.max(1, Math.round((d2 - d1) / 86400000) + 1); }, 0);
-            let descontoPassagens = faltasAnt * passagensPorDia; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
+            
+            // Abater Faltas em DIAS UTEIS do mes anterior
+            let faltasAnt = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarPassagem && r.data.startsWith(mesAntStr)).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasUteisFalta = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasUteisFalta++; } return acc + diasUteisFalta; }, 0);
+            
+            // Abater Ferias em DIAS UTEIS do mes atual
+            let feriasMesAt = db.registros.filter(r => r.type === 'ferias' && r.funcId === id).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasFeriasUteis = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(d.getFullYear()===ano && (d.getMonth()+1)===mes && db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasFeriasUteis++; } return acc + diasFeriasUteis; }, 0);
+
+            let descontoPassagens = (faltasAnt + feriasMesAt) * passagensPorDia; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
             let valorUnit = parseMoeda(rotaObj.valor); let valTotal = passagensFinais * valorUnit;
             arrVTParaImprimir.push({ id: f.id, nome: f.nome, rota: rotaObj.rota, valorUnit: valorUnit, passagens: passagensFinais, valTotal: valTotal });
-            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ddd;"><div style="flex:1;"><strong>${f.nome}</strong><br><small>${rotaObj.rota} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc. Mês Ant: -${descontoPassagens}</small></div><div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap; justify-content:flex-end;"><div style="white-space:nowrap;"><input type="number" id="vt_pass_${f.id}" value="${passagensFinais}" style="width:40px; padding:5px; text-align:center;" onchange="atualizarArrVT('${f.id}', 'passagens', this.value)"> unid.</div><div style="white-space:nowrap;">R$ <input type="text" id="vt_val_${f.id}" value="${formatMoeda(valTotal)}" style="width:60px; padding:5px; text-align:center;" oninput="maskMoeda(this)" onchange="atualizarArrVT('${f.id}', 'valor', this.value)"></div></div></div>`;
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ddd;"><div style="flex:1;"><strong>${f.nome}</strong><br><small>${rotaObj.rota} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc.: -${descontoPassagens}</small></div><div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;"><div style="white-space:nowrap;"><input type="number" id="vt_pass_${f.id}" value="${passagensFinais}" style="width:50px; padding:5px; text-align:center;" onchange="atualizarArrVT('${f.id}', 'passagens', this.value)"> unid.</div><div style="white-space:nowrap;">R$ <input type="text" id="vt_val_${f.id}" value="${formatMoeda(valTotal)}" style="width:70px; padding:5px; text-align:center;" oninput="maskMoeda(this)" onchange="atualizarArrVT('${f.id}', 'valor', this.value)"></div></div></div>`;
         });
         if(arrVTParaImprimir.length === 0) html = "<div style='padding:15px;'>Nenhum funcionário selecionado possui rota de VT configurada.</div>";
         box.innerHTML = html;
@@ -804,8 +837,9 @@
     function executarPrintQuinzena() {
         let mesRef = document.getElementById('quinzenaMesRef').value; if(!mesRef) return; let ano = mesRef.split('-')[0]; let mesNum = mesRef.split('-')[1]; let dataPgto = document.getElementById('quinzenaDataPagto').value; let cidade = db.empresa.cidade || 'Cidade';
         let ids = Array.from(itensSelecionados); let w = window.open('','_blank'); 
-        let html = `<html><head><title>Quinzena</title><style>body{font-family:Arial,sans-serif; margin:20px; padding:20px; border:2px solid #000;} .logo-area{text-align:center; margin-bottom:10px;} .logo-area img{max-height:80px; margin-bottom:10px;} .titulo-empresa{font-size:22px; font-weight:bold; margin:0;} .sub-empresa{font-size:14px; font-weight:bold; margin:5px 0;} .titulo-doc{font-size:18px; font-weight:bold; margin:20px 0; text-align:center;} .texto-declara{font-size:14px; margin-bottom:30px; text-align:justify; line-height:1.5;} .tabela-lista{width:100%; border-collapse:collapse; font-size:14px;} .tabela-lista td{padding:12px 5px;} .linha-ass{border-bottom:1px solid #000; width:100%; display:block;} .rodape-data{text-align:right; margin-top:40px; font-size:16px; font-weight:bold;}</style></head><body>`;
-        html += `<div class="logo-area">${db.empresa.logo ? `<img src="${db.empresa.logo}">` : ''}<div class="titulo-empresa">${db.empresa.fantasia || 'NOME DA EMPRESA'}</div><div class="sub-empresa">${db.empresa.razao || ''}</div><div class="sub-empresa">CNPJ ${db.empresa.cnpj || ''}</div></div>`;
+        let html = `<html><head><title>Quinzena</title><style>body{font-family:Arial,sans-serif; margin:20px; padding:20px; border:2px solid #000;} .logo-area{text-align:center; margin-bottom:10px;} .logo-area img{max-height:80px; margin-bottom:10px;} .titulo-empresa{font-size:22px; font-weight:bold; margin:0;} .sub-empresa{font-size:14px; font-weight:bold; margin:5px 0;} .titulo-doc{font-size:18px; font-weight:bold; margin:20px 0; text-align:center;} .texto-declara{font-size:14px; margin-bottom:30px; text-align:justify; line-height:1.5;} .tabela-lista{width:100%; border-collapse:collapse; font-size:14px;} .tabela-lista td{padding:12px 5px; vertical-align:bottom;} .linha-ass{border-bottom:1px solid #000; width:100%; display:inline-block; margin-bottom:2px;} .rodape-data{text-align:right; margin-top:40px; font-size:16px; font-weight:bold;}</style></head><body>`;
+        let logoHtml = db.empresa.logo ? `<img src="${db.empresa.logo}">` : `<div class="titulo-empresa">${db.empresa.fantasia || 'NOME DA EMPRESA'}</div>`;
+        html += `<div class="logo-area">${logoHtml}<div class="sub-empresa">${db.empresa.razao || ''}</div><div class="sub-empresa">CNPJ ${db.empresa.cnpj || ''}</div></div>`;
         html += `<div class="titulo-doc">FOLHA DE PAGAMENTO DE ADIANTAMENTO DA QUINZENA</div>`;
         html += `<div class="texto-declara">Ao assinar esta folha, declaro que recebi, da empresa supracitada, a importância respectiva a cada colaborador em adiantamento do salário do mês de <b>${getExtensoMes(mesNum).toUpperCase()} DE ${ano}</b>.</div>`;
         html += `<table class="tabela-lista">`;
@@ -830,8 +864,26 @@
             let hs = f.horarios || { entrada: '07:00', saida: '17:00', intEnt: '11:00', intSai: '12:00', folga: '' };
             let expedHtml = '<table class="dias-sem">';
             for(let dw=1; dw<=7; dw++) { let realDw = dw === 7 ? 0 : dw; let isAberto = db.configGerais.diasFuncionamento.includes(realDw.toString()); let isFolga = hs.folga === realDw.toString(); let textoH = (!isAberto || isFolga) ? 'Folga' : `${hs.entrada} às ${hs.saida} &nbsp;&nbsp;&nbsp; ${hs.intEnt} às ${hs.intSai}`; expedHtml += `<tr><td>${diasSemanaFull[realDw]}</td><td align="right">${textoH}</td></tr>`; } expedHtml += '</table>';
+            
+            let feriasFunc = db.registros.filter(r => r.type === 'ferias' && r.funcId === id);
+
             html += `<div ${idx !== itensSelecionados.size-1 ? 'class="page-break"' : ''}><div class="cabecalho"><div class="cab-left"><div style="background:#ddd; font-weight:bold; text-align:center; padding:2px; border-bottom:1px solid #000; margin:-5px -5px 5px -5px;">FOLHA DE PONTO DIÁRIA</div><div><span class="bold">Empresa:</span> ${db.empresa.razao || ''}</div><div><span class="bold">CNPJ:</span> ${db.empresa.cnpj || ''}</div><div><span class="bold">Endereço:</span> ${db.empresa.rua || ''}, ${db.empresa.numero || ''} - ${db.empresa.bairro || ''}</div><div><span class="bold">Cidade/UF:</span> ${db.empresa.cidade || ''} / ${db.empresa.uf || ''}</div><div style="border-top:1px solid #000; margin:5px -5px 5px -5px;"></div><div><span class="bold">${f.codigo ? f.codigo+' - ' : ''}${f.nome}</span></div><div><span class="bold">Função:</span> ${funName} &nbsp;&nbsp; <span class="bold">Serviço:</span> ${db.empresa.fantasia || ''}</div><div><span class="bold">CTPS:</span> ${f.ctps || ''} &nbsp;&nbsp; <span class="bold">Admissão:</span> ${formatDataBR(f.admissao)}</div></div><div class="cab-right"><div><span class="bold">Período:</span> 01/${String(mes).padStart(2,'0')}/${ano} a ${diasNoMes}/${String(mes).padStart(2,'0')}/${ano}</div><div style="border-top:1px solid #000; margin:5px -5px 5px -5px;"></div>${expedHtml}</div></div><table><tr><th rowspan="2" colspan="2">Dias</th><th rowspan="2">Entrada</th><th colspan="2">Intervalo</th><th rowspan="2">Saída</th><th colspan="2">Hora Extra</th><th rowspan="2">Assinatura</th></tr><tr><th>Saída</th><th>Entrada</th><th>Entrada</th><th>Saída</th></tr>`;
-            for(let d=1; d<=diasNoMes; d++) { let dt = new Date(ano, mes-1, d); let diaW = dt.getDay(); let isAberto = db.configGerais.diasFuncionamento.includes(diaW.toString()); let isFolga = hs.folga === diaW.toString(); if(!isAberto || isFolga) { html += `<tr class="tr-off"><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td></tr>`; } else { html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`; } }
+            for(let d=1; d<=diasNoMes; d++) { 
+                let dt = new Date(ano, mes-1, d); let diaW = dt.getDay(); 
+                let isAberto = db.configGerais.diasFuncionamento.includes(diaW.toString()); 
+                let isFolga = hs.folga === diaW.toString(); 
+                
+                let emFerias = false;
+                feriasFunc.forEach(r => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; if(dt >= d1 && dt <= d2) emFerias = true; });
+
+                if(emFerias) {
+                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td colspan="6">Em férias</td><td>Em férias</td></tr>`;
+                } else if(!isAberto || isFolga) { 
+                    html += `<tr class="tr-off"><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td></tr>`; 
+                } else { 
+                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`; 
+                } 
+            }
             html += `</table><div style="margin-top:20px; text-align:center;">Reconheço a exatidão destas anotações.<br><br><div style="display:flex; justify-content:space-between; margin-top:30px; padding:0 20px;"><div>Data: ___/___/______</div><div style="width:250px; border-top:1px solid #000; padding-top:5px;">Assinatura do Diretor</div></div></div></div>`;
         });
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintPonto');
