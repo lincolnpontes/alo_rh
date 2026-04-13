@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.10</title>
+    <title>Alô RH v1.0.11</title>
     <style>
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
@@ -87,7 +87,7 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.10</div>
+    <div class="splash-versao">v1.0.11</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -294,12 +294,12 @@
         
         <div class="form-group">
             <label>Chaves PIX:</label>
-            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-                <select id="novoPixTipo" style="width: 80px; padding: 10px 5px;" onchange="document.getElementById('novoPixInput').value=''; document.getElementById('novoPixInput').focus();">
+            <div style="display: flex; gap: 5px; margin-bottom: 5px; align-items:center;">
+                <select id="novoPixTipo" style="width: auto; padding: 8px 4px;" onchange="document.getElementById('novoPixInput').value=''; document.getElementById('novoPixInput').focus();">
                     <option value="CPF">CPF</option><option value="Celular">Celular</option><option value="E-mail">E-mail</option><option value="Aleatória">Aleatória</option>
                 </select>
-                <input type="text" id="novoPixInput" placeholder="Chave PIX" style="flex: 1; min-width: 0;" oninput="mascaraPixDinamica(this)">
-                <button class="btn-action" onclick="addPix()" style="padding: 5px 10px; width: auto; font-size: 14px; flex-shrink: 0;">+</button>
+                <input type="text" id="novoPixInput" placeholder="Chave PIX" style="flex: 1; padding: 8px; min-width: 0;" oninput="mascaraPixDinamica(this)">
+                <button class="btn-action" onclick="addPix()" style="width: 36px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; flex-shrink: 0;">+</button>
             </div>
             <div id="listaPix" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:100px; overflow-y:auto;"></div>
         </div>
@@ -524,6 +524,7 @@
     function parseMoeda(str) { if(!str) return 0; return parseFloat(String(str).replace(/\./g, "").replace(",", ".")); }
     function formatMoeda(val) { return parseFloat(val).toLocaleString('pt-BR', {minimumFractionDigits: 2}); }
     function formatDataBR(dataStr) { if(!dataStr) return ""; const partes = dataStr.split('-'); if(partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`; return dataStr; }
+    function formatDataCurta(dataStr) { if(!dataStr) return ""; let p = dataStr.split('-'); if(p.length !== 3) return dataStr; const m = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"]; return `${p[2]}/${m[parseInt(p[1])-1]}`; }
     function getExtensoMes(mesNum) { const m = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]; return m[parseInt(mesNum)-1] || ""; }
 
     function mascaraPixDinamica(el) {
@@ -574,18 +575,18 @@
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Classe', semanal: false };
             let isSelected = itensSelecionados.has(f.id); let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
             let badgeExtra = catObj.semanal ? '<span style="background:#E65100; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">SEMANAL</span>' : '';
-            let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : '';
+            let funcCodStr = f.codigo ? `<div style="color:#00695C; font-size:11px; font-weight:bold; margin-bottom:1px;">[${f.codigo}]</div>` : '';
             let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função';
             
             let feriasMsg = '';
             let feriasList = db.registros.filter(r => r.type === 'ferias' && r.funcId === f.id);
             for(let r of feriasList) {
                 let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1;
-                if(hj >= d1 && hj <= d2) { feriasMsg = `<div style="color:#1565C0; font-size:11px; font-weight:bold; white-space:nowrap;">Em férias</div>`; break; } 
-                else if (d1 > hj) { let diff = (d1 - hj) / 86400000; if(diff <= 15) { feriasMsg = `<div style="color:#F57F17; font-size:11px; font-weight:bold; white-space:nowrap;">Férias em breve</div>`; break; } }
+                if(hj >= d1 && hj <= d2) { feriasMsg = `<div style="color:#1565C0; font-size:11px; font-weight:bold; text-align:right;">Em férias<br>até ${formatDataCurta(r.dataFim)}</div>`; break; } 
+                else if (d1 > hj) { let diff = (d1 - hj) / 86400000; if(diff <= 15) { feriasMsg = `<div style="color:#F57F17; font-size:11px; font-weight:bold; text-align:right;">Férias em breve<br>(${formatDataCurta(r.data)})</div>`; break; } }
             }
 
-            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info"><div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funcCodStr}${funName} • ${catObj.nome}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${feriasMsg}</div></li>`;
+            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info">${funcCodStr}<div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funName} • ${catObj.nome}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${feriasMsg}</div></li>`;
         });
         if(funcs.length === 0) html = `<li style="padding: 20px; text-align: center; color: #999;">Nenhum funcionário encontrado.</li>`;
         lista.innerHTML = html;
@@ -608,7 +609,7 @@
             let funcs = [...db.funcionarios].sort((a,b) => a.nome.localeCompare(b.nome));
             funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : ''; let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função'; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${f.nome}</strong><br><small style="color:#666;">${funName}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div></div>`; });
         } else if(tipo === 'categorias') {
-            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes (Setores)"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
+            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
             db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${c.cor}; color:${c.corTexto || '#fff'}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${c.nome}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse('${c.id}')">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias','${c.id}')">🗑️</button></div></div>`; });
         } else if(tipo === 'funcoes') {
             fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Funções/Cargos"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFuncao(null);
@@ -646,7 +647,7 @@
         fecharModal('modalListagem'); tempPix = [];
         if(id) {
             let f = db.funcionarios.find(x => x.id === id); carregarComboCategorias(f.categoria, f.funcao, f.vtRota);
-            document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcFuncao').value = f.funcao || ''; document.getElementById('funcCategoria').value = f.categoria || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
+            document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
             document.getElementById('funcHoraEntrada').value = (f.horarios && f.horarios.entrada) ? f.horarios.entrada : '07:00'; document.getElementById('funcHoraSaida').value = (f.horarios && f.horarios.saida) ? f.horarios.saida : '17:00'; document.getElementById('funcHoraIntEnt').value = (f.horarios && f.horarios.intEnt) ? f.horarios.intEnt : '11:00'; document.getElementById('funcHoraIntSai').value = (f.horarios && f.horarios.intSai) ? f.horarios.intSai : '12:00'; document.getElementById('funcDiaFolga').value = (f.horarios && f.horarios.folga !== undefined) ? f.horarios.folga : '';
             if(f.pixList) tempPix = JSON.parse(JSON.stringify(f.pixList));
         } else {
@@ -657,8 +658,7 @@
     }
     function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config" style="align-items:flex-start;"><div><span style="word-break: break-all;">${p.chave}</span><br><label class="radio-custom"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label></div><button onclick="removerPix(${i})" style="margin-top:5px;">X</button></div>`).join(''); }
     function addPix() { 
-        let tipo = document.getElementById('novoPixTipo').value;
-        let chv = document.getElementById('novoPixInput').value.trim(); 
+        let tipo = document.getElementById('novoPixTipo').value; let chv = document.getElementById('novoPixInput').value.trim(); 
         if(tipo === 'E-mail') { chv = chv.toLowerCase(); if(!chv.includes('@') || !chv.includes('.')) return alert('Digite um e-mail válido com @ e domínio.'); }
         if(chv) { tempPix.push({ chave: chv, principal: tempPix.length === 0 }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } 
     }
@@ -732,6 +732,9 @@
         for(let d = new Date(d1Valid); d <= d2Valid; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { temDiaUtil = true; break; } }
         if(!temDiaUtil) return alert("O período selecionado não contém dias úteis de trabalho. Verifique as configurações da empresa.");
 
+        let conflitoFerias = db.registros.some(r => { if(r.type !== 'ferias' || r.funcId !== funcId) return false; let rIni = r.data; let rFim = r.dataFim || r.data; return (dataIni <= rFim && dataFim >= rIni); });
+        if(conflitoFerias) return alert("Não é possível registrar ausência. O funcionário está de férias neste período!");
+
         let conflito = db.registros.some(r => { if(r.type !== 'falta' || r.funcId !== funcId || r.id === editId) return false; let rIni = r.data; let rFim = r.dataFim || r.data; return (dataIni <= rFim && dataFim >= rIni); });
         if(conflito) return alert("Já existe uma ausência registrada nestes dias para este funcionário.");
         
@@ -774,7 +777,7 @@
     function salvarFerias() { const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); }
     function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
-    function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); } }
+    function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); renderizarLista(); } }
 
     function abrirModalAniversarios() {
         let box = document.getElementById('listaAniversarios'); let html = '';
@@ -816,7 +819,20 @@
             let descontoPassagens = (faltasAnt + feriasMesAt) * passagensPorDia; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
             let valorUnit = parseMoeda(rotaObj.valor); let valTotal = passagensFinais * valorUnit;
             arrVTParaImprimir.push({ id: f.id, nome: f.nome, rota: rotaObj.rota, valorUnit: valorUnit, passagens: passagensFinais, valTotal: valTotal });
-            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ddd;"><div style="flex:1;"><strong>${f.nome}</strong><br><small>${rotaObj.rota} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc.: -${descontoPassagens}</small></div><div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;"><div style="white-space:nowrap;"><input type="number" id="vt_pass_${f.id}" value="${passagensFinais}" style="width:50px; padding:5px; text-align:center;" onchange="atualizarArrVT('${f.id}', 'passagens', this.value)"> unid.</div><div style="white-space:nowrap;">R$ <input type="text" id="vt_val_${f.id}" value="${formatMoeda(valTotal)}" style="width:70px; padding:5px; text-align:center;" oninput="maskMoeda(this)" onchange="atualizarArrVT('${f.id}', 'valor', this.value)"></div></div></div>`;
+            
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ddd;">
+                <div style="flex:1;"><strong>${f.nome}</strong><br><small>${rotaObj.rota} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc.: -${descontoPassagens}</small></div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:12px;">
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <label style="margin:0; color:#555;">Passagens:</label>
+                        <input type="number" id="vt_pass_${f.id}" value="${passagensFinais}" style="width:60px; padding:6px; text-align:center; border:1px solid #ccc; border-radius:4px;" onchange="atualizarArrVT('${f.id}', 'passagens', this.value)">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <label style="margin:0; color:#555;">Valor (R$):</label>
+                        <input type="text" id="vt_val_${f.id}" value="${formatMoeda(valTotal)}" style="width:60px; padding:6px; text-align:center; border:1px solid #ccc; border-radius:4px;" oninput="maskMoeda(this)" onchange="atualizarArrVT('${f.id}', 'valor', this.value)">
+                    </div>
+                </div>
+            </div>`;
         });
         if(arrVTParaImprimir.length === 0) html = "<div style='padding:15px;'>Nenhum funcionário selecionado possui rota de VT configurada.</div>";
         box.innerHTML = html;
