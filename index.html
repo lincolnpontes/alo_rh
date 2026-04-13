@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.11</title>
+    <title>Alô RH v1.0.12</title>
     <style>
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
@@ -87,7 +87,7 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.11</div>
+    <div class="splash-versao">v1.0.12</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -294,12 +294,12 @@
         
         <div class="form-group">
             <label>Chaves PIX:</label>
-            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-                <select id="novoPixTipo" style="width: 90px; padding: 10px 5px;" onchange="document.getElementById('novoPixInput').value=''; document.getElementById('novoPixInput').focus();">
+            <div style="display: flex; gap: 5px; margin-bottom: 5px; align-items:stretch;">
+                <select id="novoPixTipo" style="width: auto; padding: 8px 4px;" onchange="document.getElementById('novoPixInput').value=''; document.getElementById('novoPixInput').focus();">
                     <option value="CPF">CPF</option><option value="Celular">Celular</option><option value="E-mail">E-mail</option><option value="Aleatória">Aleatória</option>
                 </select>
-                <input type="text" id="novoPixInput" placeholder="Chave PIX" style="flex: 1; min-width: 0;" oninput="mascaraPixDinamica(this)">
-                <button class="btn-action" onclick="addPix()" style="width: 40px; flex-shrink: 0; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 20px;">+</button>
+                <input type="text" id="novoPixInput" placeholder="Chave PIX" style="flex: 1; padding: 8px; min-width: 0;" oninput="mascaraPixDinamica(this)">
+                <button class="btn-action" onclick="addPix()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">+</button>
             </div>
             <div id="listaPix" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:100px; overflow-y:auto;"></div>
         </div>
@@ -346,7 +346,7 @@
             <div style="display: flex; gap: 5px;">
                 <input type="text" id="novoVTRota" placeholder="Rota (Ex: Centro)" style="flex: 2;">
                 <input type="text" id="novoVTValor" placeholder="R$ 0,00" inputmode="numeric" oninput="maskMoeda(this)" style="flex: 1.5;">
-                <button class="btn-action" onclick="addVT()" style="padding: 10px 15px; flex-shrink: 0;" id="btnSalvarVT">+</button>
+                <button class="btn-action" onclick="addVT()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;" id="btnSalvarVT">+</button>
             </div>
         </div>
         <div id="listaVT" style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 15px; max-height: 120px; overflow-y: auto;"></div>
@@ -355,7 +355,7 @@
         <div class="form-group" style="margin-bottom: 5px;">
             <div style="display: flex; gap: 5px;">
                 <input type="text" id="novoMotivo" placeholder="Ex: Farmácia" style="flex: 1;">
-                <button class="btn-action" onclick="addMotivo()" style="padding: 10px 15px; flex-shrink: 0;">+</button>
+                <button class="btn-action" onclick="addMotivo()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">+</button>
             </div>
         </div>
         <div id="listaMotivos" style="background: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 120px; overflow-y: auto;"></div>
@@ -575,7 +575,7 @@
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Classe', semanal: false };
             let isSelected = itensSelecionados.has(f.id); let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
             let badgeExtra = catObj.semanal ? '<span style="background:#E65100; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">SEMANAL</span>' : '';
-            let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : '';
+            let funcCodStr = f.codigo ? `<div style="color:#00695C; font-size:11px; font-weight:bold; margin-bottom:1px;">[${f.codigo}]</div>` : '';
             let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função';
             
             let feriasMsg = '';
@@ -586,7 +586,7 @@
                 else if (d1 > hj) { let diff = (d1 - hj) / 86400000; if(diff <= 15) { feriasMsg = `<div style="color:#F57F17; font-size:11px; font-weight:bold; text-align:right;">Férias em breve<br>(${formatDataCurta(r.data)})</div>`; break; } }
             }
 
-            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info"><div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funcCodStr}${funName} • ${catObj.nome}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${feriasMsg}</div></li>`;
+            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info">${funcCodStr}<div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funName} • ${catObj.nome}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${feriasMsg}</div></li>`;
         });
         if(funcs.length === 0) html = `<li style="padding: 20px; text-align: center; color: #999;">Nenhum funcionário encontrado.</li>`;
         lista.innerHTML = html;
@@ -607,7 +607,7 @@
         if(tipo === 'funcionarios') {
             document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = 'flex'; document.getElementById('btnFuncoesListagem').style.display = 'flex'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
             let funcs = [...db.funcionarios].sort((a,b) => a.nome.localeCompare(b.nome));
-            funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : ''; let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função'; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><strong>${f.nome}</strong><br><small style="color:#666;">${codStr}${funName}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div></div>`; });
+            funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : ''; let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função'; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${f.nome}</strong><br><small style="color:#666;">${funName}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div></div>`; });
         } else if(tipo === 'categorias') {
             fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
             db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${c.cor}; color:${c.corTexto || '#fff'}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${c.nome}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse('${c.id}')">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias','${c.id}')">🗑️</button></div></div>`; });
