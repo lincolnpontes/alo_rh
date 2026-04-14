@@ -30,8 +30,9 @@
         .scroll-area { overflow-y: auto; flex: 1; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
         
         .filters { padding: 10px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #eee; background: white; flex-shrink: 0; }
-        .chip { background-color: #e0e0e0; color: #333; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; border: 2px solid transparent; }
+        .chip { background-color: #e0e0e0; color: #333; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; border: 2px solid transparent; transition: 0.3s; }
         .chip.active { border-color: #333; opacity: 0.9; }
+        .chip.aptos { background-color: #4CAF50; color: white; border-color: #388E3C; }
         
         .list { padding: 0; margin: 0; list-style: none; }
         .item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; position: relative; user-select: none; }
@@ -71,7 +72,7 @@
         input:checked + .slider:before { transform: translateX(20px); }
         
         .list-item-config { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #ddd; padding: 8px 10px; border-radius: 5px; margin-bottom: 5px; font-size: 13px; }
-        .list-item-config button { background: #ffcdd2; color: #d32f2f; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: bold; }
+        .list-item-config button { background: #ffcdd2; color: #d32f2f; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: bold; flex-shrink: 0; }
         .btn-edit-small { background: #E0F2F1 !important; color: #00695C !important; margin-right: 5px; }
         
         .radio-custom { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; color: #1565C0; font-weight: bold; }
@@ -81,6 +82,8 @@
         .checkbox-dias label { display: flex; align-items: center; gap: 3px; font-size: 12px; font-weight: normal; color: #333; }
         
         .edit-highlight { background-color: #E3F2FD; border: 1px dashed #1565C0; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
+        .btn-dia-rapido { background: #fff; border: 1px solid #00695C; color: #00695C; border-radius: 6px; padding: 8px; flex: 1; font-size: 12px; font-weight: bold; text-align: center; cursor: pointer; }
+        .btn-dia-rapido:active { background: #00695C; color: #fff; }
     </style>
 </head>
 <body>
@@ -181,7 +184,7 @@
         </div>
 
         <div id="conteudoListagem" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
-        <div class="modal-actions" style="flex-shrink: 0;"><button class="btn-cancel" onclick="fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex';" style="width: 100%;">Voltar</button></div>
+        <div class="modal-actions" style="flex-shrink: 0;"><button class="btn-cancel" id="btnVoltarListagem" onclick="fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex';" style="width: 100%;">Voltar</button></div>
     </div>
 </div>
 
@@ -197,7 +200,7 @@
         <div class="form-group"><label>Razão Social:</label><input type="text" id="empRazao"></div>
         <div class="form-group"><label>Nome Fantasia:</label><input type="text" id="empFantasia"></div>
         <div class="form-group"><label>CNPJ:</label><input type="text" id="empCNPJ" inputmode="numeric" oninput="maskCNPJ(this)" placeholder="00.000.000/0000-00"></div>
-        <div class="form-group"><label>Rua:</label><input type="text" id="empRua"></div>
+        <div class="form-group"><label>Endereço:</label><input type="text" id="empRua"></div>
         <div style="display: flex; gap:10px;"><div class="form-group" style="flex:1;"><label>Número:</label><input type="text" id="empNum" inputmode="numeric"></div><div class="form-group" style="flex:3;"><label>Bairro:</label><input type="text" id="empBairro"></div></div>
         <div style="display: flex; gap:10px;"><div class="form-group" style="flex:2;"><label>Cidade:</label><input type="text" id="empCidade"></div><div class="form-group" style="flex:1;"><label>UF:</label><select id="empUF"><option value="PB">PB</option><option value="PE">PE</option><option value="RN">RN</option><option value="CE">CE</option><option value="SP">SP</option><option value="RJ">RJ</option></select></div></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display='flex';">Cancelar</button><button class="btn-action" onclick="salvarEmpresa()">Salvar</button></div>
@@ -215,9 +218,31 @@
         </div>
         <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:5px; margin-top: 10px;">
             <label class="switch"><input type="checkbox" id="classeSemanal"><span class="slider"></span></label>
-            <span style="font-weight:bold; font-size:12px; color:#E65100;">Funcionários dessa classe recebem por Semana (Extra)</span>
+            <span style="font-weight:bold; font-size:12px; color:#E65100;">Funcionários dessa classe recebem por Semana</span>
         </div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormClasse'); abrirGerenciar('categorias');">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
+
+        <div class="section-title">Horários Padrão (Expediente)</div>
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <input type="time" id="classeHoraEntrada" style="flex: 1;" title="Entrada">
+            <input type="time" id="classeHoraSaida" style="flex: 1;" title="Saída">
+        </div>
+        <div class="section-title" style="margin-top: 5px;">Horários Padrão (Intervalo)</div>
+        <div style="display: flex; gap: 5px; margin-bottom: 5px; align-items:center;">
+            <input type="time" id="classeHoraIntEnt" style="flex: 1;" title="Início Intervalo">
+            <input type="time" id="classeHoraIntSai" style="flex: 1;" title="Fim Intervalo">
+        </div>
+        <label style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" id="classeSemIntervalo" onchange="toggleIntervaloClasse()"> Classe sem intervalo de descanso</label>
+
+        <div class="section-title">Salários Base da Classe</div>
+        <div class="form-group" style="margin-bottom: 5px;">
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="novoSalarioClasse" placeholder="R$ 0,00" inputmode="numeric" oninput="maskMoeda(this)" style="flex: 1;">
+                <button class="btn-action" onclick="addSalarioClasse()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">+</button>
+            </div>
+        </div>
+        <div id="listaSalariosClasse" style="background: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 100px; overflow-y: auto;"></div>
+
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormClasse'); abrirGerenciar('funcionarios');">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
     </div>
 </div>
 
@@ -226,7 +251,7 @@
         <div class="modal-title">Função</div>
         <input type="hidden" id="funcaoId">
         <div class="form-group"><label>Nome da Função:</label><input type="text" id="funcaoNome" placeholder="Ex: Garçom, Aux. Cozinha"></div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFuncao'); abrirGerenciar('funcoes');">Cancelar</button><button class="btn-action" onclick="salvarFuncao()">Salvar</button></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFuncao'); abrirGerenciar('funcionarios');">Cancelar</button><button class="btn-action" onclick="salvarFuncao()">Salvar</button></div>
     </div>
 </div>
 
@@ -241,7 +266,7 @@
 </div>
 
 <div class="modal-overlay" id="modalFormFuncionario">
-    <div class="modal">
+    <div class="modal" style="padding-top:15px;">
         <div class="modal-title">Cadastro de Funcionário</div>
         <input type="hidden" id="funcId">
         
@@ -268,26 +293,23 @@
 
         <div class="section-title">Vínculo e Financeiro</div>
         <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:1;"><label>Classe:</label><select id="funcCategoria"></select></div>
+            <div class="form-group" style="flex:1;"><label>Classe:</label><select id="funcCategoria" onchange="aplicarPadroesClasse()"></select></div>
             <div class="form-group" style="flex:1;"><label>Função:</label><select id="funcFuncao"></select></div>
         </div>
         
-        <div class="form-group">
-            <div style="display: flex; justify-content: space-between;">
-                <label style="flex:1;">Horários e Expediente:</label>
-                <label style="flex:1;">Horário do Intervalo:</label>
+        <div class="form-group" style="background:#f9f9f9; padding:10px; border-radius:5px; border:1px solid #eee;">
+            <div style="display: flex; justify-content: space-between; font-weight:bold; font-size:12px; color:#555; margin-bottom:5px;">
+                <span style="flex:1;">Expediente:</span>
+                <span style="flex:1;">Intervalo:</span>
             </div>
-            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
                 <input type="time" id="funcHoraEntrada" style="flex: 1;" title="Entrada">
                 <input type="time" id="funcHoraSaida" style="flex: 1;" title="Saída">
                 <input type="time" id="funcHoraIntEnt" style="flex: 1;" title="Início Intervalo">
                 <input type="time" id="funcHoraIntSai" style="flex: 1;" title="Fim Intervalo">
             </div>
-            <select id="funcDiaFolga" style="width: 100%;">
-                <option value="">-- Selecione o Dia de Folga Padrão --</option>
-                <option value="1">Segunda-feira</option><option value="2">Terça-feira</option><option value="3">Quarta-feira</option>
-                <option value="4">Quinta-feira</option><option value="5">Sexta-feira</option><option value="6">Sábado</option><option value="0">Domingo</option>
-            </select>
+            <label style="font-weight:bold; font-size:12px; color:#555; display:block; margin-bottom:5px;">Dias de Folga Padrão:</label>
+            <div class="checkbox-dias" id="boxDiasFolgaFunc"></div>
         </div>
 
         <div class="form-group"><label>Rota do Vale Transporte:</label><select id="funcVTRota"></select></div>
@@ -299,13 +321,13 @@
                     <option value="CPF">CPF</option><option value="Celular">Celular</option><option value="E-mail">E-mail</option><option value="Aleatória">Aleatória</option>
                 </select>
                 <input type="text" id="novoPixInput" placeholder="Chave PIX" style="flex: 1; padding: 8px; min-width: 0;" oninput="mascaraPixDinamica(this)">
-                <button class="btn-action" onclick="addPix()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">+</button>
+                <button class="btn-action" onclick="addPix()" style="flex: none; width: 40px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold;">+</button>
             </div>
             <div id="listaPix" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:100px; overflow-y:auto;"></div>
         </div>
         
         <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:1;"><label>Salário Base:</label><input type="text" id="funcSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
+            <div class="form-group" style="flex:1;"><label>Salário Base (Mensal):</label><input type="text" id="funcSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
             <div class="form-group" style="flex:1;"><label>Gratificação:</label><input type="text" id="funcGratificacao" inputmode="numeric" oninput="maskMoeda(this)" placeholder="Opcional"></div>
         </div>
         <div style="display: flex; gap: 10px;">
@@ -374,10 +396,40 @@
         <button class="btn-outline" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Lançar Férias</button>
         
         <div id="btnPagarExtra" style="display:none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
-            <button class="btn-action" style="width: 100%; background:#E65100;" onclick="alert('Tela de Pagamento Semanal em Breve!')">✅ Confirmar Pagto da Semana</button>
+            <button class="btn-action" style="width: 100%; background:#E65100;" onclick="abrirModalPresencaSemana()">✅ Presença na Semana</button>
         </div>
 
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalAcoesFunc')">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalPresencaSemana">
+    <div class="modal">
+        <div class="modal-title" style="color:#E65100; border-color:#E65100;">Presença na Semana</div>
+        <p style="font-size:12px; color:#666; margin-top:0;">Adicione os dias trabalhados. Depois clique em Confirmar Pagamento para zerar o acumulado e gerar o recibo.</p>
+        
+        <div style="display:flex; gap:5px; margin-bottom:10px;" id="boxBotoesDiasRapidos"></div>
+        <div style="display:flex; gap:5px; align-items:center; margin-bottom:15px; background:#fff3e0; padding:8px; border-radius:5px;">
+            <input type="date" id="dataPresencaManual" style="flex:1;">
+            <button class="btn-action" style="background:#E65100; padding:10px;" onclick="addPresencaManual()">+ Dia</button>
+        </div>
+
+        <div id="listaPresencasPendentes" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:150px; overflow-y:auto; font-size:13px; margin-bottom:15px;"></div>
+        
+        <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:bold; margin-bottom:15px; border-top:2px solid #E65100; padding-top:10px;">
+            <span>Acumulado a Receber:</span>
+            <span id="totalPresencasPendentes" style="color:#E65100;">R$ 0,00</span>
+        </div>
+
+        <button class="btn-action" style="width: 100%; margin-bottom: 15px; background-color:#E65100; font-size:16px;" onclick="confirmarPagamentoSemana()">💰 Confirmar Pagamento</button>
+        
+        <button class="btn-outline" style="border:none; color:#777; padding:0; font-size:12px; text-decoration:underline;" onclick="toggleDiv('areaHistPagosSemana')">Ver Histórico de Pagamentos</button>
+        <div id="areaHistPagosSemana" style="display:none; margin-top:10px;">
+            <div class="section-title" style="background:#eeeeee; border-left-color:#9e9e9e;">Pagamentos Realizados</div>
+            <div id="listaHistoricoPagosSemana" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:150px; overflow-y:auto; font-size:12px;"></div>
+        </div>
+
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPresencaSemana'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button></div>
     </div>
 </div>
 
@@ -536,8 +588,8 @@
 
     // 2. DADOS BASE
     let db = carregarBanco(); 
-    let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set();
-    let isSyncingFundo = false; let tempVT = []; let tempMotivos = []; let tempPix = [];
+    let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false;
+    let isSyncingFundo = false; let tempVT = []; let tempMotivos = []; let tempPix = []; let tempSalariosClasse = [];
 
     function carregarBanco() {
         let base = { app_id: "alorh", empresa: { logo: "", razao: "", fantasia: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" }, categorias: [], funcoes: [], funcionarios: [], administradores: [], configGerais: { salarioMinimo: "1412,00", adiantamentoQuinzena: "500,00", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [] }, registros: [], configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, senhaAdmin: "1999" } };
@@ -560,22 +612,55 @@
     }
 
     function renderizarFiltros() { 
-        let html = `<div class="chip ${categoriaAtual === null ? 'active' : ''}" onclick="filtrarCat(null)">TODOS</div>`; 
+        let textTodos = filtroAptosHoje ? "APTOS HOJE" : "TODOS";
+        let classTodos = filtroAptosHoje ? "aptos" : (categoriaAtual === null ? "active" : "");
+        let html = `<div class="chip ${classTodos}" onclick="filtrarCat(null)">${textTodos}</div>`; 
         db.categorias.forEach(cat => { html += `<div class="chip ${categoriaAtual === cat.id ? 'active' : ''}" style="background-color: ${cat.cor || '#00695C'}; color: ${cat.corTexto || '#FFF'};" onclick="filtrarCat('${cat.id}')">${cat.nome}</div>`; }); 
         document.getElementById('containerFiltros').innerHTML = html; 
     }
-    function filtrarCat(id) { categoriaAtual = id; renderizarFiltros(); renderizarLista(); }
+    
+    function filtrarCat(id) { 
+        if(id === null) {
+            if(categoriaAtual === null) filtroAptosHoje = !filtroAptosHoje;
+            categoriaAtual = null;
+        } else {
+            categoriaAtual = id; filtroAptosHoje = false;
+        }
+        renderizarFiltros(); renderizarLista(); 
+    }
+
+    function isEmFerias(funcId, dateStr) {
+        return db.registros.some(r => {
+            if(r.type !== 'ferias' || r.funcId !== funcId) return false;
+            let d1 = r.data; let d2 = r.dataFim || r.data;
+            return (dateStr >= d1 && dateStr <= d2);
+        });
+    }
 
     function renderizarLista() {
         const lista = document.getElementById('listaPrincipal'); let html = '';
         let funcs = [...db.funcionarios]; if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual); funcs.sort((a,b) => a.nome.localeCompare(b.nome));
-        let hj = new Date(); hj.setHours(0,0,0,0);
+        let hj = new Date(); hj.setHours(0,0,0,0); let hjStr = getHojeSTR();
+        
+        if(filtroAptosHoje) {
+            funcs = funcs.filter(f => {
+                if(isEmFerias(f.id, hjStr)) return false;
+                let temAtestado = db.registros.some(r => r.type==='falta' && (r.tipo==='Atestado' || r.tipo==='Falta') && r.funcId===f.id && r.data<=hjStr && (r.dataFim?r.dataFim:r.data)>=hjStr);
+                if(temAtestado) return false;
+                let catObj = db.categorias.find(c => c.id === f.categoria);
+                if(catObj && catObj.semanal) {
+                    let temPresencaHoje = db.registros.some(r => r.type==='presenca' && r.funcId===f.id && r.data===hjStr);
+                    if(!temPresencaHoje) return false;
+                }
+                return true;
+            });
+        }
         
         funcs.forEach(f => {
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Classe', semanal: false };
             let isSelected = itensSelecionados.has(f.id); let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
-            let badgeExtra = catObj.semanal ? '<span style="background:#E65100; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">SEMANAL</span>' : '';
-            let funcCodStr = f.codigo ? `<div style="color:#00695C; font-size:11px; font-weight:bold; margin-bottom:1px;">[${f.codigo}]</div>` : '';
+            let badgeExtra = catObj.semanal ? `<div style="color:#E65100; font-size:11px; font-weight:bold; margin-bottom:2px; text-align:right;">SEMANAL</div>` : '';
+            let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : '';
             let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função';
             
             let feriasMsg = '';
@@ -586,7 +671,9 @@
                 else if (d1 > hj) { let diff = (d1 - hj) / 86400000; if(diff <= 15) { feriasMsg = `<div style="color:#F57F17; font-size:11px; font-weight:bold; text-align:right;">Férias em breve<br>(${formatDataCurta(r.data)})</div>`; break; } }
             }
 
-            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info">${funcCodStr}<div class="item-title">${f.nome} ${badgeExtra}</div><div class="item-subtitle">${funName} • ${catObj.nome}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${feriasMsg}</div></li>`;
+            let infoDireita = badgeExtra + feriasMsg;
+
+            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info"><div class="item-title">${f.nome}</div><div class="item-subtitle">${funcCodStr}${funName} • ${catObj.nome}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${infoDireita}</div></li>`;
         });
         if(funcs.length === 0) html = `<li style="padding: 20px; text-align: center; color: #999;">Nenhum funcionário encontrado.</li>`;
         lista.innerHTML = html;
@@ -606,16 +693,20 @@
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
         if(tipo === 'funcionarios') {
             document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = 'flex'; document.getElementById('btnFuncoesListagem').style.display = 'flex'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
+            document.getElementById('btnVoltarListagem').onclick = () => { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex'; };
             let funcs = [...db.funcionarios].sort((a,b) => a.nome.localeCompare(b.nome));
             funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${f.codigo}]</strong> ` : ''; let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função'; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${f.nome}</strong><br><small style="color:#666;">${funName}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc('${f.id}')">✏️</button></div></div>`; });
         } else if(tipo === 'categorias') {
             fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
+            document.getElementById('btnVoltarListagem').onclick = () => { abrirGerenciar('funcionarios'); };
             db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${c.cor}; color:${c.corTexto || '#fff'}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${c.nome}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse('${c.id}')">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias','${c.id}')">🗑️</button></div></div>`; });
         } else if(tipo === 'funcoes') {
             fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Funções/Cargos"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFuncao(null);
+            document.getElementById('btnVoltarListagem').onclick = () => { abrirGerenciar('funcionarios'); };
             db.funcoes.forEach((fn) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${fn.nome}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFuncao('${fn.id}')">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('funcoes','${fn.id}')">🗑️</button></div></div>`; });
         } else if(tipo === 'administradores') {
             document.getElementById('tituloListagem').innerText = "Administradores"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormAdmin(null);
+            document.getElementById('btnVoltarListagem').onclick = () => { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex'; };
             db.administradores.forEach((a) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${a.nome}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormAdmin('${a.id}')">✏️</button></div></div>`; });
         }
         lista.innerHTML = htmlLista; document.getElementById('modalListagem').style.display = 'flex';
@@ -631,16 +722,57 @@
     function abrirFormAdmin(id) { fecharModal('modalListagem'); if(id) { let a = db.administradores.find(x => x.id === id); document.getElementById('adminId').value = a.id; document.getElementById('adminNome').value = a.nome; document.getElementById('adminSenha').value = a.senha; } else { document.getElementById('adminId').value = ''; document.getElementById('adminNome').value = ''; document.getElementById('adminSenha').value = ''; } document.getElementById('modalFormAdmin').style.display = 'flex'; }
     function salvarAdmin() { let id = document.getElementById('adminId').value || 'adm_' + Date.now(); let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value }; const idx = db.administradores.findIndex(x => x.id === id); if(idx >= 0) db.administradores[idx] = novo; else db.administradores.push(novo); salvarBanco(); fecharModal('modalFormAdmin'); abrirGerenciar('administradores'); }
 
-    function abrirFormClasse(id) { fecharModal('modalListagem'); if(id) { let c = db.categorias.find(x => x.id === id); document.getElementById('classeId').value = c.id; document.getElementById('classeNome').value = c.nome; document.getElementById('classeCorFundo').value = c.cor || '#00695C'; document.getElementById('classeCorTexto').value = c.corTexto || '#ffffff'; document.getElementById('classeSemanal').checked = c.semanal || false; } else { document.getElementById('classeId').value = ''; document.getElementById('classeNome').value = ''; document.getElementById('classeCorFundo').value = '#00695C'; document.getElementById('classeCorTexto').value = '#ffffff'; document.getElementById('classeSemanal').checked = false; } document.getElementById('modalFormClasse').style.display = 'flex'; }
-    function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); abrirGerenciar('categorias'); renderizarFiltros(); renderizarLista(); }
+    // CLASSES
+    function abrirFormClasse(id) { 
+        fecharModal('modalListagem'); tempSalariosClasse = [];
+        if(id) { 
+            let c = db.categorias.find(x => x.id === id); document.getElementById('classeId').value = c.id; document.getElementById('classeNome').value = c.nome; document.getElementById('classeCorFundo').value = c.cor || '#00695C'; document.getElementById('classeCorTexto').value = c.corTexto || '#ffffff'; document.getElementById('classeSemanal').checked = c.semanal || false; 
+            document.getElementById('classeHoraEntrada').value = (c.horarios && c.horarios.entrada) ? c.horarios.entrada : ''; document.getElementById('classeHoraSaida').value = (c.horarios && c.horarios.saida) ? c.horarios.saida : ''; document.getElementById('classeHoraIntEnt').value = (c.horarios && c.horarios.intEnt) ? c.horarios.intEnt : ''; document.getElementById('classeHoraIntSai').value = (c.horarios && c.horarios.intSai) ? c.horarios.intSai : ''; document.getElementById('classeSemIntervalo').checked = (c.horarios && c.horarios.semIntervalo) || false;
+            if(c.salarios) tempSalariosClasse = [...c.salarios];
+        } else { 
+            document.getElementById('classeId').value = ''; document.getElementById('classeNome').value = ''; document.getElementById('classeCorFundo').value = '#00695C'; document.getElementById('classeCorTexto').value = '#ffffff'; document.getElementById('classeSemanal').checked = false; 
+            document.getElementById('classeHoraEntrada').value = ''; document.getElementById('classeHoraSaida').value = ''; document.getElementById('classeHoraIntEnt').value = ''; document.getElementById('classeHoraIntSai').value = ''; document.getElementById('classeSemIntervalo').checked = false;
+        } 
+        toggleIntervaloClasse(); renderListaSalariosClasse(); document.getElementById('modalFormClasse').style.display = 'flex'; 
+    }
+    function toggleIntervaloClasse() { let isSem = document.getElementById('classeSemIntervalo').checked; document.getElementById('classeHoraIntEnt').disabled = isSem; document.getElementById('classeHoraIntSai').disabled = isSem; if(isSem) { document.getElementById('classeHoraIntEnt').value = ''; document.getElementById('classeHoraIntSai').value = ''; } }
+    function renderListaSalariosClasse() { const box = document.getElementById('listaSalariosClasse'); if(tempSalariosClasse.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhum salário base.</div>'; return; } box.innerHTML = tempSalariosClasse.map((s, i) => `<div class="list-item-config"><span>R$ ${formatMoeda(s)}</span><button onclick="removerSalarioClasse(${i})">X</button></div>`).join(''); }
+    function addSalarioClasse() { let vStr = document.getElementById('novoSalarioClasse').value; let val = parseMoeda(vStr); if(val > 0) { tempSalariosClasse.push(val); document.getElementById('novoSalarioClasse').value = ''; renderListaSalariosClasse(); } }
+    function removerSalarioClasse(idx) { tempSalariosClasse.splice(idx, 1); renderListaSalariosClasse(); }
+    
+    function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked, horarios: { entrada: document.getElementById('classeHoraEntrada').value, saida: document.getElementById('classeHoraSaida').value, intEnt: document.getElementById('classeHoraIntEnt').value, intSai: document.getElementById('classeHoraIntSai').value, semIntervalo: document.getElementById('classeSemIntervalo').checked }, salarios: tempSalariosClasse }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); abrirGerenciar('categorias'); renderizarFiltros(); renderizarLista(); }
 
     function abrirFormFuncao(id) { fecharModal('modalListagem'); if(id) { let fn = db.funcoes.find(x => x.id === id); document.getElementById('funcaoId').value = fn.id; document.getElementById('funcaoNome').value = fn.nome; } else { document.getElementById('funcaoId').value = ''; document.getElementById('funcaoNome').value = ''; } document.getElementById('modalFormFuncao').style.display = 'flex'; }
     function salvarFuncao() { let id = document.getElementById('funcaoId').value || 'fn_' + Date.now(); let novo = { id: id, nome: document.getElementById('funcaoNome').value }; const idx = db.funcoes.findIndex(x => x.id === id); if(idx >= 0) db.funcoes[idx] = novo; else db.funcoes.push(novo); salvarBanco(); fecharModal('modalFormFuncao'); abrirGerenciar('funcoes'); }
 
+    // FUNCIONARIO
     function carregarComboCategorias(selCat = '', selFun = '', selVt = '') { 
         const cCat = document.getElementById('funcCategoria'); cCat.innerHTML = '<option value="">-- Selecione a Classe --</option>'; db.categorias.forEach(c => cCat.innerHTML += `<option value="${c.id}" ${selCat === c.id ? 'selected' : ''}>${c.nome}</option>`); 
         const cFun = document.getElementById('funcFuncao'); cFun.innerHTML = '<option value="">-- Função --</option>'; db.funcoes.forEach(fn => cFun.innerHTML += `<option value="${fn.id}" ${selFun === fn.id ? 'selected' : ''}>${fn.nome}</option>`);
         const cVt = document.getElementById('funcVTRota'); cVt.innerHTML = '<option value="">-- Rota (Nenhuma) --</option>'; (db.configGerais.valesTransporte || []).forEach(v => cVt.innerHTML += `<option value="${v.rota}" ${selVt === v.rota ? 'selected' : ''}>${v.rota}</option>`);
+    }
+
+    function aplicarPadroesClasse() {
+        let catId = document.getElementById('funcCategoria').value;
+        let c = db.categorias.find(x => x.id === catId);
+        if(c) {
+            if(c.horarios) {
+                document.getElementById('funcHoraEntrada').value = c.horarios.entrada || ''; document.getElementById('funcHoraSaida').value = c.horarios.saida || '';
+                if(c.horarios.semIntervalo) { document.getElementById('funcHoraIntEnt').value = ''; document.getElementById('funcHoraIntSai').value = ''; document.getElementById('funcHoraIntEnt').disabled = true; document.getElementById('funcHoraIntSai').disabled = true; } else { document.getElementById('funcHoraIntEnt').value = c.horarios.intEnt || ''; document.getElementById('funcHoraIntSai').value = c.horarios.intSai || ''; document.getElementById('funcHoraIntEnt').disabled = false; document.getElementById('funcHoraIntSai').disabled = false; }
+            }
+            if(c.salarios && c.salarios.length > 0) { document.getElementById('funcSalario').value = formatMoeda(c.salarios[0]); }
+        }
+    }
+
+    function renderizarDiasFolgaFuncionario(arrFolgasSelecionadas) {
+        const box = document.getElementById('boxDiasFolgaFunc'); box.innerHTML = '';
+        const diasArr = [{v:'1', n:'Seg'},{v:'2', n:'Ter'},{v:'3', n:'Qua'},{v:'4', n:'Qui'},{v:'5', n:'Sex'},{v:'6', n:'Sáb'},{v:'0', n:'Dom'}];
+        diasArr.forEach(d => {
+            let isChecked = false;
+            if(arrFolgasSelecionadas) { isChecked = arrFolgasSelecionadas.includes(d.v); } 
+            else { isChecked = !db.configGerais.diasFuncionamento.includes(d.v); }
+            box.innerHTML += `<label><input type="checkbox" class="chk-folga-func" value="${d.v}" ${isChecked ? 'checked' : ''}> ${d.n}</label>`;
+        });
     }
 
     function abrirFormFunc(id) {
@@ -648,11 +780,13 @@
         if(id) {
             let f = db.funcionarios.find(x => x.id === id); carregarComboCategorias(f.categoria, f.funcao, f.vtRota);
             document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
-            document.getElementById('funcHoraEntrada').value = (f.horarios && f.horarios.entrada) ? f.horarios.entrada : '07:00'; document.getElementById('funcHoraSaida').value = (f.horarios && f.horarios.saida) ? f.horarios.saida : '17:00'; document.getElementById('funcHoraIntEnt').value = (f.horarios && f.horarios.intEnt) ? f.horarios.intEnt : '11:00'; document.getElementById('funcHoraIntSai').value = (f.horarios && f.horarios.intSai) ? f.horarios.intSai : '12:00'; document.getElementById('funcDiaFolga').value = (f.horarios && f.horarios.folga !== undefined) ? f.horarios.folga : '';
+            document.getElementById('funcHoraEntrada').value = (f.horarios && f.horarios.entrada) ? f.horarios.entrada : ''; document.getElementById('funcHoraSaida').value = (f.horarios && f.horarios.saida) ? f.horarios.saida : ''; document.getElementById('funcHoraIntEnt').value = (f.horarios && f.horarios.intEnt) ? f.horarios.intEnt : ''; document.getElementById('funcHoraIntSai').value = (f.horarios && f.horarios.intSai) ? f.horarios.intSai : ''; 
+            renderizarDiasFolgaFuncionario(f.horarios ? f.horarios.folgas : []);
             if(f.pixList) tempPix = JSON.parse(JSON.stringify(f.pixList));
         } else {
             carregarComboCategorias(); document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
-            document.getElementById('funcHoraEntrada').value = '07:00'; document.getElementById('funcHoraSaida').value = '17:00'; document.getElementById('funcHoraIntEnt').value = '11:00'; document.getElementById('funcHoraIntSai').value = '12:00'; document.getElementById('funcDiaFolga').value = '';
+            document.getElementById('funcHoraEntrada').value = ''; document.getElementById('funcHoraSaida').value = ''; document.getElementById('funcHoraIntEnt').value = ''; document.getElementById('funcHoraIntSai').value = ''; 
+            renderizarDiasFolgaFuncionario(null);
         }
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
@@ -664,7 +798,12 @@
     }
     function removerPix(idx) { tempPix.splice(idx, 1); if(tempPix.length > 0 && !tempPix.some(p => p.principal)) tempPix[0].principal = true; renderListaPix(); }
     function setPixPrincipal(idx) { tempPix.forEach((p, i) => p.principal = (i === idx)); }
-    function salvarFuncionario() { const id = document.getElementById('funcId').value || 'f_'+Date.now(); const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folga: document.getElementById('funcDiaFolga').value } }; const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); renderizarLista(); }
+    function salvarFuncionario() { 
+        const id = document.getElementById('funcId').value || 'f_'+Date.now(); 
+        let folgas = Array.from(document.querySelectorAll('.chk-folga-func:checked')).map(el => el.value);
+        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
+        const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); renderizarLista(); 
+    }
 
     // CONFIGS
     function renderListasConfig() { const listVT = document.getElementById('listaVT'); const listMot = document.getElementById('listaMotivos'); listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${v.rota} - <b style="color:#00695C;">R$ ${v.valor}</b></span><div><button class="btn-edit-small" onclick="editarVT(${i})">✏️</button><button onclick="removerVT(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>'; listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${m}</span><button onclick="removerMotivo(${i})">X</button></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>'; }
@@ -679,12 +818,69 @@
     function getAdminOptions(selectedId = '') { let html = '<option value="">-- Selecione --</option>'; db.administradores.forEach(a => { html += `<option value="${a.id}" ${selectedId === a.id ? 'selected' : ''}>${a.nome}</option>`; }); return html; }
     function getAdminNome(id) { let a = db.administradores.find(x => x.id === id); return a ? a.nome : 'N/I'; }
 
+    // PRESENÇA SEMANAL
+    function abrirModalPresencaSemana() {
+        fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId); if(!f) return;
+        document.getElementById('dataPresencaManual').value = getHojeSTR();
+        
+        let hj = new Date(); let day = hj.getDay(); let diff = (day === 0 ? -3 : 4 - day); 
+        let thu = new Date(hj); thu.setDate(hj.getDate() + diff); let fri = new Date(thu); fri.setDate(thu.getDate() + 1); let sat = new Date(thu); sat.setDate(thu.getDate() + 2); let sun = new Date(thu); sun.setDate(thu.getDate() + 3);
+        
+        let boxRapido = document.getElementById('boxBotoesDiasRapidos'); boxRapido.innerHTML = '';
+        let m = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+        let diasArr = [ {n:'Qui', dt:thu}, {n:'Sex', dt:fri}, {n:'Sáb', dt:sat}, {n:'Dom', dt:sun} ];
+        diasArr.forEach(d => { let dtStr = `${d.dt.getFullYear()}-${String(d.dt.getMonth()+1).padStart(2,'0')}-${String(d.dt.getDate()).padStart(2,'0')}`; boxRapido.innerHTML += `<button class="btn-dia-rapido" onclick="addPresencaManual('${dtStr}')">${d.n} (${d.dt.getDate()}/${m[d.dt.getMonth()]})</button>`; });
+        
+        renderizarPresencasPendentes(funcId); document.getElementById('modalPresencaSemana').style.display = 'flex';
+    }
+    
+    function addPresencaManual(dtForced = null) {
+        const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId);
+        let dt = dtForced || document.getElementById('dataPresencaManual').value; if(!dt) return;
+        let c = db.categorias.find(x => x.id === f.categoria); let valBase = 0;
+        if(c && c.salarios && c.salarios.length > 0) {
+            if(c.salarios.length === 1) { valBase = c.salarios[0]; } 
+            else { 
+                let opcoes = c.salarios.map((s,i) => `${i+1} -> R$ ${formatMoeda(s)}`).join('\n');
+                let esc = prompt(`Escolha o salário para este dia (Digite o número da opção):\n${opcoes}`);
+                if(esc && c.salarios[parseInt(esc)-1]) valBase = c.salarios[parseInt(esc)-1]; else return;
+            }
+        } else { valBase = parseMoeda(f.salario || db.configGerais.salarioMinimo); }
+        
+        // Verifica se ja tem presenca pendente nesse dia
+        if(db.registros.some(r => r.type==='presenca' && r.funcId===funcId && r.status==='pendente' && r.data===dt)) return alert("Dia já adicionado na lista pendente.");
+        
+        db.registros.push({ id: 'reg_'+Date.now(), type: 'presenca', funcId: funcId, data: dt, valor: valBase, status: 'pendente' }); salvarBanco(); renderizarPresencasPendentes(funcId);
+    }
+    
+    function renderizarPresencasPendentes(funcId) {
+        let box = document.getElementById('listaPresencasPendentes'); let hPagos = document.getElementById('listaHistoricoPagosSemana');
+        let pendentes = db.registros.filter(r => r.type === 'presenca' && r.funcId === funcId && r.status === 'pendente').sort((a,b) => new Date(a.data) - new Date(b.data));
+        let pagos = db.registros.filter(r => r.type === 'pagamento_semana' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
+        
+        let totalPend = 0; let html = '';
+        pendentes.forEach(r => { totalPend += r.valor; html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:5px 0;"><span>📅 ${formatDataBR(r.data)}</span><span><b style="color:#00695C;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; color:#d32f2f; cursor:pointer;" onclick="excluirRegistro('${r.id}', 'presenca')">X</button></span></div>`; });
+        document.getElementById('totalPresencasPendentes').innerText = `R$ ${formatMoeda(totalPend)}`; box.innerHTML = html || '<div style="color:#999; text-align:center;">Nenhum dia lançado na semana atual.</div>';
+        
+        let htmlP = ''; pagos.forEach(r => { htmlP += `<div style="border-bottom:1px solid #ddd; padding:5px 0;"><b>Pagamento em ${formatDataBR(r.data)}</b><br><span style="color:#E65100; font-weight:bold;">Total: R$ ${formatMoeda(r.valorTotal)} (${r.dias.length} dias)</span></div>`; });
+        hPagos.innerHTML = htmlP || '<div style="color:#999; text-align:center;">Nenhum histórico.</div>';
+    }
+
+    function confirmarPagamentoSemana() {
+        const funcId = document.getElementById('acoesFuncId').value;
+        let pendentes = db.registros.filter(r => r.type === 'presenca' && r.funcId === funcId && r.status === 'pendente');
+        if(pendentes.length === 0) return alert("Não há dias trabalhados na lista.");
+        if(!confirm("Confirmar pagamento dos dias pendentes? Isso vai zerar o acumulado.")) return;
+        let total = 0; let diasIds = []; pendentes.forEach(r => { total += r.valor; r.status = 'pago'; diasIds.push(r.data); });
+        db.registros.push({ id: 'reg_'+Date.now(), type: 'pagamento_semana', funcId: funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds });
+        salvarBanco(); renderizarPresencasPendentes(funcId); alert("Pagamento Confirmado e registrado no histórico!");
+    }
+
     // ADIANTAMENTOS
     function abrirModalAdiantamento(editId = null) {
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value;
         let selMotivo = document.getElementById('adiantMotivo'); selMotivo.innerHTML = ''; db.configGerais.motivosAdiantamento.forEach(m => selMotivo.innerHTML += `<option value="${m}">${m}</option>`); if(db.configGerais.motivosAdiantamento.length === 0) selMotivo.innerHTML = '<option value="Vale">Vale</option>';
         document.getElementById('adiantAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
-        
         let areaEdit = document.getElementById('areaEditAdiant');
         if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('adiantEditId').value = editId; document.getElementById('adiantData').value = r.data; document.getElementById('adiantValor').value = formatMoeda(r.valor); document.getElementById('adiantMotivo').value = r.motivo; document.getElementById('adiantForma').value = r.forma; document.getElementById('adiantAdmin').value = r.adminId; document.getElementById('btnSalvarAdiantamento').innerText = "Salvar Edição"; document.getElementById('btnCancelEditAdiant').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
         else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; document.getElementById('btnSalvarAdiantamento').innerText = "Gravar Lançamento"; document.getElementById('btnCancelEditAdiant').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
@@ -727,10 +923,9 @@
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('faltaEditId').value;
         let dataIni = document.getElementById('faltaData').value; let dataFim = document.getElementById('faltaDataFim').value || dataIni;
         
-        let temDiaUtil = false;
-        let d1Valid = new Date(dataIni + "T00:00:00"); let d2Valid = new Date(dataFim + "T00:00:00");
+        let temDiaUtil = false; let d1Valid = new Date(dataIni + "T00:00:00"); let d2Valid = new Date(dataFim + "T00:00:00");
         for(let d = new Date(d1Valid); d <= d2Valid; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { temDiaUtil = true; break; } }
-        if(!temDiaUtil) return alert("O período selecionado não contém dias úteis de trabalho. Verifique as configurações da empresa.");
+        if(!temDiaUtil) return alert("O período selecionado não contém dias úteis. Verifique as configurações da empresa.");
 
         let conflitoFerias = db.registros.some(r => { if(r.type !== 'ferias' || r.funcId !== funcId) return false; let rIni = r.data; let rFim = r.dataFim || r.data; return (dataIni <= rFim && dataFim >= rIni); });
         if(conflitoFerias) return alert("Não é possível registrar ausência. O funcionário está de férias neste período!");
@@ -752,11 +947,8 @@
             groups[mY].records.push(r);
             let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1;
             let diasUteisFalta = 0;
-            for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) {
-                if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; groups[mY].dsrSemanas.add(getWeekNumber(d)); }
-            }
-            if(r.descontarDia) { groups[mY].diasDesc += diasUteisFalta; }
-            if(r.descontarPassagem) groups[mY].passDesc += diasUteisFalta;
+            for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; groups[mY].dsrSemanas.add(getWeekNumber(d)); } }
+            if(r.descontarDia) { groups[mY].diasDesc += diasUteisFalta; } if(r.descontarPassagem) groups[mY].passDesc += diasUteisFalta;
         });
 
         for (const [mY, g] of Object.entries(groups)) {
@@ -777,7 +969,7 @@
     function salvarFerias() { const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); }
     function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
-    function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); renderizarLista(); } }
+    function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); else if(tela === 'presenca') renderizarPresencasPendentes(funcId); renderizarLista(); } }
 
     function abrirModalAniversarios() {
         let box = document.getElementById('listaAniversarios'); let html = '';
@@ -810,10 +1002,7 @@
             
             let passagensPorDia = 2; let passagensMes = diasUteis * passagensPorDia;
             
-            // Abater Faltas em DIAS UTEIS do mes anterior
             let faltasAnt = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarPassagem && r.data.startsWith(mesAntStr)).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasUteisFalta = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasUteisFalta++; } return acc + diasUteisFalta; }, 0);
-            
-            // Abater Ferias em DIAS UTEIS do mes atual
             let feriasMesAt = db.registros.filter(r => r.type === 'ferias' && r.funcId === id).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasFeriasUteis = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(d.getFullYear()===ano && (d.getMonth()+1)===mes && db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasFeriasUteis++; } return acc + diasFeriasUteis; }, 0);
 
             let descontoPassagens = (faltasAnt + feriasMesAt) * passagensPorDia; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
@@ -877,9 +1066,9 @@
         Array.from(itensSelecionados).forEach((id, idx) => {
             let f = db.funcionarios.find(x => x.id === id); if(!f) return;
             let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : '';
-            let hs = f.horarios || { entrada: '07:00', saida: '17:00', intEnt: '11:00', intSai: '12:00', folga: '' };
+            let hs = f.horarios || { entrada: '07:00', saida: '17:00', intEnt: '11:00', intSai: '12:00', folgas: [] };
             let expedHtml = '<table class="dias-sem">';
-            for(let dw=1; dw<=7; dw++) { let realDw = dw === 7 ? 0 : dw; let isAberto = db.configGerais.diasFuncionamento.includes(realDw.toString()); let isFolga = hs.folga === realDw.toString(); let textoH = (!isAberto || isFolga) ? 'Folga' : `${hs.entrada} às ${hs.saida} &nbsp;&nbsp;&nbsp; ${hs.intEnt} às ${hs.intSai}`; expedHtml += `<tr><td>${diasSemanaFull[realDw]}</td><td align="right">${textoH}</td></tr>`; } expedHtml += '</table>';
+            for(let dw=1; dw<=7; dw++) { let realDw = dw === 7 ? 0 : dw; let isAberto = db.configGerais.diasFuncionamento.includes(realDw.toString()); let isFolga = (hs.folgas || []).includes(realDw.toString()); let textoH = (!isAberto || isFolga) ? 'Folga' : `${hs.entrada} às ${hs.saida} &nbsp;&nbsp;&nbsp; ${hs.intEnt} às ${hs.intSai}`; expedHtml += `<tr><td>${diasSemanaFull[realDw]}</td><td align="right">${textoH}</td></tr>`; } expedHtml += '</table>';
             
             let feriasFunc = db.registros.filter(r => r.type === 'ferias' && r.funcId === id);
 
@@ -887,7 +1076,7 @@
             for(let d=1; d<=diasNoMes; d++) { 
                 let dt = new Date(ano, mes-1, d); let diaW = dt.getDay(); 
                 let isAberto = db.configGerais.diasFuncionamento.includes(diaW.toString()); 
-                let isFolga = hs.folga === diaW.toString(); 
+                let isFolga = (hs.folgas || []).includes(diaW.toString()); 
                 
                 let emFerias = false;
                 feriasFunc.forEach(r => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; if(dt >= d1 && dt <= d2) emFerias = true; });
