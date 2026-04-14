@@ -23,8 +23,9 @@
         .header-title { font-size: 20px; font-weight: bold; }
         .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin-left: 15px;}
         
-        .action-bar { display: none; justify-content: space-between; padding: 8px 10px; background: #37474F; align-items: center; flex-shrink: 0; gap: 4px; }
+        .action-bar { display: none; justify-content: space-between; padding: 8px 10px; background: #37474F; align-items: center; flex-shrink: 0; gap: 4px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
         .btn-action-bar { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 6px; padding: 6px 10px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;}
+        .btn-action-bar.ativo { background: #4CAF50; border-color: #388E3C; }
         
         .area-conteudo { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .scroll-area { overflow-y: auto; flex: 1; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
@@ -56,6 +57,8 @@
         .input-cor::-webkit-color-swatch-wrapper { padding: 0; }
         .input-cor::-webkit-color-swatch { border: none; border-radius: 6px; }
         
+        .time-input-large { height: 45px !important; border-radius: 10px !important; font-size: 16px !important; text-align: center; background-color: #f9f9f9; border: 1px solid #ccc; }
+        
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
         .btn-cancel, .btn-action, .btn-danger, .btn-outline { padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; text-align: center; border: none; font-size: 14px; }
         .btn-cancel { background: #eee; color: #333; }
@@ -81,7 +84,7 @@
         .checkbox-dias { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
         .checkbox-dias label { display: flex; align-items: center; gap: 3px; font-size: 12px; font-weight: normal; color: #333; }
         
-        .edit-highlight { background-color: #E3F2FD; border: 1px dashed #1565C0; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
+        .edit-highlight { background-color: #E3F2FD; border: 1px dashed #1565C0; padding: 10px; border-radius: 5px; margin-bottom: 15px; transition: 0.3s; }
         .btn-dia-rapido { background: #fff; border: 1px solid #00695C; color: #00695C; border-radius: 6px; padding: 8px; flex: 1; font-size: 12px; font-weight: bold; text-align: center; cursor: pointer; }
         .btn-dia-rapido:active { background: #00695C; color: #fff; }
     </style>
@@ -111,8 +114,10 @@
     
     <div class="area-conteudo">
         <div id="actionBar" class="action-bar">
-            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 5px; flex-wrap: nowrap; align-items:center;" id="boxBarraAcoes">
                 <button class="btn-action-bar" onclick="toggleModoSelecao()" id="btnModoSelecaoBar">☑️ Sel</button>
+                <div id="boxFiltrosDias" style="display:flex; gap:5px;"></div>
+                
                 <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
                 <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinz.</button>
                 <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
@@ -216,22 +221,24 @@
             <div class="form-group" style="flex:1;"><label>Cor do Fundo:</label><input type="color" class="input-cor" id="classeCorFundo" value="#00695C"></div>
             <div class="form-group" style="flex:1;"><label>Cor do Texto:</label><input type="color" class="input-cor" id="classeCorTexto" value="#ffffff"></div>
         </div>
-        <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:5px; margin-top: 10px;">
-            <label class="switch"><input type="checkbox" id="classeSemanal"><span class="slider"></span></label>
-            <span style="font-weight:bold; font-size:12px; color:#E65100;">Funcionários dessa classe recebem por Semana</span>
-        </div>
-
+        
         <div class="section-title">Horários Padrão (Expediente)</div>
         <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-            <input type="time" id="classeHoraEntrada" style="flex: 1;" title="Entrada">
-            <input type="time" id="classeHoraSaida" style="flex: 1;" title="Saída">
+            <input type="time" id="classeHoraEntrada" class="time-input-large" style="flex: 1;" title="Entrada">
+            <input type="time" id="classeHoraSaida" class="time-input-large" style="flex: 1;" title="Saída">
         </div>
+        
         <div class="section-title" style="margin-top: 5px;">Horários Padrão (Intervalo)</div>
         <div style="display: flex; gap: 5px; margin-bottom: 5px; align-items:center;">
-            <input type="time" id="classeHoraIntEnt" style="flex: 1;" title="Início Intervalo">
-            <input type="time" id="classeHoraIntSai" style="flex: 1;" title="Fim Intervalo">
+            <input type="time" id="classeHoraIntEnt" class="time-input-large" style="flex: 1;" title="Início Intervalo">
+            <input type="time" id="classeHoraIntSai" class="time-input-large" style="flex: 1;" title="Fim Intervalo">
         </div>
-        <label style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" id="classeSemIntervalo" onchange="toggleIntervaloClasse()"> Classe sem intervalo de descanso</label>
+        <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:15px;"><input type="checkbox" id="classeSemIntervalo" onchange="toggleIntervaloClasse()"> Classe sem intervalo de descanso</label>
+
+        <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:8px; margin-bottom: 15px; border: 1px solid #FFE0B2;">
+            <label class="switch"><input type="checkbox" id="classeSemanal"><span class="slider"></span></label>
+            <span style="font-weight:bold; font-size:14px; color:#E65100;">Pagamento por semana</span>
+        </div>
 
         <div class="section-title">Salários Base da Classe</div>
         <div class="form-group" style="margin-bottom: 5px;">
@@ -242,7 +249,7 @@
         </div>
         <div id="listaSalariosClasse" style="background: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 100px; overflow-y: auto;"></div>
 
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormClasse'); abrirGerenciar('funcionarios');">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormClasse'); abrirGerenciar('categorias');">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
     </div>
 </div>
 
@@ -251,7 +258,7 @@
         <div class="modal-title">Função</div>
         <input type="hidden" id="funcaoId">
         <div class="form-group"><label>Nome da Função:</label><input type="text" id="funcaoNome" placeholder="Ex: Garçom, Aux. Cozinha"></div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFuncao'); abrirGerenciar('funcionarios');">Cancelar</button><button class="btn-action" onclick="salvarFuncao()">Salvar</button></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFuncao'); abrirGerenciar('funcoes');">Cancelar</button><button class="btn-action" onclick="salvarFuncao()">Salvar</button></div>
     </div>
 </div>
 
@@ -297,6 +304,12 @@
             <div class="form-group" style="flex:1;"><label>Função:</label><select id="funcFuncao"></select></div>
         </div>
         
+        <div id="boxPermissoesSemanais" style="display:none; background:#FFF3E0; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #FFE0B2;">
+            <div style="font-size:12px; font-weight:bold; color:#E65100; margin-bottom:5px;">Permissões para Pagamento por Semana:</div>
+            <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:5px;"><input type="checkbox" id="funcHabFaltas" checked> Habilitar botão de Registrar Ausência</label>
+            <label style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" id="funcHabFerias" checked> Habilitar botão de Lançar Férias</label>
+        </div>
+
         <div class="form-group" style="background:#f9f9f9; padding:10px; border-radius:5px; border:1px solid #eee;">
             <div style="display: flex; justify-content: space-between; font-weight:bold; font-size:12px; color:#555; margin-bottom:5px;">
                 <span style="flex:1;">Expediente:</span>
@@ -321,13 +334,13 @@
                     <option value="CPF">CPF</option><option value="Celular">Celular</option><option value="E-mail">E-mail</option><option value="Aleatória">Aleatória</option>
                 </select>
                 <input type="text" id="novoPixInput" placeholder="Chave PIX" style="flex: 1; padding: 8px; min-width: 0;" oninput="mascaraPixDinamica(this)">
-                <button class="btn-action" onclick="addPix()" style="flex: none; width: 40px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold;">+</button>
+                <button class="btn-action" onclick="addPix()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">+</button>
             </div>
             <div id="listaPix" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:100px; overflow-y:auto;"></div>
         </div>
         
         <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:1;"><label>Salário Base (Mensal):</label><input type="text" id="funcSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
+            <div class="form-group" style="flex:1;"><label>Salário Base (Padrão):</label><input type="text" id="funcSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
             <div class="form-group" style="flex:1;"><label>Gratificação:</label><input type="text" id="funcGratificacao" inputmode="numeric" oninput="maskMoeda(this)" placeholder="Opcional"></div>
         </div>
         <div style="display: flex; gap: 10px;">
@@ -386,14 +399,26 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalConfirmExclusaoMotivo" style="z-index:2000;">
+    <div class="modal" style="text-align:center;">
+        <div style="font-size:40px; margin-bottom:10px;">⚠️</div>
+        <div class="modal-title" style="justify-content:center; color:#d32f2f; border:none; margin-bottom:5px;">Excluir Motivo?</div>
+        <p style="font-size:14px; color:#555; margin-bottom:20px;">Tem certeza que deseja remover este motivo da lista?</p>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-cancel" onclick="fecharModal('modalConfirmExclusaoMotivo')">Não, Voltar</button>
+            <button class="btn-danger" onclick="executarRemocaoMotivo()">Sim, Excluir</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalAcoesFunc">
     <div class="modal">
         <div class="modal-title" id="tituloAcoesFunc">Nome do Funcionário</div>
         <input type="hidden" id="acoesFuncId">
         
         <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento()">💸 Lançar Adiantamento</button>
-        <button class="btn-outline" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Ausência / Atestado</button>
-        <button class="btn-outline" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Lançar Férias</button>
+        <button class="btn-outline" id="btnAcaoFalta" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Ausência / Atestado</button>
+        <button class="btn-outline" id="btnAcaoFerias" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Lançar Férias</button>
         
         <div id="btnPagarExtra" style="display:none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
             <button class="btn-action" style="width: 100%; background:#E65100;" onclick="abrirModalPresencaSemana()">✅ Presença na Semana</button>
@@ -421,6 +446,7 @@
             <span id="totalPresencasPendentes" style="color:#E65100;">R$ 0,00</span>
         </div>
 
+        <button class="btn-outline" style="width: 100%; margin-bottom: 10px; border-color:#0277BD; color:#0277BD; font-size:14px;" onclick="copiarPixFuncionario()"><span style="font-size:18px; vertical-align:middle;">🔗</span> Copiar Chave PIX</button>
         <button class="btn-action" style="width: 100%; margin-bottom: 15px; background-color:#E65100; font-size:16px;" onclick="confirmarPagamentoSemana()">💰 Confirmar Pagamento</button>
         
         <button class="btn-outline" style="border:none; color:#777; padding:0; font-size:12px; text-decoration:underline;" onclick="toggleDiv('areaHistPagosSemana')">Ver Histórico de Pagamentos</button>
@@ -430,6 +456,15 @@
         </div>
 
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPresencaSemana'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalEscolhaSalario" style="z-index: 1500;">
+    <div class="modal">
+        <div class="modal-title" style="color:#E65100; border-color:#E65100;">Escolha o Salário</div>
+        <p style="font-size:12px; color:#666; margin-top:0;">Qual o valor a ser pago para este dia?</p>
+        <div id="listaBotoesSalario" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalEscolhaSalario')" style="width: 100%;">Cancelar</button></div>
     </div>
 </div>
 
@@ -586,10 +621,10 @@
         else if (tipo === 'E-mail') { el.value = el.value.toLowerCase(); }
     }
 
-    // 2. DADOS BASE
+    // 2. DADOS BASE E FUNCOES DE TEMPO
     let db = carregarBanco(); 
-    let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false;
-    let isSyncingFundo = false; let tempVT = []; let tempMotivos = []; let tempPix = []; let tempSalariosClasse = [];
+    let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
+    let isSyncingFundo = false; let tempVT = []; let tempMotivos = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null;
 
     function carregarBanco() {
         let base = { app_id: "alorh", empresa: { logo: "", razao: "", fantasia: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" }, categorias: [], funcoes: [], funcionarios: [], administradores: [], configGerais: { salarioMinimo: "1412,00", adiantamentoQuinzena: "500,00", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [] }, registros: [], configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, senhaAdmin: "1999" } };
@@ -601,60 +636,76 @@
     function marcarMudancaEstrutural() { db.configs.ultimaMudancaLocal = Date.now(); salvarBanco(); sincronizarFundo(false, true); }
     function getHojeSTR() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
     function getWeekNumber(d) { let date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7)); let yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1)); return Math.ceil((((date - yearStart) / 86400000) + 1)/7); }
+    
+    function getDatesDaSemana() {
+        let hj = new Date(); hj.setHours(0,0,0,0);
+        let day = hj.getDay(); let isoDay = day === 0 ? 7 : day; 
+        let monday = new Date(hj.getTime() - ((isoDay - 1) * 86400000));
+        let qui = new Date(monday.getTime() + (3 * 86400000));
+        let sex = new Date(monday.getTime() + (4 * 86400000));
+        let sab = new Date(monday.getTime() + (5 * 86400000));
+        let dom = new Date(monday.getTime() + (6 * 86400000));
+        let toStr = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return { hoje: { str: toStr(hj), dt: hj }, qui: { str: toStr(qui), dt: qui }, sex: { str: toStr(sex), dt: sex }, sab: { str: toStr(sab), dt: sab }, dom: { str: toStr(dom), dt: dom } };
+    }
 
-    window.onload = () => { setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'flex'; renderizarFiltros(); renderizarLista(); };
+    window.onload = () => { setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'flex'; initDiasFiltro(); renderizarFiltros(); renderizarLista(); };
 
     function toggleModoSelecao() { 
         modoSelecaoAtivo = !modoSelecaoAtivo; 
         document.getElementById('btnModoSelecaoBar').style.backgroundColor = modoSelecaoAtivo ? '#00695C' : 'rgba(255,255,255,0.15)'; 
         document.getElementById('btnAcaoMassa1').style.display = modoSelecaoAtivo ? 'flex' : 'none'; document.getElementById('btnAcaoMassa2').style.display = modoSelecaoAtivo ? 'flex' : 'none'; document.getElementById('btnAcaoMassa3').style.display = modoSelecaoAtivo ? 'flex' : 'none';
+        document.getElementById('boxFiltrosDias').style.display = modoSelecaoAtivo ? 'none' : 'flex';
         if(!modoSelecaoAtivo) itensSelecionados.clear(); renderizarLista(); 
     }
 
+    function initDiasFiltro() {
+        let dates = getDatesDaSemana(); let box = document.getElementById('boxFiltrosDias');
+        box.innerHTML = `<button class="btn-action-bar" id="btnFiltro_${dates.hoje.str}" onclick="setFiltroApto('${dates.hoje.str}')">Hoje</button><button class="btn-action-bar" id="btnFiltro_${dates.qui.str}" onclick="setFiltroApto('${dates.qui.str}')">Qui</button><button class="btn-action-bar" id="btnFiltro_${dates.sex.str}" onclick="setFiltroApto('${dates.sex.str}')">Sex</button><button class="btn-action-bar" id="btnFiltro_${dates.sab.str}" onclick="setFiltroApto('${dates.sab.str}')">Sáb</button><button class="btn-action-bar" id="btnFiltro_${dates.dom.str}" onclick="setFiltroApto('${dates.dom.str}')">Dom</button>`;
+    }
+
+    function setFiltroApto(diaKey) {
+        if(diaFiltroAptos === diaKey) { diaFiltroAptos = null; } else { diaFiltroAptos = diaKey; categoriaAtual = null; }
+        document.querySelectorAll('#boxFiltrosDias .btn-action-bar').forEach(b => b.classList.remove('ativo'));
+        if(diaFiltroAptos) document.getElementById(`btnFiltro_${diaKey}`).classList.add('ativo');
+        renderizarFiltros(); renderizarLista();
+    }
+
     function renderizarFiltros() { 
-        let textTodos = filtroAptosHoje ? "APTOS HOJE" : "TODOS";
-        let classTodos = filtroAptosHoje ? "aptos" : (categoriaAtual === null ? "active" : "");
-        let html = `<div class="chip ${classTodos}" onclick="filtrarCat(null)">${textTodos}</div>`; 
+        let classTodos = diaFiltroAptos ? "aptos" : (categoriaAtual === null ? "active" : "");
+        let html = `<div class="chip ${classTodos}" onclick="filtrarCat(null)">TODOS</div>`; 
         db.categorias.forEach(cat => { html += `<div class="chip ${categoriaAtual === cat.id ? 'active' : ''}" style="background-color: ${cat.cor || '#00695C'}; color: ${cat.corTexto || '#FFF'};" onclick="filtrarCat('${cat.id}')">${cat.nome}</div>`; }); 
         document.getElementById('containerFiltros').innerHTML = html; 
     }
     
     function filtrarCat(id) { 
-        if(id === null) {
-            if(categoriaAtual === null) filtroAptosHoje = !filtroAptosHoje;
-            categoriaAtual = null;
-        } else {
-            categoriaAtual = id; filtroAptosHoje = false;
-        }
+        if(id === null) { categoriaAtual = null; diaFiltroAptos = null; document.querySelectorAll('#boxFiltrosDias .btn-action-bar').forEach(b => b.classList.remove('ativo')); } else { categoriaAtual = id; diaFiltroAptos = null; document.querySelectorAll('#boxFiltrosDias .btn-action-bar').forEach(b => b.classList.remove('ativo')); }
         renderizarFiltros(); renderizarLista(); 
     }
 
-    function isEmFerias(funcId, dateStr) {
-        return db.registros.some(r => {
-            if(r.type !== 'ferias' || r.funcId !== funcId) return false;
-            let d1 = r.data; let d2 = r.dataFim || r.data;
-            return (dateStr >= d1 && dateStr <= d2);
-        });
+    function isEmFerias(funcId, dateStr) { return db.registros.some(r => { if(r.type !== 'ferias' || r.funcId !== funcId) return false; let d1 = r.data; let d2 = r.dataFim || r.data; return (dateStr >= d1 && dateStr <= d2); }); }
+
+    function isAptoNoDia(f, dtStr) {
+        if(isEmFerias(f.id, dtStr)) return false;
+        let temFalta = db.registros.some(r => r.type==='falta' && r.funcId===f.id && r.data<=dtStr && (r.dataFim?r.dataFim:r.data)>=dtStr);
+        if(temFalta) return false;
+        let catObj = db.categorias.find(c => c.id === f.categoria);
+        if(catObj && catObj.semanal) {
+            let temPresenca = db.registros.some(r => r.type==='presenca' && r.funcId===f.id && r.data===dtStr);
+            if(!temPresenca) return false;
+        } else {
+            let dateObj = new Date(dtStr + "T00:00:00"); let diaSemana = dateObj.getDay().toString();
+            if(!db.configGerais.diasFuncionamento.includes(diaSemana)) return false;
+            if(f.horarios && f.horarios.folgas && f.horarios.folgas.includes(diaSemana)) return false;
+        } return true;
     }
 
     function renderizarLista() {
         const lista = document.getElementById('listaPrincipal'); let html = '';
         let funcs = [...db.funcionarios]; if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual); funcs.sort((a,b) => a.nome.localeCompare(b.nome));
-        let hj = new Date(); hj.setHours(0,0,0,0); let hjStr = getHojeSTR();
+        let hj = new Date(); hj.setHours(0,0,0,0);
         
-        if(filtroAptosHoje) {
-            funcs = funcs.filter(f => {
-                if(isEmFerias(f.id, hjStr)) return false;
-                let temAtestado = db.registros.some(r => r.type==='falta' && (r.tipo==='Atestado' || r.tipo==='Falta') && r.funcId===f.id && r.data<=hjStr && (r.dataFim?r.dataFim:r.data)>=hjStr);
-                if(temAtestado) return false;
-                let catObj = db.categorias.find(c => c.id === f.categoria);
-                if(catObj && catObj.semanal) {
-                    let temPresencaHoje = db.registros.some(r => r.type==='presenca' && r.funcId===f.id && r.data===hjStr);
-                    if(!temPresencaHoje) return false;
-                }
-                return true;
-            });
-        }
+        if(diaFiltroAptos) { funcs = funcs.filter(f => isAptoNoDia(f, diaFiltroAptos)); }
         
         funcs.forEach(f => {
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Classe', semanal: false };
@@ -672,7 +723,6 @@
             }
 
             let infoDireita = badgeExtra + feriasMsg;
-
             html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem('${f.id}')">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto || '#fff'};">${f.nome.charAt(0).toUpperCase()}</div><div class="item-info"><div class="item-title">${f.nome}</div><div class="item-subtitle">${funcCodStr}${funName} • ${catObj.nome}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${infoDireita}</div></li>`;
         });
         if(funcs.length === 0) html = `<li style="padding: 20px; text-align: center; color: #999;">Nenhum funcionário encontrado.</li>`;
@@ -681,7 +731,9 @@
 
     function cliqueItem(id) {
         if (modoSelecaoAtivo) { if (itensSelecionados.has(id)) itensSelecionados.delete(id); else itensSelecionados.add(id); renderizarLista(); } 
-        else { let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = f.nome; document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; document.getElementById('modalAcoesFunc').style.display = 'flex'; }
+        else { let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = f.nome; document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
+        if(catObj && catObj.semanal) { document.getElementById('btnAcaoFalta').style.display = (f.habFaltas) ? 'block' : 'none'; document.getElementById('btnAcaoFerias').style.display = (f.habFerias) ? 'block' : 'none'; } else { document.getElementById('btnAcaoFalta').style.display = 'block'; document.getElementById('btnAcaoFerias').style.display = 'block'; }
+        document.getElementById('modalAcoesFunc').style.display = 'flex'; }
     }
 
     // 3. GERENCIAMENTO CRUD
@@ -722,7 +774,7 @@
     function abrirFormAdmin(id) { fecharModal('modalListagem'); if(id) { let a = db.administradores.find(x => x.id === id); document.getElementById('adminId').value = a.id; document.getElementById('adminNome').value = a.nome; document.getElementById('adminSenha').value = a.senha; } else { document.getElementById('adminId').value = ''; document.getElementById('adminNome').value = ''; document.getElementById('adminSenha').value = ''; } document.getElementById('modalFormAdmin').style.display = 'flex'; }
     function salvarAdmin() { let id = document.getElementById('adminId').value || 'adm_' + Date.now(); let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value }; const idx = db.administradores.findIndex(x => x.id === id); if(idx >= 0) db.administradores[idx] = novo; else db.administradores.push(novo); salvarBanco(); fecharModal('modalFormAdmin'); abrirGerenciar('administradores'); }
 
-    // CLASSES
+    // CLASSES E SALARIOS
     function abrirFormClasse(id) { 
         fecharModal('modalListagem'); tempSalariosClasse = [];
         if(id) { 
@@ -761,6 +813,9 @@
                 if(c.horarios.semIntervalo) { document.getElementById('funcHoraIntEnt').value = ''; document.getElementById('funcHoraIntSai').value = ''; document.getElementById('funcHoraIntEnt').disabled = true; document.getElementById('funcHoraIntSai').disabled = true; } else { document.getElementById('funcHoraIntEnt').value = c.horarios.intEnt || ''; document.getElementById('funcHoraIntSai').value = c.horarios.intSai || ''; document.getElementById('funcHoraIntEnt').disabled = false; document.getElementById('funcHoraIntSai').disabled = false; }
             }
             if(c.salarios && c.salarios.length > 0) { document.getElementById('funcSalario').value = formatMoeda(c.salarios[0]); }
+            document.getElementById('boxPermissoesSemanais').style.display = c.semanal ? 'block' : 'none';
+        } else {
+            document.getElementById('boxPermissoesSemanais').style.display = 'none';
         }
     }
 
@@ -779,12 +834,16 @@
         fecharModal('modalListagem'); tempPix = [];
         if(id) {
             let f = db.funcionarios.find(x => x.id === id); carregarComboCategorias(f.categoria, f.funcao, f.vtRota);
+            let c = db.categorias.find(x => x.id === f.categoria); document.getElementById('boxPermissoesSemanais').style.display = (c && c.semanal) ? 'block' : 'none';
             document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
+            document.getElementById('funcHabFaltas').checked = f.habFaltas !== undefined ? f.habFaltas : true; document.getElementById('funcHabFerias').checked = f.habFerias !== undefined ? f.habFerias : true;
             document.getElementById('funcHoraEntrada').value = (f.horarios && f.horarios.entrada) ? f.horarios.entrada : ''; document.getElementById('funcHoraSaida').value = (f.horarios && f.horarios.saida) ? f.horarios.saida : ''; document.getElementById('funcHoraIntEnt').value = (f.horarios && f.horarios.intEnt) ? f.horarios.intEnt : ''; document.getElementById('funcHoraIntSai').value = (f.horarios && f.horarios.intSai) ? f.horarios.intSai : ''; 
             renderizarDiasFolgaFuncionario(f.horarios ? f.horarios.folgas : []);
             if(f.pixList) tempPix = JSON.parse(JSON.stringify(f.pixList));
         } else {
-            carregarComboCategorias(); document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
+            carregarComboCategorias(); document.getElementById('boxPermissoesSemanais').style.display = 'none';
+            document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
+            document.getElementById('funcHabFaltas').checked = true; document.getElementById('funcHabFerias').checked = true;
             document.getElementById('funcHoraEntrada').value = ''; document.getElementById('funcHoraSaida').value = ''; document.getElementById('funcHoraIntEnt').value = ''; document.getElementById('funcHoraIntSai').value = ''; 
             renderizarDiasFolgaFuncionario(null);
         }
@@ -801,57 +860,58 @@
     function salvarFuncionario() { 
         const id = document.getElementById('funcId').value || 'f_'+Date.now(); 
         let folgas = Array.from(document.querySelectorAll('.chk-folga-func:checked')).map(el => el.value);
-        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
+        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
         const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); renderizarLista(); 
     }
 
     // CONFIGS
-    function renderListasConfig() { const listVT = document.getElementById('listaVT'); const listMot = document.getElementById('listaMotivos'); listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${v.rota} - <b style="color:#00695C;">R$ ${v.valor}</b></span><div><button class="btn-edit-small" onclick="editarVT(${i})">✏️</button><button onclick="removerVT(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>'; listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${m}</span><button onclick="removerMotivo(${i})">X</button></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>'; }
+    function renderListasConfig() { const listVT = document.getElementById('listaVT'); const listMot = document.getElementById('listaMotivos'); listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${v.rota} - <b style="color:#00695C;">R$ ${v.valor}</b></span><div><button class="btn-edit-small" onclick="editarVT(${i})">✏️</button><button onclick="removerVT(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>'; listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${m}</span><div style="display:flex; gap:2px;"><button class="btn-edit-small" onclick="moverMotivo(${i}, -1)">⬆️</button><button class="btn-edit-small" onclick="moverMotivo(${i}, 1)">⬇️</button><button onclick="confirmarRemoverMotivo(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>'; }
     function addVT() { let r = document.getElementById('novoVTRota').value.trim(); let v = document.getElementById('novoVTValor').value.trim(); let editIdx = document.getElementById('editIdxVT').value; if(r && v) { if(editIdx !== "") { tempVT[editIdx] = {rota: r, valor: v}; document.getElementById('editIdxVT').value = ""; document.getElementById('btnSalvarVT').innerText = "+"; } else { tempVT.push({rota: r, valor: v}); } document.getElementById('novoVTRota').value = ''; document.getElementById('novoVTValor').value = ''; renderListasConfig(); } }
     function editarVT(idx) { let v = tempVT[idx]; document.getElementById('novoVTRota').value = v.rota; document.getElementById('novoVTValor').value = v.valor; document.getElementById('editIdxVT').value = idx; document.getElementById('btnSalvarVT').innerText = "OK"; }
     function removerVT(idx) { tempVT.splice(idx, 1); renderListasConfig(); }
     function addMotivo() { let mot = document.getElementById('novoMotivo').value.trim(); if(mot) { tempMotivos.push(mot); document.getElementById('novoMotivo').value = ''; renderListasConfig(); } }
-    function removerMotivo(idx) { tempMotivos.splice(idx, 1); renderListasConfig(); }
+    function moverMotivo(idx, dir) { if(dir === -1 && idx > 0) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx-1]; tempMotivos[idx-1] = t; } if(dir === 1 && idx < tempMotivos.length-1) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx+1]; tempMotivos[idx+1] = t; } renderListasConfig(); }
+    function confirmarRemoverMotivo(idx) { motivoToDelete = idx; document.getElementById('modalConfirmExclusaoMotivo').style.display = 'flex'; }
+    function executarRemocaoMotivo() { if(motivoToDelete !== null) { tempMotivos.splice(motivoToDelete, 1); renderListasConfig(); } fecharModal('modalConfirmExclusaoMotivo'); }
     function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
 
     // POPULAR ADMIN SELECT
     function getAdminOptions(selectedId = '') { let html = '<option value="">-- Selecione --</option>'; db.administradores.forEach(a => { html += `<option value="${a.id}" ${selectedId === a.id ? 'selected' : ''}>${a.nome}</option>`; }); return html; }
     function getAdminNome(id) { let a = db.administradores.find(x => x.id === id); return a ? a.nome : 'N/I'; }
 
-    // PRESENÇA SEMANAL
+    // PRESENÇA SEMANAL E PIX
+    function copiarPixFuncionario() { let funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId); if(f && f.pixList && f.pixList.length > 0) { let pix = f.pixList.find(p => p.principal) || f.pixList[0]; navigator.clipboard.writeText(pix.chave).then(() => alert('Chave PIX copiada: ' + pix.chave)).catch(()=>alert('Erro ao copiar')); } else { alert('Nenhuma chave PIX cadastrada para este funcionário.'); } }
+    
     function abrirModalPresencaSemana() {
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId); if(!f) return;
         document.getElementById('dataPresencaManual').value = getHojeSTR();
         
-        let hj = new Date(); let day = hj.getDay(); let diff = (day === 0 ? -3 : 4 - day); 
-        let thu = new Date(hj); thu.setDate(hj.getDate() + diff); let fri = new Date(thu); fri.setDate(thu.getDate() + 1); let sat = new Date(thu); sat.setDate(thu.getDate() + 2); let sun = new Date(thu); sun.setDate(thu.getDate() + 3);
-        
+        let dates = getDatesDaSemana();
         let boxRapido = document.getElementById('boxBotoesDiasRapidos'); boxRapido.innerHTML = '';
         let m = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-        let diasArr = [ {n:'Qui', dt:thu}, {n:'Sex', dt:fri}, {n:'Sáb', dt:sat}, {n:'Dom', dt:sun} ];
-        diasArr.forEach(d => { let dtStr = `${d.dt.getFullYear()}-${String(d.dt.getMonth()+1).padStart(2,'0')}-${String(d.dt.getDate()).padStart(2,'0')}`; boxRapido.innerHTML += `<button class="btn-dia-rapido" onclick="addPresencaManual('${dtStr}')">${d.n} (${d.dt.getDate()}/${m[d.dt.getMonth()]})</button>`; });
+        let diasArr = [ {n:'Qui', dt:dates.qui.dt}, {n:'Sex', dt:dates.sex.dt}, {n:'Sáb', dt:dates.sab.dt}, {n:'Dom', dt:dates.dom.dt} ];
+        diasArr.forEach(d => { let dtStr = `${d.dt.getFullYear()}-${String(d.dt.getMonth()+1).padStart(2,'0')}-${String(d.dt.getDate()).padStart(2,'0')}`; boxRapido.innerHTML += `<button class="btn-dia-rapido" onclick="addPresencaManual('${dtStr}')">${d.n}<br>(${d.dt.getDate()}/${m[d.dt.getMonth()]})</button>`; });
         
         renderizarPresencasPendentes(funcId); document.getElementById('modalPresencaSemana').style.display = 'flex';
     }
     
     function addPresencaManual(dtForced = null) {
         const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId);
-        let dt = dtForced || document.getElementById('dataPresencaManual').value; if(!dt) return;
-        let c = db.categorias.find(x => x.id === f.categoria); let valBase = 0;
-        if(c && c.salarios && c.salarios.length > 0) {
-            if(c.salarios.length === 1) { valBase = c.salarios[0]; } 
-            else { 
-                let opcoes = c.salarios.map((s,i) => `${i+1} -> R$ ${formatMoeda(s)}`).join('\n');
-                let esc = prompt(`Escolha o salário para este dia (Digite o número da opção):\n${opcoes}`);
-                if(esc && c.salarios[parseInt(esc)-1]) valBase = c.salarios[parseInt(esc)-1]; else return;
-            }
-        } else { valBase = parseMoeda(f.salario || db.configGerais.salarioMinimo); }
+        let dt = dtForced || document.getElementById('dataPresencaManual').value; if(!dt) return; dataTempPresenca = dt;
         
-        // Verifica se ja tem presenca pendente nesse dia
         if(db.registros.some(r => r.type==='presenca' && r.funcId===funcId && r.status==='pendente' && r.data===dt)) return alert("Dia já adicionado na lista pendente.");
         
-        db.registros.push({ id: 'reg_'+Date.now(), type: 'presenca', funcId: funcId, data: dt, valor: valBase, status: 'pendente' }); salvarBanco(); renderizarPresencasPendentes(funcId);
+        let c = db.categorias.find(x => x.id === f.categoria);
+        if(c && c.salarios && c.salarios.length > 1) {
+            let box = document.getElementById('listaBotoesSalario'); box.innerHTML = '';
+            c.salarios.forEach(s => { box.innerHTML += `<button class="btn-action" style="background:#E65100; font-size:16px; padding:12px;" onclick="confirmarSalarioPresenca(${s})">R$ ${formatMoeda(s)}</button>`; });
+            document.getElementById('modalEscolhaSalario').style.display = 'flex';
+        } else {
+            let valBase = (c && c.salarios && c.salarios.length === 1) ? c.salarios[0] : parseMoeda(f.salario || db.configGerais.salarioMinimo); registrarPresenca(valBase);
+        }
     }
+    function confirmarSalarioPresenca(val) { fecharModal('modalEscolhaSalario'); registrarPresenca(val); }
+    function registrarPresenca(val) { const funcId = document.getElementById('acoesFuncId').value; db.registros.push({ id: 'reg_'+Date.now(), type: 'presenca', funcId: funcId, data: dataTempPresenca, valor: val, status: 'pendente' }); salvarBanco(); renderizarPresencasPendentes(funcId); }
     
     function renderizarPresencasPendentes(funcId) {
         let box = document.getElementById('listaPresencasPendentes'); let hPagos = document.getElementById('listaHistoricoPagosSemana');
@@ -873,7 +933,7 @@
         if(!confirm("Confirmar pagamento dos dias pendentes? Isso vai zerar o acumulado.")) return;
         let total = 0; let diasIds = []; pendentes.forEach(r => { total += r.valor; r.status = 'pago'; diasIds.push(r.data); });
         db.registros.push({ id: 'reg_'+Date.now(), type: 'pagamento_semana', funcId: funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds });
-        salvarBanco(); renderizarPresencasPendentes(funcId); alert("Pagamento Confirmado e registrado no histórico!");
+        salvarBanco(); renderizarPresencasPendentes(funcId); alert("Pagamento Confirmado!");
     }
 
     // ADIANTAMENTOS
@@ -947,8 +1007,11 @@
             groups[mY].records.push(r);
             let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1;
             let diasUteisFalta = 0;
-            for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; groups[mY].dsrSemanas.add(getWeekNumber(d)); } }
-            if(r.descontarDia) { groups[mY].diasDesc += diasUteisFalta; } if(r.descontarPassagem) groups[mY].passDesc += diasUteisFalta;
+            for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) {
+                if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; groups[mY].dsrSemanas.add(getWeekNumber(d)); }
+            }
+            if(r.descontarDia) { groups[mY].diasDesc += diasUteisFalta; }
+            if(r.descontarPassagem) groups[mY].passDesc += diasUteisFalta;
         });
 
         for (const [mY, g] of Object.entries(groups)) {
@@ -1002,7 +1065,10 @@
             
             let passagensPorDia = 2; let passagensMes = diasUteis * passagensPorDia;
             
+            // Abater Faltas em DIAS UTEIS do mes anterior
             let faltasAnt = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarPassagem && r.data.startsWith(mesAntStr)).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasUteisFalta = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasUteisFalta++; } return acc + diasUteisFalta; }, 0);
+            
+            // Abater Ferias em DIAS UTEIS do mes atual
             let feriasMesAt = db.registros.filter(r => r.type === 'ferias' && r.funcId === id).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasFeriasUteis = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(d.getFullYear()===ano && (d.getMonth()+1)===mes && db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasFeriasUteis++; } return acc + diasFeriasUteis; }, 0);
 
             let descontoPassagens = (faltasAnt + feriasMesAt) * passagensPorDia; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
