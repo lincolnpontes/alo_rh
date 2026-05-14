@@ -1,0 +1,85 @@
+html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
+        input, select, textarea, .modal { user-select: text; -webkit-user-select: text; font-family: inherit; }
+        .app-container { width: 100%; max-width: 100%; height: 100%; background-color: #ffffff; display: flex; flex-direction: column; position: absolute; top: 0; left: 0; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
+        #splashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #00695C; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.5s ease; }
+        .splash-titulo { font-size: 32px; font-weight: bold; letter-spacing: 1px; }
+        .splash-versao { font-size: 14px; margin-top: 5px; opacity: 0.8; }
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; text-align: center; padding: 20px; box-sizing: border-box; }
+        .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #00695C; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .header { background-color: #00695C; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; color: white; flex-shrink: 0; }
+        .header-title { font-size: 20px; font-weight: bold; }
+        .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin-left: 15px;}
+        
+        .action-bar { display: none; justify-content: space-between; padding: 8px 10px; background: #37474F; align-items: center; flex-shrink: 0; gap: 4px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+        .btn-action-bar { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 6px; padding: 6px 10px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;}
+        .btn-action-bar.ativo { background: #4CAF50; border-color: #388E3C; }
+        
+        .area-conteudo { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .scroll-area { overflow-y: auto; flex: 1; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }
+        
+        .filters { padding: 10px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #eee; background: white; flex-shrink: 0; }
+        .chip { background-color: #e0e0e0; color: #333; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; border: 2px solid transparent; transition: 0.3s; }
+        .chip.active { border-color: #333; opacity: 0.9; }
+        .chip.aptos { background-color: #4CAF50; color: white; border-color: #388E3C; }
+        
+        .list { padding: 0; margin: 0; list-style: none; }
+        .item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; position: relative; user-select: none; }
+        .item.selecionado { background-color: #E0F2F1; }
+        .item-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; color: white; font-size: 16px; flex-shrink: 0;}
+        .item-info { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden;}
+        .item-title { font-weight: bold; font-size: 15px; margin-bottom: 2px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .item-subtitle { color: #666; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        
+        .checkbox-selecao { width: 24px; height: 24px; border: 2px solid #00695C; border-radius: 4px; display: inline-block; vertical-align: middle; margin-right: 12px; position: relative; pointer-events: none; flex-shrink: 0;}
+        .item.selecionado .checkbox-selecao::after { content: '✓'; color: #00695C; position: absolute; font-size: 18px; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 2px solid #00695C; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 4px; color: #555; font-weight: bold; font-size: 12px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .input-cor { height: 60px; padding: 0; border: 2px solid #ddd; cursor: pointer; width: 100%; border-radius: 8px; appearance: none; -webkit-appearance: none; }
+        .input-cor::-webkit-color-swatch-wrapper { padding: 0; }
+        .input-cor::-webkit-color-swatch { border: none; border-radius: 6px; }
+        
+        .time-input-large { height: 45px !important; border-radius: 10px !important; font-size: 16px !important; text-align: center; background-color: #f9f9f9; border: 1px solid #ccc; }
+        
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
+        .btn-cancel, .btn-action, .btn-danger, .btn-outline { padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; text-align: center; border: none; font-size: 14px; }
+        .btn-cancel { background: #eee; color: #333; }
+        .btn-action { background: #00695C; color: white; }
+        .btn-danger { background: #d32f2f; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #00695C; color: #00695C; width: 100%; margin-bottom: 8px; text-align: left; }
+        
+        .section-title { background: #e0f2f1; padding: 8px; font-size: 13px; font-weight: bold; color: #004d40; border-radius: 4px; margin: 15px 0 10px 0; border-left: 4px solid #00695C;}
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; margin-right: 8px; vertical-align: middle; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        input:checked + .slider { background-color: #00695C; }
+        input:checked + .slider:before { transform: translateX(20px); }
+        
+        .list-item-config { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #ddd; padding: 8px 10px; border-radius: 5px; margin-bottom: 5px; font-size: 13px; }
+        .list-item-config button { background: #ffcdd2; color: #d32f2f; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: bold; flex-shrink: 0; }
+        .btn-edit-small { background: #E0F2F1 !important; color: #00695C !important; margin-right: 5px; }
+        
+        .radio-custom { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; color: #1565C0; font-weight: bold; }
+        .radio-custom input { margin: 0; width: 16px; height: 16px; accent-color: #1565C0; }
+
+        .checkbox-dias { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .checkbox-dias label { display: flex; align-items: center; gap: 3px; font-size: 12px; font-weight: normal; color: #333; }
+        
+        .edit-highlight { background-color: #E3F2FD; border: 1px dashed #1565C0; padding: 10px; border-radius: 5px; margin-bottom: 15px; transition: 0.3s; }
+        .btn-dia-rapido { background: #fff; border: 1px solid #00695C; color: #00695C; border-radius: 6px; padding: 8px; flex: 1; font-size: 12px; font-weight: bold; text-align: center; cursor: pointer; }
+        .btn-dia-rapido:active { background: #00695C; color: #fff; }
+        .empty-state { padding: 42px 20px; text-align: center; color: #555; }
+        .empty-state-title { font-size: 18px; font-weight: 800; color: #004D40; margin-bottom: 6px; }
+        .empty-state-text { font-size: 13px; line-height: 1.4; max-width: 360px; margin: 0 auto 16px auto; color: #666; }
+        .empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .empty-actions .btn-action, .empty-actions .btn-outline { flex: 0 1 auto; width: auto; min-width: 120px; margin: 0; text-align: center; }
