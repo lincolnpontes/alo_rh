@@ -1,4 +1,4 @@
-const CACHE_NAME = 'alo-rh-v1.0.16';
+const CACHE_NAME = 'alo-rh-v1.0.19';
 const APP_SHELL = [
   './',
   './index.html',

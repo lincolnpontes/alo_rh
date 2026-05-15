@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.18</title>
+    <title>Alô RH v1.0.19</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -18,7 +18,7 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.18</div>
+    <div class="splash-versao">v1.0.19</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -128,7 +128,7 @@
             <button class="btn-action" id="btnNovoListagem" style="flex: 2; padding: 10px; font-size: 14px; border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 8px;">
                 <span style="font-size: 18px; font-weight: bold; line-height: 1;">+</span> Novo
             </button>
-            <button class="btn-outline" id="btnClassesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('categorias')">🏷️ Classes</button>
+            <button class="btn-outline" id="btnClassesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('categorias')">🏷️ Vínculos</button>
             <button class="btn-outline" id="btnFuncoesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('funcoes')">💼 Funções</button>
         </div>
 
@@ -158,9 +158,9 @@
 
 <div class="modal-overlay" id="modalFormClasse">
     <div class="modal">
-        <div class="modal-title">Classe</div>
+        <div class="modal-title">Vínculo</div>
         <input type="hidden" id="classeId">
-        <div class="form-group"><label>Nome da Classe:</label><input type="text" id="classeNome" placeholder="Ex: Cozinha, Atendimento"></div>
+        <div class="form-group"><label>Nome do Vínculo:</label><input type="text" id="classeNome" placeholder="Ex: Carteira Assinada, Extra, Contrato"></div>
         <div style="display: flex; gap: 10px;">
             <div class="form-group" style="flex:1;"><label>Cor do Fundo:</label><input type="color" class="input-cor" id="classeCorFundo" value="#00695C"></div>
             <div class="form-group" style="flex:1;"><label>Cor do Texto:</label><input type="color" class="input-cor" id="classeCorTexto" value="#ffffff"></div>
@@ -177,14 +177,14 @@
             <input type="time" id="classeHoraIntEnt" class="time-input-large" style="flex: 1;" title="Início Intervalo">
             <input type="time" id="classeHoraIntSai" class="time-input-large" style="flex: 1;" title="Fim Intervalo">
         </div>
-        <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:15px;"><input type="checkbox" id="classeSemIntervalo" onchange="toggleIntervaloClasse()"> Classe sem intervalo de descanso</label>
+        <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:15px;"><input type="checkbox" id="classeSemIntervalo" onchange="toggleIntervaloClasse()"> Vínculo sem intervalo de descanso</label>
 
         <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:8px; margin-bottom: 15px; border: 1px solid #FFE0B2;">
             <label class="switch"><input type="checkbox" id="classeSemanal"><span class="slider"></span></label>
             <span style="font-weight:bold; font-size:14px; color:#E65100;">Pagamento por semana</span>
         </div>
 
-        <div class="section-title">Salários Base da Classe</div>
+        <div class="section-title">Salários Base do Vínculo</div>
         <div class="form-group" style="margin-bottom: 5px;">
             <div style="display: flex; gap: 5px;">
                 <input type="text" id="novoSalarioClasse" placeholder="R$ 0,00" inputmode="numeric" oninput="maskMoeda(this)" style="flex: 1;">
@@ -193,7 +193,7 @@
         </div>
         <div id="listaSalariosClasse" style="background: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 100px; overflow-y: auto;"></div>
 
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormClasse'); abrirGerenciar('categorias');">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="cancelarFormClasse()">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
     </div>
 </div>
 
@@ -201,8 +201,9 @@
     <div class="modal">
         <div class="modal-title">Função</div>
         <input type="hidden" id="funcaoId">
+        <div class="form-group"><label>Número da Função:</label><input type="text" id="funcaoNumero" inputmode="numeric" maxlength="4" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="Ex: 002"></div>
         <div class="form-group"><label>Nome da Função:</label><input type="text" id="funcaoNome" placeholder="Ex: Garçom, Aux. Cozinha"></div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFuncao'); abrirGerenciar('funcoes');">Cancelar</button><button class="btn-action" onclick="salvarFuncao()">Salvar</button></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="cancelarFormFuncao()">Cancelar</button><button class="btn-action" onclick="salvarFuncao()">Salvar</button></div>
     </div>
 </div>
 
@@ -244,7 +245,7 @@
 
         <div class="section-title">Vínculo e Financeiro</div>
         <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex:1;"><label>Classe:</label><select id="funcCategoria" onchange="aplicarPadroesClasse()"></select></div>
+            <div class="form-group" style="flex:1;"><label>Vínculo:</label><select id="funcCategoria" onchange="aplicarPadroesClasse()"></select></div>
             <div class="form-group" style="flex:1;"><label>Função:</label><select id="funcFuncao"></select></div>
         </div>
         
@@ -293,7 +294,7 @@
         </div>
 
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="fecharModal('modalFormFuncionario'); abrirGerenciar('funcionarios');">Cancelar</button>
+            <button class="btn-cancel" onclick="cancelarFormFuncionario()">Cancelar</button>
             <button class="btn-action" onclick="salvarFuncionario()">Salvar</button>
         </div>
     </div>
@@ -360,7 +361,7 @@
         <div class="modal-title" id="tituloAcoesFunc">Nome do Funcionário</div>
         <input type="hidden" id="acoesFuncId">
         
-        <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento()">💸 Lançar Adiantamento</button>
+        <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento()">💸 Adiantamentos</button>
         <button class="btn-outline" id="btnAcaoFalta" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Ausência / Atestado</button>
         <button class="btn-outline" id="btnAcaoFerias" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Lançar Férias</button>
         
@@ -414,7 +415,7 @@
 
 <div class="modal-overlay" id="modalFormAdiantamento">
     <div class="modal">
-        <div class="modal-title" style="color:#1565C0; border-color:#1565C0;">Lançar Adiantamento</div>
+        <div class="modal-title" style="color:#1565C0; border-color:#1565C0;">Adiantamentos</div>
         <input type="hidden" id="adiantEditId">
         
         <div id="areaEditAdiant" class="">
@@ -433,7 +434,10 @@
             </div>
         </div>
         
-        <div class="section-title" style="display:flex; justify-content:space-between;"><span>Pendentes (Ativos)</span> <strong id="totalAdiantPendente" style="color:#D32F2F;">R$ 0,00</strong></div>
+        <div class="section-title" style="display:flex; justify-content:space-between;"><span>Pendente (meses anteriores)</span> <strong id="totalAdiantPendenteAnt" style="color:#D32F2F;">R$ 0,00</strong></div>
+        <div id="listaHistoricoAdiantamentosAnt" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px; margin-bottom:10px;"></div>
+
+        <div class="section-title" style="display:flex; justify-content:space-between;"><span>Pendentes (mês atual)</span> <strong id="totalAdiantPendenteAtual" style="color:#1565C0;">R$ 0,00</strong></div>
         <div id="listaHistoricoAdiantamentos" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px; margin-bottom:10px;"></div>
 
         <button class="btn-outline" style="border:none; color:#777; padding:0; font-size:12px; text-decoration:underline;" onclick="toggleDiv('areaHistAdiantDesc')">Ver Histórico de Já Descontados</button>

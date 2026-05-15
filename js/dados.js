@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.16';
+    const APP_VERSION = 'v1.0.19';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -29,6 +29,7 @@
     let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
     let isSyncingFundo = false; let syncPendente = false; let timerSincronizacao = null; let timerSyncRegistros = null; let isPuxandoNuvem = false;
     let tempVT = []; let tempMotivos = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null;
+    let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar';
     let assinaturasRegistros = new Map(); let idsRegistrosConhecidos = new Set(); registrarEstadoRegistros();
 
     function criarBancoBase() {
@@ -67,6 +68,8 @@
         normalizado.configs.ultimaMudancaLocal = Number(normalizado.configs.ultimaMudancaLocal || 0);
         normalizado.configs.ultimaSincronizacao = Number(normalizado.configs.ultimaSincronizacao || 0);
         normalizado.configs.registrosExcluidos = normalizarExclusoesRegistros(normalizado.configs.registrosExcluidos);
+        normalizado.funcoes = normalizado.funcoes.map((funcao) => ({ numero: "", ...funcao }));
+        normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => ({ arquivado: false, ...funcionario }));
         normalizado.registros = normalizado.registros.map((registro) => {
             const registroNormalizado = { ...registro };
             if(!registroNormalizado._syncAtualizadoEm) registroNormalizado._syncAtualizadoEm = Number(registroNormalizado.editadoEm || registroNormalizado.criadoEm || 0);
@@ -246,7 +249,7 @@
         db.configs.segurancaVersao = 2;
         delete db.configs.senhaAdmin;
         delete db.configs.senhaAdminLegada;
-        salvarBanco({ sincronizar: opcoes.sincronizar !== false });
+        salvarBanco({ sincronizar: opcoes.sincronizar !== false, atualizarMudanca: false });
     }
 
     async function validarSenhaAvancada(pin) {

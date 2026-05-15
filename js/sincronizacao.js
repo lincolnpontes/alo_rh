@@ -100,13 +100,21 @@
 
     async function puxarBancoNuvem(url = db.configs.url) {
         const fetchUrl = adicionarParametroURL(url, 'nocache', Date.now());
+        const erros = [];
         try {
             const res = await fetch(fetchUrl, { redirect: "follow", cache: "no-store" });
             const dados = await res.json();
             if(dados && dados.ok === false) throw new Error(dados.erro || 'Falha na nuvem.');
             return dados;
         } catch(e) {
-            return puxarBancoNuvemJSONP(url);
+            erros.push(e.message || 'Falha ao ler resposta direta.');
+        }
+
+        try {
+            return await puxarBancoNuvemJSONP(url);
+        } catch(e) {
+            const detalhe = e.message || erros[0] || 'Falha ao puxar dados.';
+            throw new Error(detalhe);
         }
     }
 
@@ -120,7 +128,7 @@
             };
             const timer = setTimeout(() => {
                 limpar();
-                reject(new Error('Tempo esgotado ao puxar dados.'));
+                reject(new Error('O Google Script nao respondeu como app do Alo RH. Confira se o Code.gs completo foi colado e se a implantacao esta atualizada.'));
             }, 15000);
             window[callback] = (dados) => {
                 clearTimeout(timer);
@@ -131,7 +139,7 @@
             script.onerror = () => {
                 clearTimeout(timer);
                 limpar();
-                reject(new Error('Falha ao puxar dados.'));
+                reject(new Error('Falha ao carregar a URL do Google Script. Confira a implantacao e o acesso como Qualquer pessoa.'));
             };
             script.src = adicionarParametroURL(adicionarParametroURL(url, 'callback', callback), 'nocache', Date.now());
             document.head.appendChild(script);
@@ -173,13 +181,44 @@
         return preservado;
     }
 
+    function temDadosNegocio(banco) {
+        const b = normalizarBanco(banco);
+        const empresaPreenchida = ['logo','razao','fantasia','cnpj','rua','numero','bairro','cidade']
+            .some(campo => String((b.empresa || {})[campo] || '').trim());
+        return empresaPreenchida
+            || b.categorias.length > 0
+            || b.funcoes.length > 0
+            || b.funcionarios.length > 0
+            || b.administradores.length > 0
+            || b.registros.length > 0
+            || b.configGerais.valesTransporte.length > 0
+            || b.configGerais.motivosAdiantamento.length > 0;
+    }
+
+    function resumoBancoSync(banco) {
+        const b = normalizarBanco(banco);
+        return [
+            `funcionários: ${b.funcionarios.length}`,
+            `vínculos: ${b.categorias.length}`,
+            `funções: ${b.funcoes.length}`,
+            `lançamentos: ${b.registros.length}`
+        ].join(', ');
+    }
+
     function aplicarBancoNuvem(nuvemDB, modo = 'completo') {
         if(!nuvemDB || nuvemDB.app_id !== APP_ID) throw new Error('Banco invalido.');
         const localAtual = normalizarBanco(db);
         const nuvem = normalizarBanco(nuvemDB);
         const localTs = Number(localAtual.configs.ultimaMudancaLocal || 0);
         const nuvemTs = Number(nuvem.configs.ultimaMudancaLocal || 0);
-        const base = (modo === 'completo' && nuvemTs > localTs) ? nuvem : localAtual;
+        const localTemDados = temDadosNegocio(localAtual);
+        const nuvemTemDados = temDadosNegocio(nuvem);
+        let base = localAtual;
+        if(modo === 'completo') {
+            if(!localTemDados && nuvemTemDados) base = nuvem;
+            else if(localTemDados && !nuvemTemDados) base = localAtual;
+            else base = nuvemTs > localTs ? nuvem : localAtual;
+        }
         const outro = base === nuvem ? localAtual : nuvem;
         const mergeRegistros = mesclarRegistrosBancos(base, outro);
         const novoBanco = normalizarBanco(base);
@@ -210,7 +249,7 @@
             return true;
         } catch(e) {
             atualizarTextoSincronizacao('Nao foi possivel sincronizar agora. O app continua com os dados deste aparelho.');
-            if(manual) alert('Nao foi possivel sincronizar agora. Confira a URL e o token.');
+            if(manual) alert(`Nao foi possivel sincronizar agora.\n\nDetalhe: ${e.message || 'Confira a URL e o token.'}`);
             return false;
         } finally {
             isPuxandoNuvem = false;
@@ -251,6 +290,19 @@
         }
     }
 
+    async function testarSincronizacao() {
+        if(!db.configs.url) return alert("Configure a URL!");
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            const nuvemDB = await puxarBancoNuvem();
+            alert(`Conexao com a nuvem OK.\n\nNeste aparelho: ${resumoBancoSync(db)}\nNa nuvem: ${resumoBancoSync(nuvemDB)}`);
+        } catch(e) {
+            alert(`Teste falhou.\n\nDetalhe: ${e.message || 'Confira a URL, token e implantacao do Apps Script.'}`);
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
     async function salvarURL() {
         const inputUrl = document.getElementById('configUrlApp').value.trim();
         if(!inputUrl) return alert("Digite a URL!");
@@ -270,7 +322,7 @@
             alert("Concluido! Dados puxados.");
             location.reload();
         } catch(e) {
-            alert("Falha ao puxar dados. Confira a URL do Google Script.");
+            alert(`Falha ao puxar dados.\n\nDetalhe: ${e.message || 'Confira a URL do Google Script e o token.'}`);
         } finally {
             document.getElementById('loadingOverlay').style.display = 'none';
         }

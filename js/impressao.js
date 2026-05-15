@@ -11,7 +11,7 @@
         let mesAnt = mes - 1; let anoAnt = ano; if(mesAnt === 0) { mesAnt = 12; anoAnt = ano - 1; } let mesAntStr = `${anoAnt}-${String(mesAnt).padStart(2,'0')}`;
 
         Array.from(itensSelecionados).forEach(id => {
-            let f = db.funcionarios.find(x => x.id === id); if(!f || !f.vtRota) return;
+            let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado || !f.vtRota) return;
             let rotaObj = (db.configGerais.valesTransporte || []).find(v => v.rota === f.vtRota); if(!rotaObj) return;
             
             let passagensPorDia = 2; let passagensMes = diasUteis * passagensPorDia;
@@ -24,10 +24,10 @@
 
             let descontoPassagens = (faltasAnt + feriasMesAt) * passagensPorDia; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
             let valorUnit = parseMoeda(rotaObj.valor); let valTotal = passagensFinais * valorUnit;
-            arrVTParaImprimir.push({ id: f.id, nome: f.nome, rota: rotaObj.rota, valorUnit: valorUnit, passagens: passagensFinais, valTotal: valTotal });
+            arrVTParaImprimir.push({ id: f.id, codigo: f.codigo || '', nome: f.nome, rota: rotaObj.rota, valorUnit: valorUnit, passagens: passagensFinais, valTotal: valTotal });
             
             html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ddd;">
-                <div style="flex:1;"><strong>${f.nome}</strong><br><small>${rotaObj.rota} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc.: -${descontoPassagens}</small></div>
+                <div style="flex:1;"><strong>${escapeHTML(f.nome)}</strong><br><small>${escapeHTML(rotaObj.rota)} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc.: -${descontoPassagens}</small></div>
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:12px;">
                     <div style="display:flex; align-items:center; gap:5px;">
                         <label style="margin:0; color:#555;">Passagens:</label>
@@ -48,10 +48,41 @@
         if(campo === 'passagens') { obj.passagens = parseInt(val) || 0; obj.valTotal = obj.passagens * obj.valorUnit; document.getElementById(`vt_val_${id}`).value = formatMoeda(obj.valTotal); } 
         else { obj.valTotal = parseMoeda(val); }
     }
+    function getEmpresaPrint() { return db.empresa.razao || db.empresa.fantasia || 'EMPRESA'; }
+    function getEnderecoEmpresaPrint() {
+        const rua = [db.empresa.rua, db.empresa.numero].filter(Boolean).join(', ');
+        return [rua, db.empresa.bairro].filter(Boolean).join(', ');
+    }
+    function getFuncaoPrint(funcaoId) {
+        const funcao = db.funcoes.find(fn => fn.id === funcaoId);
+        if(!funcao) return '';
+        const numero = String(funcao.numero || '').trim();
+        const nome = String(funcao.nome || '').toUpperCase();
+        return numero ? `${numero.padStart(3, '0')} - ${nome}` : nome;
+    }
     function executarPrintVT() {
-        if(arrVTParaImprimir.length === 0) return alert("Nada para imprimir."); let mesStr = document.getElementById('vtMesRef').value.split('-').reverse().join('/');
-        let w = window.open('','_blank'); let html = `<html><head><title>Recibo VT</title><style>body{font-family:Arial,sans-serif;} .recibo{border: 1px solid #000; padding: 15px; margin-bottom: 20px; width: 45%; display: inline-block; vertical-align: top; margin-right: 2%; box-sizing:border-box;} h3{margin: 0 0 10px 0; text-align:center;} .linha{display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px; border-bottom: 1px dotted #ccc;} .page-break { page-break-after: always; }</style></head><body>`;
-        arrVTParaImprimir.forEach((item, idx) => { let brk = (idx > 0 && idx % 4 === 0) ? 'class="page-break"' : ''; html += `<div class="recibo" ${brk}><h3>RECIBO DE VALE TRANSPORTE</h3><div style="font-size:12px; text-align:center; margin-bottom:10px;">Referência: ${mesStr}</div><div style="font-size:14px; font-weight:bold; margin-bottom:10px; border-bottom:1px solid #000; padding-bottom:5px;">${item.nome}</div><div class="linha"><span>Rota</span><span>${item.rota}</span></div><div class="linha"><span>Qtd. Passagens</span><span>${item.passagens}</span></div><div style="font-weight:bold; font-size:16px; border-top: 2px solid #000; padding-top:5px; margin-top:10px; display:flex; justify-content:space-between;"><span>TOTAL:</span><span>R$ ${formatMoeda(item.valTotal)}</span></div><br><div style="margin-top: 30px; border-top: 1px solid #000; text-align:center; font-size:12px; width: 80%; margin-left: 10%;">Assinatura do Funcionário</div></div>`; });
+        if(arrVTParaImprimir.length === 0) return alert("Nada para imprimir.");
+        let mesStr = document.getElementById('vtMesRef').value.split('-').reverse().join('/');
+        let empresa = getEmpresaPrint();
+        let w = window.open('','_blank'); let html = `<html><head><title>Recibo VT</title><style>
+            @page{size:A4 portrait;margin:12mm 10mm;}
+            body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:13px;}
+            .recibo-vt{border:2px solid #000; height:84mm; box-sizing:border-box; margin-bottom:7mm; page-break-inside:avoid;}
+            .recibo-vt:nth-of-type(3n){margin-bottom:0;}
+            .titulo-vt{background:#d9d9d9;border-bottom:2px solid #000;text-align:center;font-weight:bold;font-size:16px;padding:5px 0;}
+            .vt-corpo{padding:9px 12px;}
+            .vt-empresa{text-align:center;font-weight:bold;font-size:14px;margin-bottom:8px;}
+            .linha-vt{display:grid;grid-template-columns:140px 1fr;border-bottom:1px solid #000;min-height:24px;align-items:end;}
+            .linha-vt span:first-child{font-weight:bold;}
+            .total-vt{display:flex;justify-content:space-between;border:2px solid #000;margin-top:10px;padding:5px 8px;font-size:15px;font-weight:bold;}
+            .declaracao-vt{margin-top:10px;line-height:1.35;text-align:justify;}
+            .assinatura-vt{display:flex;justify-content:space-between;gap:25mm;margin-top:14mm;text-align:center;font-size:12px;}
+            .assinatura-vt div{flex:1;border-top:1px solid #000;padding-top:3px;}
+        </style></head><body>`;
+        arrVTParaImprimir.forEach((item) => {
+            const codigoNome = `${item.codigo ? `${escapeHTML(item.codigo)} - ` : ''}${escapeHTML(item.nome)}`;
+            html += `<section class="recibo-vt"><div class="titulo-vt">RECIBO DE VALE TRANSPORTE</div><div class="vt-corpo"><div class="vt-empresa">${escapeHTML(empresa)}${db.empresa.cnpj ? ` - CNPJ ${escapeHTML(db.empresa.cnpj)}` : ''}</div><div class="linha-vt"><span>Funcionário:</span><span>${codigoNome}</span></div><div class="linha-vt"><span>Referência:</span><span>${escapeHTML(mesStr)}</span></div><div class="linha-vt"><span>Rota:</span><span>${escapeHTML(item.rota)}</span></div><div class="linha-vt"><span>Quantidade:</span><span>${item.passagens} passagens x R$ ${formatMoeda(item.valorUnit)}</span></div><div class="total-vt"><span>Valor recebido</span><span>R$ ${formatMoeda(item.valTotal)}</span></div><div class="declaracao-vt">Declaro ter recebido da empresa acima o valor correspondente ao vale transporte do período informado.</div><div class="assinatura-vt"><div>Data</div><div>Assinatura do Funcionário</div></div></div></section>`;
+        });
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintVT');
     }
 
@@ -67,9 +98,9 @@
         html += `<table class="tabela-lista">`;
         let quinzBase = parseMoeda(db.configGerais.adiantamentoQuinzena || "0");
         ids.forEach(id => {
-            let f = db.funcionarios.find(x => x.id === id); if(!f) return;
+            let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return;
             let valFinal = quinzBase - parseMoeda(f.unidentis || "0");
-            html += `<tr><td style="width:40%;">${f.nome}</td><td style="width:15%;">R$ ${formatMoeda(valFinal)}</td><td style="width:45%;"><span class="linha-ass"></span></td></tr>`;
+            html += `<tr><td style="width:40%;">${escapeHTML(f.nome)}</td><td style="width:15%;">R$ ${formatMoeda(valFinal)}</td><td style="width:45%;"><span class="linha-ass"></span></td></tr>`;
         });
         html += `</table><div class="rodape-data">${cidade}, ${formatDataBR(dataPgto)}</div></body></html>`;
         w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintQuinzena');
@@ -78,35 +109,65 @@
     function abrirConfigPonto() { if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('pontoMesRef').value = getHojeSTR().substring(0,7); document.getElementById('modalPrintPonto').style.display = 'flex'; }
     function executarPrintPonto() {
         let mesRef = document.getElementById('pontoMesRef').value; if(!mesRef) return; let ano = parseInt(mesRef.split('-')[0]); let mes = parseInt(mesRef.split('-')[1]); let diasNoMes = new Date(ano, mes, 0).getDate();
-        let w = window.open('','_blank'); let html = `<html><head><title>Folha de Ponto</title><style>body{font-family:Arial,sans-serif; margin:0; padding:10px;} table{width:100%; border-collapse:collapse; margin-bottom: 20px;} th,td{border:1px solid #000; padding:4px; text-align:center; font-size:11px;} .page-break { page-break-after: always; } .cabecalho{display:flex; border:1px solid #000; margin-bottom:5px;} .cab-left{flex:6; padding:5px; border-right:1px solid #000;} .cab-right{flex:4; padding:5px;} .bold{font-weight:bold;} .dias-sem{width:100%; border-collapse:collapse;} .dias-sem td{border:none; text-align:left; font-size:10px; padding:1px;} .tr-off td{background-color:#f0f0f0; color:#555;} </style></head><body>`;
-        const diasSemanaNome = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]; const diasSemanaFull = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-        Array.from(itensSelecionados).forEach((id, idx) => {
-            let f = db.funcionarios.find(x => x.id === id); if(!f) return;
-            let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : '';
-            let hs = f.horarios || { entrada: '07:00', saida: '17:00', intEnt: '11:00', intSai: '12:00', folgas: [] };
-            let expedHtml = '<table class="dias-sem">';
-            for(let dw=1; dw<=7; dw++) { let realDw = dw === 7 ? 0 : dw; let isAberto = db.configGerais.diasFuncionamento.includes(realDw.toString()); let isFolga = (hs.folgas || []).includes(realDw.toString()); let textoH = (!isAberto || isFolga) ? 'Folga' : `${hs.entrada} às ${hs.saida} &nbsp;&nbsp;&nbsp; ${hs.intEnt} às ${hs.intSai}`; expedHtml += `<tr><td>${diasSemanaFull[realDw]}</td><td align="right">${textoH}</td></tr>`; } expedHtml += '</table>';
+        let w = window.open('','_blank'); let html = `<html><head><title>Folha de Ponto</title><style>
+            @page{size:A4 portrait;margin:10mm 8mm 8mm 8mm;}
+            html,body{margin:0;padding:0;color:#000;}
+            body{font-family:"Times New Roman",serif;font-size:12px;line-height:1.15;}
+            .folha{width:100%;box-sizing:border-box;break-after:page;page-break-after:always;}
+            .folha:last-child{break-after:auto;page-break-after:auto;}
+            .cabecalho-ponto{display:grid;grid-template-columns:52% 48%;border:2px solid #000;border-bottom:0;}
+            .cab-left{border-right:2px solid #000;}
+            .titulo-ponto,.periodo-ponto{height:22px;border-bottom:2px solid #000;display:flex;align-items:center;box-sizing:border-box;}
+            .titulo-ponto{justify-content:center;background:#d0d0d0;font-weight:bold;font-size:15px;letter-spacing:.2px;}
+            .periodo-ponto{justify-content:space-around;padding:0 12px;font-size:14px;}
+            .empresa-dados{padding:4px 5px;border-bottom:2px solid #000;min-height:62px;box-sizing:border-box;font-size:13px;}
+            .func-dados{padding:4px 5px;min-height:61px;box-sizing:border-box;font-size:13px;}
+            .func-nome{font-weight:bold;font-size:14px;margin-bottom:5px;}
+            .quadro-horarios{width:100%;border-collapse:collapse;margin-top:5px;font-size:12px;}
+            .quadro-horarios th,.quadro-horarios td{border:0;padding:2px 8px;text-align:left;white-space:nowrap;}
+            .quadro-horarios th{font-size:13px;font-weight:bold;}
+            .quadro-horarios .centro{text-align:center;}
+            .tabela-ponto{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;}
+            .tabela-ponto th,.tabela-ponto td{border:1.5px solid #000;text-align:center;padding:0 2px;height:5.35mm;box-sizing:border-box;font-weight:normal;}
+            .tabela-ponto thead th{height:6mm;font-size:12px;}
+            .tabela-ponto .assinatura{text-align:left;padding-left:4px;}
+            .rodape-ponto{font-size:13px;margin-top:10mm;padding:0 10mm;}
+            .rodape-linhas{display:flex;justify-content:space-between;align-items:flex-end;margin-top:12mm;gap:30mm;}
+            .linha-diretor{width:65mm;border-top:1px solid #000;text-align:center;padding-top:3px;}
+        </style></head><body>`;
+        const diasSemanaNome = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const diasSemanaFull = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+        const ordemSemana = [1, 2, 3, 4, 5, 6, 0];
+        const cidadeUf = [db.empresa.cidade, db.empresa.uf].filter(Boolean).join(' / ');
+        const endereco = getEnderecoEmpresaPrint();
+        let folhasGeradas = 0;
+        Array.from(itensSelecionados).forEach((id) => {
+            let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return;
+            folhasGeradas++;
+            let hsOrigem = f.horarios || {};
+            let hs = { entrada: hsOrigem.entrada || '07:00', saida: hsOrigem.saida || '17:00', intEnt: hsOrigem.intEnt || '11:00', intSai: hsOrigem.intSai || '12:00', folgas: Array.isArray(hsOrigem.folgas) ? hsOrigem.folgas : [] };
+            let expedHtml = '<table class="quadro-horarios"><thead><tr><th>Dia</th><th>Expediente</th><th>Intervalo</th></tr></thead><tbody>';
+            ordemSemana.forEach((realDw) => {
+                let isAberto = db.configGerais.diasFuncionamento.includes(realDw.toString());
+                let isFolga = (hs.folgas || []).includes(realDw.toString());
+                if(!isAberto || isFolga) expedHtml += `<tr><td>${diasSemanaFull[realDw]}</td><td class="centro" colspan="2">Folga</td></tr>`;
+                else expedHtml += `<tr><td>${diasSemanaFull[realDw]}</td><td>${hs.entrada} às ${hs.saida}</td><td>${hs.intEnt && hs.intSai ? `${hs.intEnt} às ${hs.intSai}` : ''}</td></tr>`;
+            });
+            expedHtml += '</tbody></table>';
             
             let feriasFunc = db.registros.filter(r => r.type === 'ferias' && r.funcId === id);
-
-            html += `<div ${idx !== itensSelecionados.size-1 ? 'class="page-break"' : ''}><div class="cabecalho"><div class="cab-left"><div style="background:#ddd; font-weight:bold; text-align:center; padding:2px; border-bottom:1px solid #000; margin:-5px -5px 5px -5px;">FOLHA DE PONTO DIÁRIA</div><div><span class="bold">Empresa:</span> ${db.empresa.razao || ''}</div><div><span class="bold">CNPJ:</span> ${db.empresa.cnpj || ''}</div><div><span class="bold">Endereço:</span> ${db.empresa.rua || ''}, ${db.empresa.numero || ''} - ${db.empresa.bairro || ''}</div><div><span class="bold">Cidade/UF:</span> ${db.empresa.cidade || ''} / ${db.empresa.uf || ''}</div><div style="border-top:1px solid #000; margin:5px -5px 5px -5px;"></div><div><span class="bold">${f.codigo ? f.codigo+' - ' : ''}${f.nome}</span></div><div><span class="bold">Função:</span> ${funName} &nbsp;&nbsp; <span class="bold">Serviço:</span> ${db.empresa.fantasia || ''}</div><div><span class="bold">CTPS:</span> ${f.ctps || ''} &nbsp;&nbsp; <span class="bold">Admissão:</span> ${formatDataBR(f.admissao)}</div></div><div class="cab-right"><div><span class="bold">Período:</span> 01/${String(mes).padStart(2,'0')}/${ano} a ${diasNoMes}/${String(mes).padStart(2,'0')}/${ano}</div><div style="border-top:1px solid #000; margin:5px -5px 5px -5px;"></div>${expedHtml}</div></div><table><tr><th rowspan="2" colspan="2">Dias</th><th rowspan="2">Entrada</th><th colspan="2">Intervalo</th><th rowspan="2">Saída</th><th colspan="2">Hora Extra</th><th rowspan="2">Assinatura</th></tr><tr><th>Saída</th><th>Entrada</th><th>Entrada</th><th>Saída</th></tr>`;
+            html += `<section class="folha"><div class="cabecalho-ponto"><div class="cab-left"><div class="titulo-ponto">FOLHA DE PONTO DIÁRIA</div><div class="empresa-dados"><div><b>Empresa:</b> <strong>${escapeHTML(db.empresa.razao || '')}</strong></div><div><b>CNPJ:</b> ${escapeHTML(db.empresa.cnpj || '')}</div><div><b>Endereço:</b> ${escapeHTML(endereco)}</div><div><b>Cidade/UF:</b> ${escapeHTML(cidadeUf)}</div></div><div class="func-dados"><div class="func-nome">${f.codigo ? `${escapeHTML(f.codigo)} - ` : ''}${escapeHTML(String(f.nome || '').toUpperCase())}</div><div><b>Função:</b> ${escapeHTML(getFuncaoPrint(f.funcao))}</div><div><b>CTPS:</b> ${escapeHTML(f.ctps || '')} &nbsp;&nbsp; <b>Serviço:</b> ${escapeHTML(db.empresa.razao || '')}</div><div><b>Admissão:</b> ${formatDataBR(f.admissao)}</div></div></div><div class="cab-right"><div class="periodo-ponto"><b>Período:</b><strong>01/${String(mes).padStart(2,'0')}/${ano}</strong><b>a</b><strong>${String(diasNoMes).padStart(2,'0')}/${String(mes).padStart(2,'0')}/${ano}</strong></div>${expedHtml}</div></div><table class="tabela-ponto"><colgroup><col style="width:4%;"><col style="width:5%;"><col style="width:9%;"><col style="width:10%;"><col style="width:10%;"><col style="width:9%;"><col style="width:10%;"><col style="width:10%;"><col style="width:33%;"></colgroup><thead><tr><th rowspan="2" colspan="2">Dias</th><th rowspan="2">Entrada</th><th colspan="2">Intervalo</th><th rowspan="2">Saída</th><th colspan="2">Hora Extra</th><th rowspan="2">Assinatura</th></tr><tr><th>Saída</th><th>Entrada</th><th>Entrada</th><th>Saída</th></tr></thead><tbody>`;
             for(let d=1; d<=diasNoMes; d++) { 
                 let dt = new Date(ano, mes-1, d); let diaW = dt.getDay(); 
                 let isAberto = db.configGerais.diasFuncionamento.includes(diaW.toString()); 
                 let isFolga = (hs.folgas || []).includes(diaW.toString()); 
-                
                 let emFerias = false;
                 feriasFunc.forEach(r => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; if(dt >= d1 && dt <= d2) emFerias = true; });
-
-                if(emFerias) {
-                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td colspan="6">Em férias</td><td>Em férias</td></tr>`;
-                } else if(!isAberto || isFolga) { 
-                    html += `<tr class="tr-off"><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td></tr>`; 
-                } else { 
-                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`; 
-                } 
+                let marcaAssinatura = emFerias ? 'Férias' : ((!isAberto || isFolga) ? 'x' : '');
+                html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="assinatura">${marcaAssinatura}</td></tr>`;
             }
-            html += `</table><div style="margin-top:20px; text-align:center;">Reconheço a exatidão destas anotações.<br><br><div style="display:flex; justify-content:space-between; margin-top:30px; padding:0 20px;"><div>Data: ___/___/______</div><div style="width:250px; border-top:1px solid #000; padding-top:5px;">Assinatura do Diretor</div></div></div></div>`;
+            html += `</tbody></table><div class="rodape-ponto"><div>Reconheço a exatidão destas anotações.</div><div class="rodape-linhas"><div><b>Data:</b> ____ / ____ / ________ .</div><div class="linha-diretor">Assinatura do Diretor</div></div></div></section>`;
         });
+        if(folhasGeradas === 0) { w.close(); return alert("Nenhum funcionário ativo selecionado para imprimir."); }
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintPonto');
     }

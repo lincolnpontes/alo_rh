@@ -37,19 +37,19 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function renderizarLista() {
         const lista = document.getElementById('listaPrincipal'); let html = '';
-        let funcs = [...db.funcionarios]; if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual); funcs.sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        let funcs = db.funcionarios.filter(f => !f.arquivado); if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual); funcs.sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || '')));
         let hj = new Date(); hj.setHours(0,0,0,0);
         
         if(diaFiltroAptos) { funcs = funcs.filter(f => isAptoNoDia(f, diaFiltroAptos)); }
         
         funcs.forEach(f => {
-            let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem Classe', semanal: false };
+            let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem vínculo', semanal: false };
             let isSelected = itensSelecionados.has(f.id); let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
             let badgeExtra = catObj.semanal ? `<div style="color:#E65100; font-size:11px; font-weight:bold; margin-bottom:2px; text-align:right;">SEMANAL</div>` : '';
             let nomeFunc = escapeHTML(f.nome || 'Sem nome');
             let inicialFunc = escapeHTML(String(f.nome || '?').charAt(0).toUpperCase());
             let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${escapeHTML(f.codigo)}]</strong> ` : '';
-            let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função';
+            let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? formatarFuncaoLista(funName) : 'Sem função';
             
             let feriasMsg = '';
             let feriasList = db.registros.filter(r => r.type === 'ferias' && r.funcId === f.id);
@@ -67,10 +67,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function renderizarEstadoVazio() {
-        if(db.funcionarios.length > 0) {
-            return `<li class="empty-state"><div class="empty-state-title">Nenhum funcionario neste filtro</div><div class="empty-state-text">Limpe os filtros ou escolha outra classe para voltar a lista.</div><div class="empty-actions"><button class="btn-action" onclick="filtrarCat(null)">Limpar filtros</button></div></li>`;
+        const ativos = db.funcionarios.filter(f => !f.arquivado);
+        if(ativos.length > 0) {
+            return `<li class="empty-state"><div class="empty-state-title">Nenhum funcionário neste filtro</div><div class="empty-state-text">Limpe os filtros ou escolha outro vínculo para voltar à lista.</div><div class="empty-actions"><button class="btn-action" onclick="filtrarCat(null)">Limpar filtros</button></div></li>`;
         }
-        return `<li class="empty-state"><div class="empty-state-title">Monte a base do RH</div><div class="empty-state-text">Cadastre classes, funcoes e depois adicione o primeiro funcionario.</div><div class="empty-actions"><button class="btn-action" onclick="abrirFormClasse(null)">Criar Classe</button><button class="btn-outline" onclick="abrirFormFuncao(null)">Criar Funcao</button><button class="btn-action" onclick="abrirFormFunc(null)">Novo Funcionario</button></div></li>`;
+        if(db.funcionarios.length > 0) {
+            return `<li class="empty-state"><div class="empty-state-title">Nenhum funcionário ativo</div><div class="empty-state-text">Há funcionários arquivados. Você pode restaurar alguém em Gerenciar Funcionários ou cadastrar uma nova pessoa.</div><div class="empty-actions"><button class="btn-action" onclick="abrirGerenciar('funcionarios')">Gerenciar Funcionários</button><button class="btn-outline" onclick="abrirFormFunc(null, 'inicio')">Novo Funcionário</button></div></li>`;
+        }
+        return `<li class="empty-state"><div class="empty-state-title">Monte a base do RH</div><div class="empty-state-text">Cadastre vínculos como Carteira Assinada, Extra ou Contrato, depois crie as funções e adicione o primeiro funcionário.</div><div class="empty-actions"><button class="btn-action" onclick="abrirFormClasse(null, 'inicio')">Criar Vínculo</button><button class="btn-outline" onclick="abrirFormFuncao(null, 'inicio')">Criar Função</button><button class="btn-action" onclick="abrirFormFunc(null, 'inicio')">Novo Funcionário</button></div></li>`;
     }
 
     function cliqueItem(id) {
@@ -78,6 +82,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         else { let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = f.nome; document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
         if(catObj && catObj.semanal) { document.getElementById('btnAcaoFalta').style.display = (f.habFaltas) ? 'block' : 'none'; document.getElementById('btnAcaoFerias').style.display = (f.habFerias) ? 'block' : 'none'; } else { document.getElementById('btnAcaoFalta').style.display = 'block'; document.getElementById('btnAcaoFerias').style.display = 'block'; }
         document.getElementById('modalAcoesFunc').style.display = 'flex'; }
+    }
+
+    function formatarFuncaoLista(funcao) {
+        if(!funcao) return '';
+        const numero = String(funcao.numero || '').trim();
+        return numero ? `${numero.padStart(3, '0')} - ${funcao.nome || ''}` : (funcao.nome || '');
     }
 
     // 3. GERENCIAMENTO CRUD
@@ -91,15 +101,34 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = 'flex'; document.getElementById('btnFuncoesListagem').style.display = 'flex'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
             document.getElementById('btnVoltarListagem').onclick = () => { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex'; };
             let funcs = [...db.funcionarios].sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || '')));
-            funcs.forEach((f) => { let codStr = f.codigo ? `<strong style="color:#00695C;">[${escapeHTML(f.codigo)}]</strong> ` : ''; let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? funName.nome : 'Sem função'; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${escapeHTML(f.nome)}</strong><br><small style="color:#666;">${escapeHTML(funName)}</small></div><div style="flex-shrink:0; margin-left:10px;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc(${jsArg(f.id)})">✏️</button></div></div>`; });
+            const renderFuncionarioGerenciar = (f) => {
+                let codStr = f.codigo ? `<strong style="color:#00695C;">[${escapeHTML(f.codigo)}]</strong> ` : '';
+                let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? formatarFuncaoLista(funName) : 'Sem função';
+                let acaoArquivo = f.arquivado
+                    ? `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#2E7D32;" title="Restaurar" onclick="restaurarFuncionario(${jsArg(f.id)})">↩️</button>`
+                    : `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#F57F17;" title="Arquivar" onclick="arquivarFuncionario(${jsArg(f.id)})">📦</button>`;
+                return `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; opacity:${f.arquivado ? '0.65' : '1'};"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${escapeHTML(f.nome)}</strong>${f.arquivado ? ' <small style="color:#F57F17; font-weight:bold;">(Arquivado)</small>' : ''}<br><small style="color:#666;">${escapeHTML(funName)}</small></div><div style="flex-shrink:0; margin-left:10px; display:flex; gap:4px; align-items:center;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc(${jsArg(f.id)})">✏️</button>${acaoArquivo}</div></div>`;
+            };
+            const ativos = funcs.filter(f => !f.arquivado);
+            const arquivados = funcs.filter(f => f.arquivado);
+            if(ativos.length) {
+                htmlLista += `<div class="section-title" style="margin-top:0;">Ativos</div>`;
+                ativos.forEach((f) => { htmlLista += renderFuncionarioGerenciar(f); });
+            } else {
+                htmlLista += `<div style="padding:12px; color:#999; text-align:center;">Nenhum funcionário ativo.</div>`;
+            }
+            if(arquivados.length) {
+                htmlLista += `<div class="section-title" style="background:#eeeeee; border-left-color:#9e9e9e;">Arquivados</div>`;
+                arquivados.forEach((f) => { htmlLista += renderFuncionarioGerenciar(f); });
+            }
         } else if(tipo === 'categorias') {
-            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Classes"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
+            fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Vínculos"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
             document.getElementById('btnVoltarListagem').onclick = () => { abrirGerenciar('funcionarios'); };
             db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${safeColor(c.cor)}; color:${safeColor(c.corTexto, '#ffffff')}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${escapeHTML(c.nome)}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse(${jsArg(c.id)})">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias',${jsArg(c.id)})">🗑️</button></div></div>`; });
         } else if(tipo === 'funcoes') {
             fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Funções/Cargos"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFuncao(null);
             document.getElementById('btnVoltarListagem').onclick = () => { abrirGerenciar('funcionarios'); };
-            db.funcoes.forEach((fn) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${escapeHTML(fn.nome)}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFuncao(${jsArg(fn.id)})">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('funcoes',${jsArg(fn.id)})">🗑️</button></div></div>`; });
+            db.funcoes.forEach((fn) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${escapeHTML(formatarFuncaoLista(fn))}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFuncao(${jsArg(fn.id)})">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('funcoes',${jsArg(fn.id)})">🗑️</button></div></div>`; });
         } else if(tipo === 'administradores') {
             document.getElementById('tituloListagem').innerText = "Administradores"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormAdmin(null);
             document.getElementById('btnVoltarListagem').onclick = () => { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex'; };
@@ -109,6 +138,26 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function excluirItem(tipo, id) { if(confirm("Deseja realmente excluir?")) { db[tipo] = db[tipo].filter(x => x.id !== id); salvarBanco(); abrirGerenciar(tipo); if(tipo==='categorias') renderizarFiltros(); } }
+    function arquivarFuncionario(id) {
+        const f = db.funcionarios.find(x => x.id === id);
+        if(!f) return;
+        if(!confirm(`Arquivar ${f.nome || 'funcionário'}? Ele não aparecerá nas listas, filtros e impressões de ativos.`)) return;
+        f.arquivado = true;
+        f.arquivadoEm = Date.now();
+        itensSelecionados.delete(id);
+        salvarBanco();
+        abrirGerenciar('funcionarios');
+        renderizarLista();
+    }
+    function restaurarFuncionario(id) {
+        const f = db.funcionarios.find(x => x.id === id);
+        if(!f) return;
+        f.arquivado = false;
+        f.arquivadoEm = null;
+        salvarBanco();
+        abrirGerenciar('funcionarios');
+        renderizarLista();
+    }
 
     function salvarEmpresa() { 
         let cnpj = document.getElementById('empCNPJ').value; if(cnpj && cnpj.length < 18) return alert("CNPJ incompleto. Digite os 14 números.");
@@ -118,8 +167,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function abrirFormAdmin(id) { fecharModal('modalListagem'); if(id) { let a = db.administradores.find(x => x.id === id); document.getElementById('adminId').value = a.id; document.getElementById('adminNome').value = a.nome; document.getElementById('adminSenha').value = a.senha; } else { document.getElementById('adminId').value = ''; document.getElementById('adminNome').value = ''; document.getElementById('adminSenha').value = ''; } document.getElementById('modalFormAdmin').style.display = 'flex'; }
     function salvarAdmin() { let id = document.getElementById('adminId').value || 'adm_' + Date.now(); let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value }; const idx = db.administradores.findIndex(x => x.id === id); if(idx >= 0) db.administradores[idx] = novo; else db.administradores.push(novo); salvarBanco(); fecharModal('modalFormAdmin'); abrirGerenciar('administradores'); }
 
-    // CLASSES E SALARIOS
-    function abrirFormClasse(id) { 
+    // VINCULOS E SALARIOS
+    function abrirFormClasse(id, origem = 'gerenciar') { 
+        origemFormClasse = origem;
         fecharModal('modalListagem'); tempSalariosClasse = [];
         if(id) { 
             let c = db.categorias.find(x => x.id === id); document.getElementById('classeId').value = c.id; document.getElementById('classeNome').value = c.nome; document.getElementById('classeCorFundo').value = c.cor || '#00695C'; document.getElementById('classeCorTexto').value = c.corTexto || '#ffffff'; document.getElementById('classeSemanal').checked = c.semanal || false; 
@@ -136,15 +186,19 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function addSalarioClasse() { let vStr = document.getElementById('novoSalarioClasse').value; let val = parseMoeda(vStr); if(val > 0) { tempSalariosClasse.push(val); document.getElementById('novoSalarioClasse').value = ''; renderListaSalariosClasse(); } }
     function removerSalarioClasse(idx) { tempSalariosClasse.splice(idx, 1); renderListaSalariosClasse(); }
     
-    function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked, horarios: { entrada: document.getElementById('classeHoraEntrada').value, saida: document.getElementById('classeHoraSaida').value, intEnt: document.getElementById('classeHoraIntEnt').value, intSai: document.getElementById('classeHoraIntSai').value, semIntervalo: document.getElementById('classeSemIntervalo').checked }, salarios: tempSalariosClasse }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); abrirGerenciar('categorias'); renderizarFiltros(); renderizarLista(); }
+    function voltarDepoisFormClasse() { if(origemFormClasse === 'inicio') { origemFormClasse = 'gerenciar'; renderizarFiltros(); renderizarLista(); return; } abrirGerenciar('categorias'); }
+    function cancelarFormClasse() { fecharModal('modalFormClasse'); voltarDepoisFormClasse(); }
+    function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked, horarios: { entrada: document.getElementById('classeHoraEntrada').value, saida: document.getElementById('classeHoraSaida').value, intEnt: document.getElementById('classeHoraIntEnt').value, intSai: document.getElementById('classeHoraIntSai').value, semIntervalo: document.getElementById('classeSemIntervalo').checked }, salarios: tempSalariosClasse }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); voltarDepoisFormClasse(); renderizarFiltros(); renderizarLista(); }
 
-    function abrirFormFuncao(id) { fecharModal('modalListagem'); if(id) { let fn = db.funcoes.find(x => x.id === id); document.getElementById('funcaoId').value = fn.id; document.getElementById('funcaoNome').value = fn.nome; } else { document.getElementById('funcaoId').value = ''; document.getElementById('funcaoNome').value = ''; } document.getElementById('modalFormFuncao').style.display = 'flex'; }
-    function salvarFuncao() { let id = document.getElementById('funcaoId').value || 'fn_' + Date.now(); let novo = { id: id, nome: document.getElementById('funcaoNome').value }; const idx = db.funcoes.findIndex(x => x.id === id); if(idx >= 0) db.funcoes[idx] = novo; else db.funcoes.push(novo); salvarBanco(); fecharModal('modalFormFuncao'); abrirGerenciar('funcoes'); }
+    function abrirFormFuncao(id, origem = 'gerenciar') { origemFormFuncao = origem; fecharModal('modalListagem'); if(id) { let fn = db.funcoes.find(x => x.id === id); document.getElementById('funcaoId').value = fn.id; document.getElementById('funcaoNumero').value = fn.numero || ''; document.getElementById('funcaoNome').value = fn.nome; } else { document.getElementById('funcaoId').value = ''; document.getElementById('funcaoNumero').value = ''; document.getElementById('funcaoNome').value = ''; } document.getElementById('modalFormFuncao').style.display = 'flex'; }
+    function voltarDepoisFormFuncao() { if(origemFormFuncao === 'inicio') { origemFormFuncao = 'gerenciar'; renderizarLista(); return; } abrirGerenciar('funcoes'); }
+    function cancelarFormFuncao() { fecharModal('modalFormFuncao'); voltarDepoisFormFuncao(); }
+    function salvarFuncao() { let id = document.getElementById('funcaoId').value || 'fn_' + Date.now(); let novo = { id: id, numero: document.getElementById('funcaoNumero').value.trim(), nome: document.getElementById('funcaoNome').value }; const idx = db.funcoes.findIndex(x => x.id === id); if(idx >= 0) db.funcoes[idx] = novo; else db.funcoes.push(novo); salvarBanco(); fecharModal('modalFormFuncao'); voltarDepoisFormFuncao(); renderizarLista(); }
 
     // FUNCIONARIO
     function carregarComboCategorias(selCat = '', selFun = '', selVt = '') { 
-        const cCat = document.getElementById('funcCategoria'); cCat.innerHTML = optionHTML('', '-- Selecione a Classe --'); db.categorias.forEach(c => cCat.innerHTML += optionHTML(c.id, c.nome, selCat === c.id)); 
-        const cFun = document.getElementById('funcFuncao'); cFun.innerHTML = optionHTML('', '-- Função --'); db.funcoes.forEach(fn => cFun.innerHTML += optionHTML(fn.id, fn.nome, selFun === fn.id));
+        const cCat = document.getElementById('funcCategoria'); cCat.innerHTML = optionHTML('', '-- Selecione o Vínculo --'); db.categorias.forEach(c => cCat.innerHTML += optionHTML(c.id, c.nome, selCat === c.id)); 
+        const cFun = document.getElementById('funcFuncao'); cFun.innerHTML = optionHTML('', '-- Função --'); db.funcoes.forEach(fn => cFun.innerHTML += optionHTML(fn.id, formatarFuncaoLista(fn), selFun === fn.id));
         const cVt = document.getElementById('funcVTRota'); cVt.innerHTML = optionHTML('', '-- Rota (Nenhuma) --'); (db.configGerais.valesTransporte || []).forEach(v => cVt.innerHTML += optionHTML(v.rota, v.rota, selVt === v.rota));
     }
 
@@ -174,7 +228,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         });
     }
 
-    function abrirFormFunc(id) {
+    function abrirFormFunc(id, origem = 'gerenciar') {
+        origemFormFuncionario = origem;
         fecharModal('modalListagem'); tempPix = [];
         if(id) {
             let f = db.funcionarios.find(x => x.id === id); carregarComboCategorias(f.categoria, f.funcao, f.vtRota);
@@ -201,11 +256,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
     function removerPix(idx) { tempPix.splice(idx, 1); if(tempPix.length > 0 && !tempPix.some(p => p.principal)) tempPix[0].principal = true; renderListaPix(); }
     function setPixPrincipal(idx) { tempPix.forEach((p, i) => p.principal = (i === idx)); }
+    function voltarDepoisFormFuncionario() { if(origemFormFuncionario === 'inicio') { origemFormFuncionario = 'gerenciar'; renderizarLista(); return; } abrirGerenciar('funcionarios'); }
+    function cancelarFormFuncionario() { fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); }
     function salvarFuncionario() { 
         const id = document.getElementById('funcId').value || 'f_'+Date.now(); 
+        const existente = db.funcionarios.find(x => x.id === id);
         let folgas = Array.from(document.querySelectorAll('.chk-folga-func:checked')).map(el => el.value);
-        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
-        const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); renderizarLista(); 
+        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, arquivado: existente ? !!existente.arquivado : false, arquivadoEm: existente ? existente.arquivadoEm : null, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
+        const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); 
     }
 
     // CONFIGS
@@ -303,13 +361,35 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function estornarDesconto(id) { let r = db.registros.find(x => x.id === id); if(!r) return; r.descontado = false; salvarBanco(); renderizarHistAdiantamento(r.funcId); }
 
     function renderizarHistAdiantamento(funcId) {
-        let boxPend = document.getElementById('listaHistoricoAdiantamentos'); let boxDesc = document.getElementById('listaHistoricoAdiantDescontados'); let hPend = ''; let hDesc = ''; let regs = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); let totalPend = 0;
+        let boxPendAtual = document.getElementById('listaHistoricoAdiantamentos');
+        let boxPendAnt = document.getElementById('listaHistoricoAdiantamentosAnt');
+        let boxDesc = document.getElementById('listaHistoricoAdiantDescontados');
+        let hAtual = ''; let hAnt = ''; let hDesc = '';
+        let totalAtual = 0; let totalAnt = 0;
+        const mesAtual = getHojeSTR().substring(0, 7);
+        let regs = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
+        const htmlPendente = (r) => {
+            let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
+            let btnAcao = r.aguardandoDesconto ? `<button style="background:#Fbc02d; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="desfazerDescontoTemp(${jsArg(r.id)})">Desfazer (10s)</button>` : `<button style="background:#2e7d32; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="marcarDesconto(${jsArg(r.id)})">Descontar</button>`;
+            return `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0; align-items:center; gap:8px;"><div><b>${formatDataBR(r.data)}</b> - ${escapeHTML(r.motivo)} ${msgEdit}<br><span style="color:#666; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center; flex-shrink:0;"><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAdiantamento(${jsArg(r.id)})">✏️</button> ${btnAcao} <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro(${jsArg(r.id)}, 'adiantamento')">🗑️</button></div></div>`;
+        };
         regs.forEach(r => { 
             let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
-            if(r.descontado) { hDesc += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;"><div><b style="color:#777;">${formatDataBR(r.data)}</b> - ${r.motivo} ${msgEdit}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center;"><b style="color:#777;">R$ ${formatMoeda(r.valor)}</b> <button style="background:#eee; border:none; border-radius:4px; padding:2px 5px; cursor:pointer; font-size:10px;" onclick="estornarDesconto('${r.id}')">Desfazer</button></div></div>`; } 
-            else { totalPend += r.valor; let btnAcao = r.aguardandoDesconto ? `<button style="background:#Fbc02d; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="desfazerDescontoTemp('${r.id}')">Desfazer (10s)</button>` : `<button style="background:#2e7d32; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="marcarDesconto('${r.id}')">Descontar</button>`; hPend += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0; align-items:center;"><div><b>${formatDataBR(r.data)}</b> - ${r.motivo} ${msgEdit}<br><span style="color:#666; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center;"><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAdiantamento('${r.id}')">✏️</button> ${btnAcao} <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'adiantamento')">🗑️</button></div></div>`; }
+            if(r.descontado) {
+                hDesc += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0; gap:8px;"><div><b style="color:#777;">${formatDataBR(r.data)}</b> - ${escapeHTML(r.motivo)} ${msgEdit}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center; flex-shrink:0;"><b style="color:#777;">R$ ${formatMoeda(r.valor)}</b> <button style="background:#eee; border:none; border-radius:4px; padding:2px 5px; cursor:pointer; font-size:10px;" onclick="estornarDesconto(${jsArg(r.id)})">Desfazer</button></div></div>`;
+            } else if(String(r.data || '').substring(0, 7) === mesAtual) {
+                totalAtual += Number(r.valor || 0);
+                hAtual += htmlPendente(r);
+            } else {
+                totalAnt += Number(r.valor || 0);
+                hAnt += htmlPendente(r);
+            }
         });
-        document.getElementById('totalAdiantPendente').innerText = `R$ ${formatMoeda(totalPend)}`; boxPend.innerHTML = hPend || '<div style="color:#999; text-align:center;">Nenhum pendente.</div>'; boxDesc.innerHTML = hDesc || '<div style="color:#999; text-align:center;">Nenhum histórico.</div>';
+        document.getElementById('totalAdiantPendenteAnt').innerText = `R$ ${formatMoeda(totalAnt)}`;
+        document.getElementById('totalAdiantPendenteAtual').innerText = `R$ ${formatMoeda(totalAtual)}`;
+        boxPendAnt.innerHTML = hAnt || '<div style="color:#999; text-align:center;">Nenhum pendente anterior.</div>';
+        boxPendAtual.innerHTML = hAtual || '<div style="color:#999; text-align:center;">Nenhum pendente no mês atual.</div>';
+        boxDesc.innerHTML = hDesc || '<div style="color:#999; text-align:center;">Nenhum histórico.</div>';
     }
 
     // FALTAS E FÉRIAS
@@ -381,7 +461,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function abrirModalAniversarios() {
         let box = document.getElementById('listaAniversarios'); let html = '';
         let grupos = {};
-        db.funcionarios.forEach(f => { if(!f.dataNasc) return; let m = f.dataNasc.split('-')[1]; let d = f.dataNasc.split('-')[2]; if(!grupos[m]) grupos[m] = []; grupos[m].push({nome: f.nome, dia: d}); });
+        db.funcionarios.filter(f => !f.arquivado).forEach(f => { if(!f.dataNasc) return; let m = f.dataNasc.split('-')[1]; let d = f.dataNasc.split('-')[2]; if(!grupos[m]) grupos[m] = []; grupos[m].push({nome: f.nome, dia: d}); });
         for(let m=1; m<=12; m++) {
             let mStr = String(m).padStart(2,'0'); if(!grupos[mStr]) continue;
             html += `<div style="background:#00695C; color:#fff; padding:5px 10px; font-weight:bold; margin-top:10px; border-radius:4px;">${getExtensoMes(m).toUpperCase()}</div>`;
