@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.21</title>
+    <title>Alô RH v1.0.22</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.22">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.21</div>
+    <div class="splash-versao">v1.0.22</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -41,6 +41,7 @@
         <div id="actionBar" class="action-bar">
             <div style="display: flex; gap: 5px; flex-wrap: nowrap; align-items:center;" id="boxBarraAcoes">
                 <div id="boxFiltrosDias" style="display:flex; gap:5px;"></div>
+                <button class="btn-action-bar btn-selecionar-lista" id="btnSelecionarLista" onclick="toggleSelecionarTodosListados()">✓ Todos</button>
                 
                 <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
                 <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinz.</button>
@@ -536,6 +537,7 @@
     <div class="modal" style="width: 95%; max-width: 600px;">
         <div class="modal-title">Ajuste de Vale Transporte</div>
         <div class="form-group"><label>Mês de Referência (que será pago):</label><input type="month" id="vtMesRef" onchange="gerarListaAjusteVT()"></div>
+        <div class="form-group"><label>Data da folha:</label><input type="date" id="vtDataPagto"></div>
         <p style="font-size:11px; color:#666;">*O sistema calcula: Dias úteis do mês - Faltas do mês anterior + Eventuais folgas não tiradas.</p>
         <div id="areaListaAjusteVT" style="max-height: 400px; overflow-y: auto;"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPrintVT')">Cancelar</button><button class="btn-action" onclick="executarPrintVT()">Gerar Recibos VT</button></div>
@@ -549,11 +551,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalAniversarios')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js"></script>
-<script src="js/calculos.js"></script>
-<script src="js/interface.js"></script>
-<script src="js/impressao.js"></script>
-<script src="js/sincronizacao.js"></script>
+<script src="js/dados.js?v=1.0.22"></script>
+<script src="js/calculos.js?v=1.0.22"></script>
+<script src="js/interface.js?v=1.0.22"></script>
+<script src="js/impressao.js?v=1.0.22"></script>
+<script src="js/sincronizacao.js?v=1.0.22"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

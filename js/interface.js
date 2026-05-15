@@ -14,6 +14,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('btnAcaoMassa2').style.display = visivel;
         document.getElementById('btnAcaoMassa3').style.display = visivel;
         document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
+        const btnSelecionarLista = document.getElementById('btnSelecionarLista');
+        if(btnSelecionarLista) {
+            const funcs = obterFuncionariosListados();
+            btnSelecionarLista.style.display = funcs.length ? 'flex' : 'none';
+            btnSelecionarLista.classList.toggle('limpar', temSelecionados);
+            btnSelecionarLista.innerText = temSelecionados ? 'Limpar' : '✓ Todos';
+        }
     }
 
     function initDiasFiltro() {
@@ -49,12 +56,18 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         renderizarFiltros(); renderizarLista(); 
     }
 
+    function obterFuncionariosListados() {
+        let funcs = db.funcionarios.filter(f => !f.arquivado);
+        if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual);
+        if(diaFiltroAptos) funcs = funcs.filter(f => isAptoNoDia(f, diaFiltroAptos));
+        funcs.sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        return funcs;
+    }
+
     function renderizarLista() {
         const lista = document.getElementById('listaPrincipal'); let html = '';
-        let funcs = db.funcionarios.filter(f => !f.arquivado); if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual); funcs.sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        let funcs = obterFuncionariosListados();
         let hj = new Date(); hj.setHours(0,0,0,0);
-        
-        if(diaFiltroAptos) { funcs = funcs.filter(f => isAptoNoDia(f, diaFiltroAptos)); }
         
         funcs.forEach(f => {
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem vínculo', semanal: false };
@@ -102,6 +115,20 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         event.stopPropagation();
         if (itensSelecionados.has(id)) itensSelecionados.delete(id);
         else itensSelecionados.add(id);
+        renderizarLista();
+    }
+
+    function toggleSelecionarTodosListados() {
+        if(itensSelecionados.size > 0) {
+            itensSelecionados.clear();
+            renderizarLista();
+            return;
+        }
+        const funcs = obterFuncionariosListados();
+        if(funcs.length === 0) return;
+        funcs.forEach(f => {
+            itensSelecionados.add(f.id);
+        });
         renderizarLista();
     }
 

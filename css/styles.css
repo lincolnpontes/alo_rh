@@ -17,6 +17,8 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .action-bar { display: none; justify-content: space-between; padding: 8px 10px; background: #37474F; align-items: center; flex-shrink: 0; gap: 4px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
         .btn-action-bar { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 6px; padding: 6px 10px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;}
         .btn-action-bar.ativo { background: #4CAF50; border-color: #388E3C; }
+        .btn-selecionar-lista { background: rgba(0,105,92,0.35); border-color: rgba(178,223,219,0.75); min-width: 74px; }
+        .btn-selecionar-lista.limpar { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.25); }
         
         .area-conteudo { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .scroll-area { overflow-y: auto; flex: 1; padding-bottom: 90px; -webkit-overflow-scrolling: touch; }

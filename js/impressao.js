@@ -1,6 +1,6 @@
 // IMPRESSÕES E VT
     let arrVTParaImprimir = [];
-    function abrirAjusteVT() { if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
+    function abrirAjusteVT() { if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); document.getElementById('vtDataPagto').value = getHojeSTR(); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
     function gerarListaAjusteVT() {
         let box = document.getElementById('areaListaAjusteVT'); let html = ''; arrVTParaImprimir = [];
         let mesRef = document.getElementById('vtMesRef').value; if(!mesRef) return;
@@ -64,6 +64,13 @@
         const [ano, mes] = mesRef.split('-');
         return { ano, mes: getExtensoMes(parseInt(mes)).toLowerCase() };
     }
+    function formatDataExtensoPrint(dataStr, cidade = '') {
+        const partes = String(dataStr || '').split('-');
+        if(partes.length !== 3) return cidade ? `${cidade}, ${dataStr || ''}` : (dataStr || '');
+        const [ano, mes, dia] = partes;
+        const cidadePrefixo = cidade ? `${cidade}, ` : '';
+        return `${cidadePrefixo}${dia} de ${getExtensoMes(parseInt(mes)).toLowerCase()} de ${ano}`;
+    }
     function quebrarPaginas(lista, tamanho) {
         const paginas = [];
         for(let i = 0; i < lista.length; i += tamanho) paginas.push(lista.slice(i, i + tamanho));
@@ -75,6 +82,7 @@
         let { ano, mes } = getMesAnoExtensoPrint(mesRefVT);
         let empresa = getEmpresaPrint();
         let cidade = db.empresa.cidade || 'Cabedelo';
+        let dataFolha = document.getElementById('vtDataPagto').value || getHojeSTR();
         let logoHtml = db.empresa.logo
             ? `<img class="logo-vt" src="${db.empresa.logo}">`
             : `<div class="logo-vt-texto">${escapeHTML(db.empresa.fantasia || '')}</div>`;
@@ -93,11 +101,12 @@
             .titulo-vt{font-size:17px;text-align:center;font-weight:bold;margin-top:9mm;}
             .texto-vt{font-size:16px;line-height:1.95;text-align:justify;margin-top:5mm;text-indent:0;}
             .lista-vt{margin-top:5mm;}
-            .linha-vt{display:grid;grid-template-columns:1fr 28px 86px 1fr;column-gap:14px;align-items:end;min-height:9.6mm;font-size:16px;}
-            .linha-vt .nome,.linha-vt .valor,.linha-vt .moeda,.linha-vt .assinatura{border-bottom:1px solid #000;padding:0 3px 2px;}
-            .linha-vt .moeda{text-align:center;}
+            .linha-vt{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;align-items:end;min-height:9.6mm;font-size:16px;}
+            .linha-vt .nome,.linha-vt .valor,.linha-vt .moeda{border-bottom:1.5px solid #000;padding:0 3px 2px;}
+            .linha-vt .assinatura{border-bottom:1.5px solid #000;margin-left:18px;padding:0 3px 2px;}
+            .linha-vt .moeda{text-align:left;padding-left:4px;}
             .linha-vt .valor{text-align:right;padding-right:8px;}
-            .total-vt{display:grid;grid-template-columns:1fr 28px 86px 1fr;column-gap:14px;font-size:16px;font-weight:bold;margin-top:1mm;}
+            .total-vt{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;font-size:16px;font-weight:bold;margin-top:1mm;}
             .total-vt div:nth-child(1){text-align:right;}
             .total-vt div:nth-child(3){text-align:right;padding-right:8px;}
             .rodape-vt{margin-top:auto;font-size:16px;}
@@ -106,32 +115,58 @@
         </style></head><body>`;
         paginas.forEach((pagina) => {
             const total = pagina.reduce((acc, item) => acc + Number(item.valTotal || 0), 0);
-            html += `<section class="vt-folha"><div class="vt-topo">${logoHtml}<div class="vt-razao">${escapeHTML(empresa)}</div><div class="vt-cnpj">CNPJ ${escapeHTML(db.empresa.cnpj || '')}</div></div><div class="titulo-vt">Folha de Pagamento dos Vales-Transporte</div><div class="texto-vt">Ao assinar esta folha, declaro que recebi da empresa supracitada a importância referente aos <b>vales-transporte</b> do mês de <b>${escapeHTML(mes)} de ${escapeHTML(ano)}</b>, que é <b>preferência minha recebê-los em dinheiro e que tenho ciência de que há previsão para tal na Convenção Coletiva da Categoria.</b></div><div class="lista-vt">`;
+            html += `<section class="vt-folha"><div class="vt-topo">${logoHtml}<div class="vt-razao">${escapeHTML(empresa)}</div><div class="vt-cnpj">CNPJ ${escapeHTML(db.empresa.cnpj || '')}</div></div><div class="titulo-vt">Folha de Pagamento dos Vales-Combustível</div><div class="texto-vt">Ao assinar esta folha, declaro que recebi da empresa supracitada a importância referente aos <b>vales-combustível</b> do mês de <b>${escapeHTML(mes)} de ${escapeHTML(ano)}</b>, que é <b>preferência minha recebê-los em dinheiro e que tenho ciência de que há previsão para tal na Convenção Coletiva da Categoria.</b></div><div class="lista-vt">`;
             pagina.forEach((item) => {
                 html += `<div class="linha-vt"><div class="nome">${escapeHTML(item.nome)}</div><div class="moeda">R$</div><div class="valor">${formatMoeda(item.valTotal)}</div><div class="assinatura"></div></div>`;
             });
-            html += `<div class="total-vt"><div>Total =</div><div>R$</div><div>${formatMoeda(total)}</div><div></div></div></div><div class="rodape-vt"><div class="data-vt">${escapeHTML(cidade)}, 01 de ${escapeHTML(mes)} de ${escapeHTML(ano)}</div><div class="assinatura-diretor-vt">Assinatura do Diretor</div></div></section>`;
+            html += `<div class="total-vt"><div>Total =</div><div>R$</div><div>${formatMoeda(total)}</div><div></div></div></div><div class="rodape-vt"><div class="data-vt">${escapeHTML(formatDataExtensoPrint(dataFolha, cidade))}</div><div class="assinatura-diretor-vt">Assinatura do Diretor</div></div></section>`;
         });
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintVT');
     }
 
     function abrirConfigQuinzena() { if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('quinzenaMesRef').value = getHojeSTR().substring(0,7); document.getElementById('quinzenaDataPagto').value = getHojeSTR(); document.getElementById('modalPrintQuinzena').style.display = 'flex'; }
     function executarPrintQuinzena() {
-        let mesRef = document.getElementById('quinzenaMesRef').value; if(!mesRef) return; let ano = mesRef.split('-')[0]; let mesNum = mesRef.split('-')[1]; let dataPgto = document.getElementById('quinzenaDataPagto').value; let cidade = db.empresa.cidade || 'Cidade';
-        let ids = Array.from(itensSelecionados); let w = window.open('','_blank'); 
-        let html = `<html><head><title>Quinzena</title><style>body{font-family:Arial,sans-serif; margin:20px; padding:20px; border:2px solid #000;} .logo-area{text-align:center; margin-bottom:10px;} .logo-area img{max-height:80px; margin-bottom:10px;} .titulo-empresa{font-size:22px; font-weight:bold; margin:0;} .sub-empresa{font-size:14px; font-weight:bold; margin:5px 0;} .titulo-doc{font-size:18px; font-weight:bold; margin:20px 0; text-align:center;} .texto-declara{font-size:14px; margin-bottom:30px; text-align:justify; line-height:1.5;} .tabela-lista{width:100%; border-collapse:collapse; font-size:14px;} .tabela-lista td{padding:12px 5px; vertical-align:bottom;} .linha-ass{border-bottom:1px solid #000; width:100%; display:inline-block; margin-bottom:2px;} .rodape-data{text-align:right; margin-top:40px; font-size:16px; font-weight:bold;}</style></head><body>`;
-        let logoHtml = db.empresa.logo ? `<img src="${db.empresa.logo}">` : `<div class="titulo-empresa">${db.empresa.fantasia || 'NOME DA EMPRESA'}</div>`;
-        html += `<div class="logo-area">${logoHtml}<div class="sub-empresa">${db.empresa.razao || ''}</div><div class="sub-empresa">CNPJ ${db.empresa.cnpj || ''}</div></div>`;
-        html += `<div class="titulo-doc">FOLHA DE PAGAMENTO DE ADIANTAMENTO DA QUINZENA</div>`;
-        html += `<div class="texto-declara">Ao assinar esta folha, declaro que recebi, da empresa supracitada, a importância respectiva a cada colaborador em adiantamento do salário do mês de <b>${getExtensoMes(mesNum).toUpperCase()} DE ${ano}</b>.</div>`;
-        html += `<table class="tabela-lista">`;
         let quinzBase = parseMoeda(db.configGerais.adiantamentoQuinzena || "0");
-        ids.forEach(id => {
+        let mesRef = document.getElementById('quinzenaMesRef').value; if(!mesRef) return; let ano = mesRef.split('-')[0]; let mesNum = mesRef.split('-')[1]; let dataPgto = document.getElementById('quinzenaDataPagto').value || getHojeSTR(); let cidade = db.empresa.cidade || 'Cidade';
+        let itensQuinzena = Array.from(itensSelecionados).map(id => {
             let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return;
             let valFinal = quinzBase - parseMoeda(f.unidentis || "0");
-            html += `<tr><td style="width:40%;">${escapeHTML(f.nome)}</td><td style="width:15%;">R$ ${formatMoeda(valFinal)}</td><td style="width:45%;"><span class="linha-ass"></span></td></tr>`;
+            return { nome: f.nome, valor: valFinal };
+        }).filter(Boolean).sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        if(itensQuinzena.length === 0) return alert("Nenhum funcionário ativo selecionado para imprimir.");
+        const paginas = quebrarPaginas(itensQuinzena, 15);
+        let logoHtml = db.empresa.logo ? `<img class="logo-quinzena" src="${db.empresa.logo}">` : `<div class="logo-quinzena-texto">${escapeHTML(db.empresa.fantasia || 'NOME DA EMPRESA')}</div>`;
+        let w = window.open('','_blank'); 
+        let html = `<html><head><title>Quinzena</title><style>
+            @page{size:A4 portrait;margin:10mm;}
+            body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:16px;}
+            .quinzena-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 7mm 8mm;display:flex;flex-direction:column;page-break-after:always;}
+            .quinzena-folha:last-child{page-break-after:auto;}
+            .logo-area{text-align:center;font-weight:bold;}
+            .logo-quinzena{max-height:28mm;max-width:70mm;object-fit:contain;display:block;margin:0 auto 1mm;}
+            .logo-quinzena-texto{min-height:18mm;font-size:28px;display:flex;align-items:center;justify-content:center;font-weight:normal;}
+            .sub-empresa{font-size:18px;line-height:1.15;}
+            .cnpj-empresa{font-size:16px;margin-top:2px;}
+            .titulo-doc{font-size:18px;font-weight:bold;margin:10mm 0 7mm;text-align:center;}
+            .texto-declara{font-size:16px;margin-bottom:13mm;text-align:justify;line-height:1.45;}
+            .lista-quinzena{margin-top:0;}
+            .linha-quinzena{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;align-items:end;min-height:9.6mm;font-size:16px;}
+            .linha-quinzena .nome,.linha-quinzena .moeda,.linha-quinzena .valor{border-bottom:1.5px solid #000;padding:0 3px 2px;}
+            .linha-quinzena .moeda{text-align:left;padding-left:4px;}
+            .linha-quinzena .valor{text-align:right;padding-right:8px;}
+            .linha-quinzena .assinatura{border-bottom:1.5px solid #000;margin-left:18px;padding:0 3px 2px;}
+            .rodape-data{text-align:right;margin-top:auto;font-size:17px;font-weight:bold;padding-right:8mm;}
+        </style></head><body>`;
+        paginas.forEach((pagina) => {
+            html += `<section class="quinzena-folha"><div class="logo-area">${logoHtml}<div class="sub-empresa">${escapeHTML(db.empresa.razao || '')}</div><div class="cnpj-empresa">CNPJ ${escapeHTML(db.empresa.cnpj || '')}</div></div>`;
+            html += `<div class="titulo-doc">FOLHA DE PAGAMENTO DE ADIANTAMENTO DA QUINZENA</div>`;
+            html += `<div class="texto-declara">Ao assinar esta folha, declaro que recebi, da empresa supracitada, a importância respectiva a cada colaborador em adiantamento do salário do mês de <b>${escapeHTML(getExtensoMes(mesNum).toUpperCase())} DE ${escapeHTML(ano)}</b>.</div><div class="lista-quinzena">`;
+            pagina.forEach((item) => {
+                html += `<div class="linha-quinzena"><div class="nome">${escapeHTML(item.nome)}</div><div class="moeda">R$</div><div class="valor">${formatMoeda(item.valor)}</div><div class="assinatura"></div></div>`;
+            });
+            html += `</div><div class="rodape-data">${escapeHTML(formatDataExtensoPrint(dataPgto, cidade))}</div></section>`;
         });
-        html += `</table><div class="rodape-data">${cidade}, ${formatDataBR(dataPgto)}</div></body></html>`;
+        html += `</body></html>`;
         w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintQuinzena');
     }
 
@@ -156,14 +191,18 @@
             .quadro-horarios th,.quadro-horarios td{border:0;padding:2px 8px;text-align:left;white-space:nowrap;}
             .quadro-horarios th{font-size:13px;font-weight:bold;}
             .quadro-horarios .centro{text-align:center;}
-            .tabela-ponto{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;}
-            .tabela-ponto th,.tabela-ponto td{border:1.5px solid #000;text-align:center;padding:0 2px;height:5.35mm;box-sizing:border-box;font-weight:normal;}
+            .tabela-ponto{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;border:2px solid #000;}
+            .tabela-ponto th,.tabela-ponto td{border:2px solid #000;text-align:center;padding:0 2px;height:5.35mm;box-sizing:border-box;font-weight:normal;}
             .tabela-ponto thead th{height:6mm;font-size:12px;}
             .tabela-ponto .assinatura{text-align:left;padding-left:4px;}
             .rodape-ponto{font-size:13px;margin-top:10mm;padding:0 10mm;}
-            .rodape-linhas{display:grid;grid-template-columns:65mm 65mm;justify-content:space-between;align-items:start;margin-top:12mm;gap:30mm;}
-            .data-ponto{border-top:1px solid transparent;padding-top:3px;}
-            .linha-diretor{width:65mm;border-top:1px solid #000;text-align:center;padding-top:3px;}
+            .rodape-linhas{display:grid;grid-template-columns:70mm 70mm;justify-content:space-between;align-items:start;margin-top:12mm;gap:24mm;}
+            .data-ponto{display:flex;align-items:flex-start;gap:4px;white-space:nowrap;}
+            .data-campo{display:inline-block;border-bottom:1.5px solid #000;height:13px;vertical-align:top;}
+            .data-campo.curto{width:12mm;}
+            .data-campo.longo{width:24mm;}
+            .diretor-ponto{text-align:center;}
+            .linha-diretor{display:block;width:65mm;border-top:1.5px solid #000;margin:13px auto 3px;}
         </style></head><body>`;
         const diasSemanaNome = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
         const diasSemanaFull = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -201,7 +240,7 @@
                     html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="assinatura">x</td></tr>`;
                 }
             }
-            html += `</tbody></table><div class="rodape-ponto"><div>Reconheço a exatidão destas anotações.</div><div class="rodape-linhas"><div class="data-ponto"><b>Data:</b> ____ / ____ / ________ .</div><div class="linha-diretor">Assinatura do Diretor</div></div></div></section>`;
+            html += `</tbody></table><div class="rodape-ponto"><div>Reconheço a exatidão destas anotações.</div><div class="rodape-linhas"><div class="data-ponto"><b>Data:</b><span class="data-campo curto"></span>/<span class="data-campo curto"></span>/<span class="data-campo longo"></span></div><div class="diretor-ponto"><span class="linha-diretor"></span><div>Assinatura do Diretor</div></div></div></div></section>`;
         });
         if(folhasGeradas === 0) { w.close(); return alert("Nenhum funcionário ativo selecionado para imprimir."); }
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintPonto');
