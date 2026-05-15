@@ -1,19 +1,31 @@
 function toggleDiv(id) { let el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
     function converterLogo(input) { if (input.files && input.files[0]) { let reader = new FileReader(); reader.onload = function(e) { document.getElementById('empLogoBase64').value = e.target.result; document.getElementById('previewLogo').innerHTML = `<img src="${e.target.result}" style="max-height:50px;">`; }; reader.readAsDataURL(input.files[0]); } }
     
-    window.onload = async () => { await migrarSenhaAvancadaLegada(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'flex'; initDiasFiltro(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
+    window.onload = async () => { await migrarSenhaAvancadaLegada(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'flex'; initDiasFiltro(); atualizarAcoesMassa(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
 
     function toggleModoSelecao() { 
-        modoSelecaoAtivo = !modoSelecaoAtivo; 
-        document.getElementById('btnModoSelecaoBar').style.backgroundColor = modoSelecaoAtivo ? '#00695C' : 'rgba(255,255,255,0.15)'; 
-        document.getElementById('btnAcaoMassa1').style.display = modoSelecaoAtivo ? 'flex' : 'none'; document.getElementById('btnAcaoMassa2').style.display = modoSelecaoAtivo ? 'flex' : 'none'; document.getElementById('btnAcaoMassa3').style.display = modoSelecaoAtivo ? 'flex' : 'none';
-        document.getElementById('boxFiltrosDias').style.display = modoSelecaoAtivo ? 'none' : 'flex';
-        if(!modoSelecaoAtivo) itensSelecionados.clear(); renderizarLista(); 
+        atualizarAcoesMassa();
+    }
+
+    function atualizarAcoesMassa() {
+        const visivel = itensSelecionados.size > 0 ? 'flex' : 'none';
+        document.getElementById('btnAcaoMassa1').style.display = visivel;
+        document.getElementById('btnAcaoMassa2').style.display = visivel;
+        document.getElementById('btnAcaoMassa3').style.display = visivel;
     }
 
     function initDiasFiltro() {
         let dates = getDatesDaSemana(); let box = document.getElementById('boxFiltrosDias');
-        box.innerHTML = `<button class="btn-action-bar" id="btnFiltro_${dates.hoje.str}" onclick="setFiltroApto('${dates.hoje.str}')">Hoje</button><button class="btn-action-bar" id="btnFiltro_${dates.qui.str}" onclick="setFiltroApto('${dates.qui.str}')">Qui</button><button class="btn-action-bar" id="btnFiltro_${dates.sex.str}" onclick="setFiltroApto('${dates.sex.str}')">Sex</button><button class="btn-action-bar" id="btnFiltro_${dates.sab.str}" onclick="setFiltroApto('${dates.sab.str}')">Sáb</button><button class="btn-action-bar" id="btnFiltro_${dates.dom.str}" onclick="setFiltroApto('${dates.dom.str}')">Dom</button>`;
+        const botoes = [
+            { label: 'Qui', data: dates.qui },
+            { label: 'Sex', data: dates.sex },
+            { label: 'Sáb', data: dates.sab },
+            { label: 'Dom', data: dates.dom }
+        ];
+        box.innerHTML = botoes.map((botao) => {
+            const label = botao.data.str === dates.hoje.str ? 'Hoje' : botao.label;
+            return `<button class="btn-action-bar" id="btnFiltro_${botao.data.str}" onclick="setFiltroApto('${botao.data.str}')">${label}</button>`;
+        }).join('');
     }
 
     function setFiltroApto(diaKey) {
@@ -44,7 +56,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         
         funcs.forEach(f => {
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem vínculo', semanal: false };
-            let isSelected = itensSelecionados.has(f.id); let htmlSelecao = modoSelecaoAtivo ? `<div class="checkbox-selecao"></div>` : ''; 
+            let isSelected = itensSelecionados.has(f.id);
             let badgeExtra = catObj.semanal ? `<div style="color:#E65100; font-size:11px; font-weight:bold; margin-bottom:2px; text-align:right;">SEMANAL</div>` : '';
             let nomeFunc = escapeHTML(f.nome || 'Sem nome');
             let inicialFunc = escapeHTML(String(f.nome || '?').charAt(0).toUpperCase());
@@ -60,10 +72,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             }
 
             let infoDireita = badgeExtra + feriasMsg;
-            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem(${jsArg(f.id)})">${htmlSelecao}<div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><div class="item-avatar" style="background-color: ${safeColor(catObj.cor, '#999999')}; color: ${safeColor(catObj.corTexto, '#ffffff')};">${inicialFunc}</div><div class="item-info"><div class="item-title">${nomeFunc}</div><div class="item-subtitle">${funcCodStr}${escapeHTML(funName)} • ${escapeHTML(catObj.nome)}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${infoDireita}</div></li>`;
+            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem(${jsArg(f.id)})"><div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><button class="item-avatar item-avatar-select ${isSelected ? 'selecionado' : ''}" style="background-color: ${safeColor(catObj.cor, '#999999')}; color: ${safeColor(catObj.corTexto, '#ffffff')};" onclick="toggleSelecaoFuncionario(event, ${jsArg(f.id)})">${inicialFunc}</button><div class="item-info"><div class="item-title">${nomeFunc}</div><div class="item-subtitle">${funcCodStr}${escapeHTML(funName)} • ${escapeHTML(catObj.nome)}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${infoDireita}</div></li>`;
         });
         if(funcs.length === 0) html = renderizarEstadoVazio();
         lista.innerHTML = html;
+        atualizarAcoesMassa();
     }
 
     function renderizarEstadoVazio() {
@@ -78,10 +91,16 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function cliqueItem(id) {
-        if (modoSelecaoAtivo) { if (itensSelecionados.has(id)) itensSelecionados.delete(id); else itensSelecionados.add(id); renderizarLista(); } 
-        else { let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = f.nome; document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
+        let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = f.nome; document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
         if(catObj && catObj.semanal) { document.getElementById('btnAcaoFalta').style.display = (f.habFaltas) ? 'block' : 'none'; document.getElementById('btnAcaoFerias').style.display = (f.habFerias) ? 'block' : 'none'; } else { document.getElementById('btnAcaoFalta').style.display = 'block'; document.getElementById('btnAcaoFerias').style.display = 'block'; }
-        document.getElementById('modalAcoesFunc').style.display = 'flex'; }
+        document.getElementById('modalAcoesFunc').style.display = 'flex';
+    }
+
+    function toggleSelecaoFuncionario(event, id) {
+        event.stopPropagation();
+        if (itensSelecionados.has(id)) itensSelecionados.delete(id);
+        else itensSelecionados.add(id);
+        renderizarLista();
     }
 
     function formatarFuncaoLista(funcao) {

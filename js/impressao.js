@@ -67,21 +67,22 @@
         let w = window.open('','_blank'); let html = `<html><head><title>Recibo VT</title><style>
             @page{size:A4 portrait;margin:12mm 10mm;}
             body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:13px;}
-            .recibo-vt{border:2px solid #000; height:84mm; box-sizing:border-box; margin-bottom:7mm; page-break-inside:avoid;}
+            .recibo-vt{border:2px solid #000; min-height:88mm; box-sizing:border-box; margin-bottom:7mm; page-break-inside:avoid;}
             .recibo-vt:nth-of-type(3n){margin-bottom:0;}
-            .titulo-vt{background:#d9d9d9;border-bottom:2px solid #000;text-align:center;font-weight:bold;font-size:16px;padding:5px 0;}
-            .vt-corpo{padding:9px 12px;}
-            .vt-empresa{text-align:center;font-weight:bold;font-size:14px;margin-bottom:8px;}
-            .linha-vt{display:grid;grid-template-columns:140px 1fr;border-bottom:1px solid #000;min-height:24px;align-items:end;}
-            .linha-vt span:first-child{font-weight:bold;}
-            .total-vt{display:flex;justify-content:space-between;border:2px solid #000;margin-top:10px;padding:5px 8px;font-size:15px;font-weight:bold;}
-            .declaracao-vt{margin-top:10px;line-height:1.35;text-align:justify;}
-            .assinatura-vt{display:flex;justify-content:space-between;gap:25mm;margin-top:14mm;text-align:center;font-size:12px;}
-            .assinatura-vt div{flex:1;border-top:1px solid #000;padding-top:3px;}
+            .titulo-vt{border-bottom:2px solid #000;text-align:center;font-weight:bold;font-size:16px;padding:5px 0;}
+            .vt-corpo{padding:8px 10px;}
+            .vt-empresa{text-align:center;font-weight:bold;font-size:13px;margin-bottom:6px;text-transform:uppercase;}
+            .vt-grid{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;}
+            .vt-grid td,.vt-grid th{border:1px solid #000;padding:4px 6px;}
+            .vt-grid th{background:#efefef;text-align:center;font-weight:bold;}
+            .rotulo-vt{width:24%;font-weight:bold;}
+            .declaracao-vt{margin-top:8px;line-height:1.35;text-align:justify;font-size:12px;}
+            .assinatura-vt{display:grid;grid-template-columns:34mm 1fr;gap:18mm;margin-top:12mm;text-align:center;font-size:12px;align-items:end;}
+            .assinatura-vt div{border-top:1px solid #000;padding-top:3px;}
         </style></head><body>`;
         arrVTParaImprimir.forEach((item) => {
             const codigoNome = `${item.codigo ? `${escapeHTML(item.codigo)} - ` : ''}${escapeHTML(item.nome)}`;
-            html += `<section class="recibo-vt"><div class="titulo-vt">RECIBO DE VALE TRANSPORTE</div><div class="vt-corpo"><div class="vt-empresa">${escapeHTML(empresa)}${db.empresa.cnpj ? ` - CNPJ ${escapeHTML(db.empresa.cnpj)}` : ''}</div><div class="linha-vt"><span>Funcionário:</span><span>${codigoNome}</span></div><div class="linha-vt"><span>Referência:</span><span>${escapeHTML(mesStr)}</span></div><div class="linha-vt"><span>Rota:</span><span>${escapeHTML(item.rota)}</span></div><div class="linha-vt"><span>Quantidade:</span><span>${item.passagens} passagens x R$ ${formatMoeda(item.valorUnit)}</span></div><div class="total-vt"><span>Valor recebido</span><span>R$ ${formatMoeda(item.valTotal)}</span></div><div class="declaracao-vt">Declaro ter recebido da empresa acima o valor correspondente ao vale transporte do período informado.</div><div class="assinatura-vt"><div>Data</div><div>Assinatura do Funcionário</div></div></div></section>`;
+            html += `<section class="recibo-vt"><div class="titulo-vt">VALE TRANSPORTE</div><div class="vt-corpo"><div class="vt-empresa">${escapeHTML(empresa)}${db.empresa.cnpj ? ` - CNPJ ${escapeHTML(db.empresa.cnpj)}` : ''}</div><table class="vt-grid"><tr><td class="rotulo-vt">Funcionário</td><td colspan="3">${codigoNome}</td></tr><tr><td class="rotulo-vt">Referência</td><td>${escapeHTML(mesStr)}</td><td class="rotulo-vt">Rota</td><td>${escapeHTML(item.rota)}</td></tr><tr><th>Quantidade</th><th>Valor Unitário</th><th colspan="2">Valor Total</th></tr><tr><td style="text-align:center;">${item.passagens}</td><td style="text-align:center;">R$ ${formatMoeda(item.valorUnit)}</td><td colspan="2" style="text-align:center;font-weight:bold;">R$ ${formatMoeda(item.valTotal)}</td></tr></table><div class="declaracao-vt">Declaro ter recebido o valor acima referente ao vale transporte do período informado, estando ciente da quantidade e do valor discriminados neste recibo.</div><div class="assinatura-vt"><div>Data</div><div>Assinatura do Funcionário</div></div></div></section>`;
         });
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintVT');
     }
@@ -132,7 +133,7 @@
             .tabela-ponto thead th{height:6mm;font-size:12px;}
             .tabela-ponto .assinatura{text-align:left;padding-left:4px;}
             .rodape-ponto{font-size:13px;margin-top:10mm;padding:0 10mm;}
-            .rodape-linhas{display:flex;justify-content:space-between;align-items:flex-end;margin-top:12mm;gap:30mm;}
+            .rodape-linhas{display:grid;grid-template-columns:1fr 65mm;align-items:start;margin-top:12mm;gap:30mm;}
             .linha-diretor{width:65mm;border-top:1px solid #000;text-align:center;padding-top:3px;}
         </style></head><body>`;
         const diasSemanaNome = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -163,8 +164,13 @@
                 let isFolga = (hs.folgas || []).includes(diaW.toString()); 
                 let emFerias = false;
                 feriasFunc.forEach(r => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; if(dt >= d1 && dt <= d2) emFerias = true; });
-                let marcaAssinatura = emFerias ? 'Férias' : ((!isAberto || isFolga) ? 'x' : '');
-                html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="assinatura">${marcaAssinatura}</td></tr>`;
+                if(emFerias) {
+                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td colspan="6">Em férias</td><td class="assinatura">---</td></tr>`;
+                } else if(!isAberto || isFolga) {
+                    html += `<tr class="tr-off"><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td class="assinatura">---</td></tr>`;
+                } else {
+                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="assinatura">x</td></tr>`;
+                }
             }
             html += `</tbody></table><div class="rodape-ponto"><div>Reconheço a exatidão destas anotações.</div><div class="rodape-linhas"><div><b>Data:</b> ____ / ____ / ________ .</div><div class="linha-diretor">Assinatura do Diretor</div></div></div></section>`;
         });

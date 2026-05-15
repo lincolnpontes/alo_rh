@@ -1,5 +1,6 @@
 // AVANCADO, SEGURANCA E SINCRONIZACAO
     let modoSenhaAvancada = 'criar';
+    let validandoSenhaAvancadaAuto = false;
 
     function abrirModalSenhaAvancada(modo = 'criar') {
         modoSenhaAvancada = modo;
@@ -44,6 +45,19 @@
         } catch(e) {
             erro.innerText = e.message || 'Falha ao validar senha.';
             erro.style.display = 'block';
+        }
+    }
+
+    async function aoDigitarSenhaAvancada(input) {
+        input.value = input.value.replace(/[^0-9]/g, '');
+        const erro = document.getElementById('senhaAvancadaErro');
+        erro.style.display = 'none';
+        if(validandoSenhaAvancadaAuto || input.value.length < 4) return;
+        validandoSenhaAvancadaAuto = true;
+        try {
+            if(await validarSenhaAvancada(input.value)) await validarAcessoAvancado();
+        } finally {
+            validandoSenhaAvancadaAuto = false;
         }
     }
 
@@ -362,6 +376,310 @@
             alert("Falha ao salvar backup.");
         } finally {
             document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
+    const COLUNAS_MODELO_FUNCIONARIOS = [
+        'Código', 'Nome', 'Data Nasc.', 'Admissão', 'CPF', 'RG', 'RG UF', 'CTPS', 'WhatsApp',
+        'Vínculo', 'Função Nº', 'Função', 'Salário', 'Gratificação', 'Sal. Família', 'Desc. Unidentis',
+        'Rota VT', 'PIX Tipo', 'PIX Chave', 'Entrada', 'Saída', 'Intervalo Início', 'Intervalo Fim',
+        'Folgas', 'Habilitar Faltas', 'Habilitar Férias'
+    ];
+
+    function xmlEscape(valor) {
+        return String(valor ?? '').replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
+    }
+
+    function colunaXLSX(indice) {
+        let s = '';
+        let n = indice + 1;
+        while(n > 0) {
+            const mod = (n - 1) % 26;
+            s = String.fromCharCode(65 + mod) + s;
+            n = Math.floor((n - 1) / 26);
+        }
+        return s;
+    }
+
+    function worksheetXML(linhas) {
+        const rows = linhas.map((linha, rIdx) => {
+            const cells = linha.map((valor, cIdx) => `<c r="${colunaXLSX(cIdx)}${rIdx + 1}" t="inlineStr"><is><t>${xmlEscape(valor)}</t></is></c>`).join('');
+            return `<row r="${rIdx + 1}">${cells}</row>`;
+        }).join('');
+        return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="18"/><cols>${COLUNAS_MODELO_FUNCIONARIOS.map((_, i) => `<col min="${i + 1}" max="${i + 1}" width="${i === 1 ? 28 : 16}" customWidth="1"/>`).join('')}</cols><sheetData>${rows}</sheetData></worksheet>`;
+    }
+
+    function crc32(bytes) {
+        if(!crc32.tabela) {
+            crc32.tabela = Array.from({ length: 256 }, (_, n) => {
+                let c = n;
+                for(let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                return c >>> 0;
+            });
+        }
+        let crc = 0 ^ -1;
+        for(let i = 0; i < bytes.length; i++) crc = (crc >>> 8) ^ crc32.tabela[(crc ^ bytes[i]) & 0xFF];
+        return (crc ^ -1) >>> 0;
+    }
+
+    function u16(n) { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, n, true); return b; }
+    function u32(n) { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n >>> 0, true); return b; }
+    function textoBytes(texto) { return new TextEncoder().encode(texto); }
+
+    function criarXLSXSemCompressao(arquivos) {
+        const partes = [];
+        const centrais = [];
+        let offset = 0;
+        arquivos.forEach((arquivo) => {
+            const nome = textoBytes(arquivo.nome);
+            const dados = textoBytes(arquivo.conteudo);
+            const crc = crc32(dados);
+            const local = [u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(dados.length), u32(dados.length), u16(nome.length), u16(0), nome, dados];
+            partes.push(...local);
+            centrais.push([u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(dados.length), u32(dados.length), u16(nome.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), nome]);
+            offset += local.reduce((total, item) => total + item.length, 0);
+        });
+        const inicioCentral = offset;
+        centrais.forEach((central) => { partes.push(...central); offset += central.reduce((total, item) => total + item.length, 0); });
+        const tamanhoCentral = offset - inicioCentral;
+        partes.push(u32(0x06054b50), u16(0), u16(0), u16(arquivos.length), u16(arquivos.length), u32(tamanhoCentral), u32(inicioCentral), u16(0));
+        return new Blob(partes, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    }
+
+    function baixarModeloFuncionariosXLSX() {
+        const exemplo = ['001', 'ANTONIO DA SILVA', '15/03/1990', '03/11/2020', '000.000.000-00', '', 'PB', '0000000/00000', '(83) 99999-9999', 'Carteira Assinada', '002', 'Garçom', '1.500,00', '', '', '', 'Centro', 'CPF', '000.000.000-00', '07:00', '17:00', '11:00', '12:00', 'Seg, Ter', 'Sim', 'Sim'];
+        const sheet = worksheetXML([COLUNAS_MODELO_FUNCIONARIOS, exemplo]);
+        const arquivos = [
+            { nome: '[Content_Types].xml', conteudo: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>' },
+            { nome: '_rels/.rels', conteudo: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+            { nome: 'xl/workbook.xml', conteudo: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Funcionarios" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+            { nome: 'xl/_rels/workbook.xml.rels', conteudo: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>' },
+            { nome: 'xl/worksheets/sheet1.xml', conteudo: sheet }
+        ];
+        const blob = criarXLSXSemCompressao(arquivos);
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'alo_rh_modelo_funcionarios.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        link.remove();
+    }
+
+    function normalizarCabecalhoPlanilha(valor) {
+        return String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    }
+
+    function valorBooleanoImportado(valor, padrao = true) {
+        const texto = String(valor || '').trim().toLowerCase();
+        if(!texto) return padrao;
+        return ['sim', 's', 'true', '1', 'x', 'yes'].includes(texto);
+    }
+
+    function normalizarDataImportada(valor) {
+        const texto = String(valor || '').trim();
+        if(!texto) return '';
+        if(/^\d+(\.\d+)?$/.test(texto) && Number(texto) > 20000) {
+            const data = new Date(Date.UTC(1899, 11, 30) + Number(texto) * 86400000);
+            return `${data.getUTCFullYear()}-${String(data.getUTCMonth() + 1).padStart(2, '0')}-${String(data.getUTCDate()).padStart(2, '0')}`;
+        }
+        const br = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if(br) return `${br[3]}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`;
+        const iso = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if(iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`;
+        return texto;
+    }
+
+    function normalizarFolgasImportadas(valor) {
+        const mapa = { seg: '1', segunda: '1', ter: '2', terca: '2', terça: '2', qua: '3', quarta: '3', qui: '4', quinta: '4', sex: '5', sexta: '5', sab: '6', sáb: '6', sabado: '6', sábado: '6', dom: '0', domingo: '0' };
+        return String(valor || '').split(/[;,|]/).map(v => v.trim().toLowerCase()).map(v => mapa[v] || '').filter(Boolean);
+    }
+
+    function obterOuCriarVinculoImportado(nome) {
+        const texto = String(nome || '').trim();
+        if(!texto) return '';
+        let vinculo = db.categorias.find(c => String(c.nome || '').trim().toLowerCase() === texto.toLowerCase());
+        if(vinculo) return vinculo.id;
+        vinculo = { id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), nome: texto, cor: '#00695C', corTexto: '#ffffff', semanal: false, horarios: { entrada: '', saida: '', intEnt: '', intSai: '', semIntervalo: false }, salarios: [] };
+        db.categorias.push(vinculo);
+        return vinculo.id;
+    }
+
+    function obterOuCriarFuncaoImportada(nome, numero) {
+        const texto = String(nome || '').trim();
+        const num = String(numero || '').trim();
+        if(!texto) return '';
+        let funcao = db.funcoes.find(fn => String(fn.nome || '').trim().toLowerCase() === texto.toLowerCase());
+        if(funcao) {
+            if(num && !funcao.numero) funcao.numero = num;
+            return funcao.id;
+        }
+        funcao = { id: 'fn_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), numero: num, nome: texto };
+        db.funcoes.push(funcao);
+        return funcao.id;
+    }
+
+    function bytesParaTexto(bytes) { return new TextDecoder('utf-8').decode(bytes); }
+    function lerU16(bytes, off) { return new DataView(bytes.buffer, bytes.byteOffset + off, 2).getUint16(0, true); }
+    function lerU32(bytes, off) { return new DataView(bytes.buffer, bytes.byteOffset + off, 4).getUint32(0, true); }
+
+    async function inflarDeflateRaw(bytes) {
+        if(!('DecompressionStream' in window)) throw new Error('Este navegador nao consegue ler XLSX compactado. Use o Chrome atualizado.');
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+        return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function lerArquivosXLSX(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let eocd = -1;
+        for(let i = bytes.length - 22; i >= 0; i--) {
+            if(lerU32(bytes, i) === 0x06054b50) { eocd = i; break; }
+        }
+        if(eocd < 0) throw new Error('Arquivo XLSX invalido.');
+        const total = lerU16(bytes, eocd + 10);
+        let off = lerU32(bytes, eocd + 16);
+        const arquivos = {};
+        for(let i = 0; i < total; i++) {
+            if(lerU32(bytes, off) !== 0x02014b50) throw new Error('Estrutura do XLSX invalida.');
+            const metodo = lerU16(bytes, off + 10);
+            const compSize = lerU32(bytes, off + 20);
+            const nomeLen = lerU16(bytes, off + 28);
+            const extraLen = lerU16(bytes, off + 30);
+            const commentLen = lerU16(bytes, off + 32);
+            const localOff = lerU32(bytes, off + 42);
+            const nome = bytesParaTexto(bytes.slice(off + 46, off + 46 + nomeLen));
+            const localNomeLen = lerU16(bytes, localOff + 26);
+            const localExtraLen = lerU16(bytes, localOff + 28);
+            const inicioDados = localOff + 30 + localNomeLen + localExtraLen;
+            const dadosCompactados = bytes.slice(inicioDados, inicioDados + compSize);
+            const dados = metodo === 0 ? dadosCompactados : await inflarDeflateRaw(dadosCompactados);
+            arquivos[nome] = bytesParaTexto(dados);
+            off += 46 + nomeLen + extraLen + commentLen;
+        }
+        return arquivos;
+    }
+
+    function textoCelulaXLSX(celula, compartilhadas) {
+        const tipo = celula.getAttribute('t');
+        if(tipo === 'inlineStr') return Array.from(celula.getElementsByTagName('t')).map(t => t.textContent).join('');
+        const v = celula.getElementsByTagName('v')[0];
+        if(!v) return '';
+        if(tipo === 's') return compartilhadas[Number(v.textContent)] || '';
+        return v.textContent || '';
+    }
+
+    function indiceColunaRef(ref) {
+        const letras = String(ref || '').replace(/[0-9]/g, '');
+        let total = 0;
+        for(const letra of letras) total = total * 26 + (letra.charCodeAt(0) - 64);
+        return total - 1;
+    }
+
+    async function lerLinhasFuncionariosXLSX(file) {
+        const arquivos = await lerArquivosXLSX(await file.arrayBuffer());
+        const parser = new DOMParser();
+        const compartilhadas = [];
+        if(arquivos['xl/sharedStrings.xml']) {
+            const sharedDoc = parser.parseFromString(arquivos['xl/sharedStrings.xml'], 'application/xml');
+            Array.from(sharedDoc.getElementsByTagName('si')).forEach(si => compartilhadas.push(Array.from(si.getElementsByTagName('t')).map(t => t.textContent).join('')));
+        }
+        let sheetPath = 'xl/worksheets/sheet1.xml';
+        if(!arquivos[sheetPath] && arquivos['xl/workbook.xml'] && arquivos['xl/_rels/workbook.xml.rels']) {
+            const workbook = parser.parseFromString(arquivos['xl/workbook.xml'], 'application/xml');
+            const sheet = workbook.getElementsByTagName('sheet')[0];
+            const rid = sheet && (sheet.getAttribute('r:id') || sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id'));
+            const rels = parser.parseFromString(arquivos['xl/_rels/workbook.xml.rels'], 'application/xml');
+            const rel = Array.from(rels.getElementsByTagName('Relationship')).find(r => r.getAttribute('Id') === rid);
+            if(rel) sheetPath = 'xl/' + rel.getAttribute('Target').replace(/^\/?xl\//, '').replace(/^\//, '');
+        }
+        if(!arquivos[sheetPath]) throw new Error('Nao encontrei a primeira aba da planilha.');
+        const sheetDoc = parser.parseFromString(arquivos[sheetPath], 'application/xml');
+        return Array.from(sheetDoc.getElementsByTagName('row')).map(row => {
+            const linha = [];
+            Array.from(row.getElementsByTagName('c')).forEach(celula => {
+                linha[indiceColunaRef(celula.getAttribute('r'))] = textoCelulaXLSX(celula, compartilhadas);
+            });
+            return linha.map(v => v || '');
+        });
+    }
+
+    function valorDaLinha(row, mapa, nomes) {
+        for(const nome of nomes) {
+            const idx = mapa[normalizarCabecalhoPlanilha(nome)];
+            if(idx !== undefined) return String(row[idx] || '').trim();
+        }
+        return '';
+    }
+
+    async function importarFuncionariosXLSX(event) {
+        const file = event.target.files[0];
+        if(!file) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            const linhas = await lerLinhasFuncionariosXLSX(file);
+            if(linhas.length < 2) throw new Error('A planilha nao tem linhas de funcionarios.');
+            const mapa = {};
+            linhas[0].forEach((cab, idx) => { mapa[normalizarCabecalhoPlanilha(cab)] = idx; });
+            let criados = 0, atualizados = 0, ignorados = 0;
+            linhas.slice(1).forEach((row) => {
+                const nome = valorDaLinha(row, mapa, ['Nome']);
+                if(!nome) { ignorados++; return; }
+                const codigo = valorDaLinha(row, mapa, ['Código', 'Codigo']);
+                const cpf = valorDaLinha(row, mapa, ['CPF']);
+                const existente = db.funcionarios.find(f => (codigo && String(f.codigo || '') === codigo) || (cpf && String(f.cpf || '') === cpf));
+                const vinculoId = obterOuCriarVinculoImportado(valorDaLinha(row, mapa, ['Vínculo', 'Vinculo']));
+                const funcaoId = obterOuCriarFuncaoImportada(valorDaLinha(row, mapa, ['Função', 'Funcao']), valorDaLinha(row, mapa, ['Função Nº', 'Funcao Nº', 'Funcao N', 'Função N']));
+                const pixChave = valorDaLinha(row, mapa, ['PIX Chave']);
+                const pixTipo = valorDaLinha(row, mapa, ['PIX Tipo']) || 'CPF';
+                const pixList = pixChave ? [{ tipo: pixTipo, chave: pixChave, principal: true }] : (existente && existente.pixList ? existente.pixList : []);
+                const funcionario = {
+                    ...(existente || {}),
+                    id: existente ? existente.id : 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    codigo,
+                    nome,
+                    dataNasc: normalizarDataImportada(valorDaLinha(row, mapa, ['Data Nasc.', 'Data Nasc', 'Nascimento'])),
+                    admissao: normalizarDataImportada(valorDaLinha(row, mapa, ['Admissão', 'Admissao'])),
+                    cpf,
+                    rg: valorDaLinha(row, mapa, ['RG']),
+                    rgUF: valorDaLinha(row, mapa, ['RG UF']) || 'PB',
+                    ctps: valorDaLinha(row, mapa, ['CTPS']),
+                    telefone: valorDaLinha(row, mapa, ['WhatsApp', 'Telefone']),
+                    categoria: vinculoId,
+                    funcao: funcaoId,
+                    salario: valorDaLinha(row, mapa, ['Salário', 'Salario']),
+                    gratificacao: valorDaLinha(row, mapa, ['Gratificação', 'Gratificacao']),
+                    salFamilia: valorDaLinha(row, mapa, ['Sal. Família', 'Sal Familia']),
+                    unidentis: valorDaLinha(row, mapa, ['Desc. Unidentis', 'Unidentis']),
+                    vtRota: valorDaLinha(row, mapa, ['Rota VT', 'VT']),
+                    pixList,
+                    habFaltas: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Faltas']), true),
+                    habFerias: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Férias', 'Habilitar Ferias']), true),
+                    arquivado: existente ? !!existente.arquivado : false,
+                    horarios: {
+                        entrada: valorDaLinha(row, mapa, ['Entrada']),
+                        saida: valorDaLinha(row, mapa, ['Saída', 'Saida']),
+                        intEnt: valorDaLinha(row, mapa, ['Intervalo Início', 'Intervalo Inicio']),
+                        intSai: valorDaLinha(row, mapa, ['Intervalo Fim']),
+                        folgas: normalizarFolgasImportadas(valorDaLinha(row, mapa, ['Folgas']))
+                    }
+                };
+                if(existente) {
+                    db.funcionarios[db.funcionarios.findIndex(f => f.id === existente.id)] = funcionario;
+                    atualizados++;
+                } else {
+                    db.funcionarios.push(funcionario);
+                    criados++;
+                }
+            });
+            salvarBanco();
+            renderizarFiltros();
+            renderizarLista();
+            alert(`Importacao concluida.\n\nCriados: ${criados}\nAtualizados: ${atualizados}\nIgnorados: ${ignorados}`);
+        } catch(e) {
+            alert(`Nao foi possivel importar a planilha.\n\nDetalhe: ${e.message || 'Verifique o modelo XLSX.'}`);
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            event.target.value = '';
         }
     }
 
