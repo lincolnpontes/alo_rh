@@ -60,29 +60,57 @@
         const nome = String(funcao.nome || '').toUpperCase();
         return numero ? `${numero.padStart(3, '0')} - ${nome}` : nome;
     }
+    function getMesAnoExtensoPrint(mesRef) {
+        const [ano, mes] = mesRef.split('-');
+        return { ano, mes: getExtensoMes(parseInt(mes)).toLowerCase() };
+    }
+    function quebrarPaginas(lista, tamanho) {
+        const paginas = [];
+        for(let i = 0; i < lista.length; i += tamanho) paginas.push(lista.slice(i, i + tamanho));
+        return paginas;
+    }
     function executarPrintVT() {
         if(arrVTParaImprimir.length === 0) return alert("Nada para imprimir.");
-        let mesStr = document.getElementById('vtMesRef').value.split('-').reverse().join('/');
+        let mesRefVT = document.getElementById('vtMesRef').value;
+        let { ano, mes } = getMesAnoExtensoPrint(mesRefVT);
         let empresa = getEmpresaPrint();
+        let cidade = db.empresa.cidade || 'Cabedelo';
+        let logoHtml = db.empresa.logo
+            ? `<img class="logo-vt" src="${db.empresa.logo}">`
+            : `<div class="logo-vt-texto">${escapeHTML(db.empresa.fantasia || '')}</div>`;
+        const itensOrdenados = [...arrVTParaImprimir].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        const paginas = quebrarPaginas(itensOrdenados, 15);
         let w = window.open('','_blank'); let html = `<html><head><title>Recibo VT</title><style>
-            @page{size:A4 portrait;margin:12mm 10mm;}
-            body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:13px;}
-            .recibo-vt{border:2px solid #000; min-height:88mm; box-sizing:border-box; margin-bottom:7mm; page-break-inside:avoid;}
-            .recibo-vt:nth-of-type(3n){margin-bottom:0;}
-            .titulo-vt{border-bottom:2px solid #000;text-align:center;font-weight:bold;font-size:16px;padding:5px 0;}
-            .vt-corpo{padding:8px 10px;}
-            .vt-empresa{text-align:center;font-weight:bold;font-size:13px;margin-bottom:6px;text-transform:uppercase;}
-            .vt-grid{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;}
-            .vt-grid td,.vt-grid th{border:1px solid #000;padding:4px 6px;}
-            .vt-grid th{background:#efefef;text-align:center;font-weight:bold;}
-            .rotulo-vt{width:24%;font-weight:bold;}
-            .declaracao-vt{margin-top:8px;line-height:1.35;text-align:justify;font-size:12px;}
-            .assinatura-vt{display:grid;grid-template-columns:34mm 1fr;gap:18mm;margin-top:12mm;text-align:center;font-size:12px;align-items:end;}
-            .assinatura-vt div{border-top:1px solid #000;padding-top:3px;}
+            @page{size:A4 portrait;margin:10mm;}
+            body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:16px;}
+            .vt-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 7mm 6mm;display:flex;flex-direction:column;page-break-after:always;}
+            .vt-folha:last-child{page-break-after:auto;}
+            .vt-topo{text-align:center;font-weight:bold;}
+            .logo-vt{max-height:28mm;max-width:58mm;object-fit:contain;display:block;margin:0 auto 1mm;}
+            .logo-vt-texto{min-height:14mm;font-size:20px;display:flex;align-items:center;justify-content:center;text-transform:uppercase;color:#5d3434;}
+            .vt-razao{font-size:20px;line-height:1.1;}
+            .vt-cnpj{font-size:16px;margin-top:2px;}
+            .titulo-vt{font-size:17px;text-align:center;font-weight:bold;margin-top:9mm;}
+            .texto-vt{font-size:16px;line-height:1.95;text-align:justify;margin-top:5mm;text-indent:0;}
+            .lista-vt{margin-top:5mm;}
+            .linha-vt{display:grid;grid-template-columns:1fr 28px 86px 1fr;column-gap:14px;align-items:end;min-height:9.6mm;font-size:16px;}
+            .linha-vt .nome,.linha-vt .valor,.linha-vt .moeda,.linha-vt .assinatura{border-bottom:1px solid #000;padding:0 3px 2px;}
+            .linha-vt .moeda{text-align:center;}
+            .linha-vt .valor{text-align:right;padding-right:8px;}
+            .total-vt{display:grid;grid-template-columns:1fr 28px 86px 1fr;column-gap:14px;font-size:16px;font-weight:bold;margin-top:1mm;}
+            .total-vt div:nth-child(1){text-align:right;}
+            .total-vt div:nth-child(3){text-align:right;padding-right:8px;}
+            .rodape-vt{margin-top:auto;font-size:16px;}
+            .data-vt{text-align:right;font-weight:bold;margin-bottom:18mm;}
+            .assinatura-diretor-vt{width:72mm;border-top:1px solid #000;text-align:center;margin:0 auto;padding-top:3px;}
         </style></head><body>`;
-        arrVTParaImprimir.forEach((item) => {
-            const codigoNome = `${item.codigo ? `${escapeHTML(item.codigo)} - ` : ''}${escapeHTML(item.nome)}`;
-            html += `<section class="recibo-vt"><div class="titulo-vt">VALE TRANSPORTE</div><div class="vt-corpo"><div class="vt-empresa">${escapeHTML(empresa)}${db.empresa.cnpj ? ` - CNPJ ${escapeHTML(db.empresa.cnpj)}` : ''}</div><table class="vt-grid"><tr><td class="rotulo-vt">Funcionário</td><td colspan="3">${codigoNome}</td></tr><tr><td class="rotulo-vt">Referência</td><td>${escapeHTML(mesStr)}</td><td class="rotulo-vt">Rota</td><td>${escapeHTML(item.rota)}</td></tr><tr><th>Quantidade</th><th>Valor Unitário</th><th colspan="2">Valor Total</th></tr><tr><td style="text-align:center;">${item.passagens}</td><td style="text-align:center;">R$ ${formatMoeda(item.valorUnit)}</td><td colspan="2" style="text-align:center;font-weight:bold;">R$ ${formatMoeda(item.valTotal)}</td></tr></table><div class="declaracao-vt">Declaro ter recebido o valor acima referente ao vale transporte do período informado, estando ciente da quantidade e do valor discriminados neste recibo.</div><div class="assinatura-vt"><div>Data</div><div>Assinatura do Funcionário</div></div></div></section>`;
+        paginas.forEach((pagina) => {
+            const total = pagina.reduce((acc, item) => acc + Number(item.valTotal || 0), 0);
+            html += `<section class="vt-folha"><div class="vt-topo">${logoHtml}<div class="vt-razao">${escapeHTML(empresa)}</div><div class="vt-cnpj">CNPJ ${escapeHTML(db.empresa.cnpj || '')}</div></div><div class="titulo-vt">Folha de Pagamento dos Vales-Transporte</div><div class="texto-vt">Ao assinar esta folha, declaro que recebi da empresa supracitada a importância referente aos <b>vales-transporte</b> do mês de <b>${escapeHTML(mes)} de ${escapeHTML(ano)}</b>, que é <b>preferência minha recebê-los em dinheiro e que tenho ciência de que há previsão para tal na Convenção Coletiva da Categoria.</b></div><div class="lista-vt">`;
+            pagina.forEach((item) => {
+                html += `<div class="linha-vt"><div class="nome">${escapeHTML(item.nome)}</div><div class="moeda">R$</div><div class="valor">${formatMoeda(item.valTotal)}</div><div class="assinatura"></div></div>`;
+            });
+            html += `<div class="total-vt"><div>Total =</div><div>R$</div><div>${formatMoeda(total)}</div><div></div></div></div><div class="rodape-vt"><div class="data-vt">${escapeHTML(cidade)}, 01 de ${escapeHTML(mes)} de ${escapeHTML(ano)}</div><div class="assinatura-diretor-vt">Assinatura do Diretor</div></div></section>`;
         });
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintVT');
     }
@@ -133,7 +161,8 @@
             .tabela-ponto thead th{height:6mm;font-size:12px;}
             .tabela-ponto .assinatura{text-align:left;padding-left:4px;}
             .rodape-ponto{font-size:13px;margin-top:10mm;padding:0 10mm;}
-            .rodape-linhas{display:grid;grid-template-columns:1fr 65mm;align-items:start;margin-top:12mm;gap:30mm;}
+            .rodape-linhas{display:grid;grid-template-columns:65mm 65mm;justify-content:space-between;align-items:start;margin-top:12mm;gap:30mm;}
+            .data-ponto{border-top:1px solid transparent;padding-top:3px;}
             .linha-diretor{width:65mm;border-top:1px solid #000;text-align:center;padding-top:3px;}
         </style></head><body>`;
         const diasSemanaNome = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -165,14 +194,14 @@
                 let emFerias = false;
                 feriasFunc.forEach(r => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; if(dt >= d1 && dt <= d2) emFerias = true; });
                 if(emFerias) {
-                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td colspan="6">Em férias</td><td class="assinatura">---</td></tr>`;
+                    html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td colspan="6">Em férias</td><td class="assinatura"></td></tr>`;
                 } else if(!isAberto || isFolga) {
-                    html += `<tr class="tr-off"><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td class="assinatura">---</td></tr>`;
+                    html += `<tr class="tr-off"><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td>---</td><td class="assinatura"></td></tr>`;
                 } else {
                     html += `<tr><td>${String(d).padStart(2,'0')}</td><td>${diasSemanaNome[diaW]}</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="assinatura">x</td></tr>`;
                 }
             }
-            html += `</tbody></table><div class="rodape-ponto"><div>Reconheço a exatidão destas anotações.</div><div class="rodape-linhas"><div><b>Data:</b> ____ / ____ / ________ .</div><div class="linha-diretor">Assinatura do Diretor</div></div></div></section>`;
+            html += `</tbody></table><div class="rodape-ponto"><div>Reconheço a exatidão destas anotações.</div><div class="rodape-linhas"><div class="data-ponto"><b>Data:</b> ____ / ____ / ________ .</div><div class="linha-diretor">Assinatura do Diretor</div></div></div></section>`;
         });
         if(folhasGeradas === 0) { w.close(); return alert("Nenhum funcionário ativo selecionado para imprimir."); }
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintPonto');

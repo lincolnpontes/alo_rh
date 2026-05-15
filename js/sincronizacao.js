@@ -446,9 +446,57 @@
         return new Blob(partes, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     }
 
+    function formatarDataModeloFuncionarios(data) {
+        if(!data) return '';
+        const partes = String(data).split('-');
+        if(partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        return data;
+    }
+
+    function nomesFolgasModelo(folgas = []) {
+        const nomes = { '1': 'Seg', '2': 'Ter', '3': 'Qua', '4': 'Qui', '5': 'Sex', '6': 'Sáb', '0': 'Dom' };
+        return (folgas || []).map(dia => nomes[dia]).filter(Boolean).join(', ');
+    }
+
+    function linhaModeloFuncionario(funcionario) {
+        const vinculo = db.categorias.find(c => c.id === funcionario.categoria);
+        const funcao = db.funcoes.find(fn => fn.id === funcionario.funcao);
+        const pix = (funcionario.pixList || []).find(p => p.principal) || (funcionario.pixList || [])[0] || {};
+        const horarios = funcionario.horarios || {};
+        return [
+            funcionario.codigo || '',
+            funcionario.nome || '',
+            formatarDataModeloFuncionarios(funcionario.dataNasc),
+            formatarDataModeloFuncionarios(funcionario.admissao),
+            funcionario.cpf || '',
+            funcionario.rg || '',
+            funcionario.rgUF || 'PB',
+            funcionario.ctps || '',
+            funcionario.telefone || '',
+            vinculo ? vinculo.nome : '',
+            funcao ? (funcao.numero || '') : '',
+            funcao ? (funcao.nome || '') : '',
+            funcionario.salario || '',
+            funcionario.gratificacao || '',
+            funcionario.salFamilia || '',
+            funcionario.unidentis || '',
+            funcionario.vtRota || '',
+            pix.tipo || 'CPF',
+            pix.chave || '',
+            horarios.entrada || '',
+            horarios.saida || '',
+            horarios.intEnt || '',
+            horarios.intSai || '',
+            nomesFolgasModelo(horarios.folgas || []),
+            funcionario.habFaltas === false ? 'Não' : 'Sim',
+            funcionario.habFerias === false ? 'Não' : 'Sim'
+        ];
+    }
+
     function baixarModeloFuncionariosXLSX() {
         const exemplo = ['001', 'ANTONIO DA SILVA', '15/03/1990', '03/11/2020', '000.000.000-00', '', 'PB', '0000000/00000', '(83) 99999-9999', 'Carteira Assinada', '002', 'Garçom', '1.500,00', '', '', '', 'Centro', 'CPF', '000.000.000-00', '07:00', '17:00', '11:00', '12:00', 'Seg, Ter', 'Sim', 'Sim'];
-        const sheet = worksheetXML([COLUNAS_MODELO_FUNCIONARIOS, exemplo]);
+        const linhasFuncionarios = (db.funcionarios || []).map(linhaModeloFuncionario);
+        const sheet = worksheetXML([COLUNAS_MODELO_FUNCIONARIOS, ...(linhasFuncionarios.length ? linhasFuncionarios : [exemplo])]);
         const arquivos = [
             { nome: '[Content_Types].xml', conteudo: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>' },
             { nome: '_rels/.rels', conteudo: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },

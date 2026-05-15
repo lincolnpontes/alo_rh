@@ -8,10 +8,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function atualizarAcoesMassa() {
-        const visivel = itensSelecionados.size > 0 ? 'flex' : 'none';
+        const temSelecionados = itensSelecionados.size > 0;
+        const visivel = temSelecionados ? 'flex' : 'none';
         document.getElementById('btnAcaoMassa1').style.display = visivel;
         document.getElementById('btnAcaoMassa2').style.display = visivel;
         document.getElementById('btnAcaoMassa3').style.display = visivel;
+        document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
     }
 
     function initDiasFiltro() {
