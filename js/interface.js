@@ -10,19 +10,18 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function atualizarAcoesMassa() {
         const temSelecionados = itensSelecionados.size > 0;
         const visivel = temSelecionados ? 'flex' : 'none';
+        const actionBar = document.getElementById('actionBar');
+        if(actionBar) actionBar.classList.toggle('com-selecao', temSelecionados);
         document.getElementById('btnAcaoMassa1').style.display = visivel;
         document.getElementById('btnAcaoMassa2').style.display = visivel;
         document.getElementById('btnAcaoMassa3').style.display = visivel;
         document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
         const btnSelecionarLista = document.getElementById('btnSelecionarLista');
-        const btnLimparSelecao = document.getElementById('btnLimparSelecao');
         if(btnSelecionarLista) {
             const funcs = obterFuncionariosListados();
             btnSelecionarLista.style.display = funcs.length ? 'flex' : 'none';
-            const todosSelecionados = funcs.length > 0 && funcs.every(f => itensSelecionados.has(f.id));
-            btnSelecionarLista.classList.toggle('selecionado', todosSelecionados);
+            btnSelecionarLista.classList.toggle('selecionado', temSelecionados);
         }
-        if(btnLimparSelecao) btnLimparSelecao.style.display = temSelecionados ? 'flex' : 'none';
     }
 
     function initDiasFiltro() {

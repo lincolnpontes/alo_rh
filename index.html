@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.23</title>
+    <title>Alô RH v1.0.24</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.23">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.24">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.23</div>
+    <div class="splash-versao">v1.0.24</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -33,7 +33,7 @@
         <div class="header-title">Alô RH</div>
         <div class="header-actions">
             <button onclick="abrirModalAniversarios()">🎂</button>
-            <button class="btn-resumo-header" onclick="abrirModalResumo()">Resumo</button>
+            <button class="btn-resumo-header" onclick="abrirModalResumo()" title="Resumo" aria-label="Resumo">📝</button>
             <button onclick="document.getElementById('modalPainelUnificado').style.display='flex'">⚙️</button>
         </div>
     </div>
@@ -41,8 +41,7 @@
     <div class="area-conteudo">
         <div id="actionBar" class="action-bar">
             <div class="selecao-lista-toolbar">
-                <button class="btn-selecionar-caixa" id="btnSelecionarLista" onclick="selecionarTodosListados()" title="Selecionar todos" aria-label="Selecionar todos"><span id="marcaSelecionarTodos"></span></button>
-                <button class="btn-limpar-selecao" id="btnLimparSelecao" onclick="limparSelecaoFuncionarios()" title="Limpar seleção" aria-label="Limpar seleção">X</button>
+                <button class="btn-selecionar-caixa" id="btnSelecionarLista" onclick="toggleSelecionarTodosListados()" title="Selecionar ou limpar seleção" aria-label="Selecionar ou limpar seleção"><span id="marcaSelecionarTodos"></span></button>
             </div>
             <div id="boxFiltrosDias" class="dias-filtro-toolbar"></div>
             <div class="acoes-massa-toolbar" id="boxBarraAcoes">
@@ -601,11 +600,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.23"></script>
-<script src="js/calculos.js?v=1.0.23"></script>
-<script src="js/interface.js?v=1.0.23"></script>
-<script src="js/impressao.js?v=1.0.23"></script>
-<script src="js/sincronizacao.js?v=1.0.23"></script>
+<script src="js/dados.js?v=1.0.24"></script>
+<script src="js/calculos.js?v=1.0.24"></script>
+<script src="js/interface.js?v=1.0.24"></script>
+<script src="js/impressao.js?v=1.0.24"></script>
+<script src="js/sincronizacao.js?v=1.0.24"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

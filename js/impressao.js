@@ -105,25 +105,22 @@
             .titulo-vt{font-size:17px;text-align:center;font-weight:bold;margin-top:7mm;}
             .texto-vt{font-size:16px;line-height:1.65;text-align:justify;margin-top:4mm;text-indent:0;}
             .lista-vt{margin-top:3mm;}
-            .linha-vt{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:16px;}
+            .linha-vt{display:grid;grid-template-columns:104mm 7mm 18mm 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:15.5px;}
             .linha-vt .nome,.linha-vt .valor,.linha-vt .moeda{border-bottom:1.5px solid #000;padding:0 3px 2px;}
-            .linha-vt .assinatura{border-bottom:1.5px solid #000;margin-left:18px;padding:0 3px 2px;}
+            .linha-vt .nome{white-space:nowrap;}
+            .linha-vt .assinatura{border-bottom:1.5px solid #000;margin-left:10px;padding:0 3px 2px;}
             .linha-vt .moeda{text-align:left;padding-left:4px;}
             .linha-vt .valor{text-align:right;padding-right:8px;}
-            .total-vt{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;font-size:16px;font-weight:bold;margin-top:1mm;}
-            .total-vt div:nth-child(1){text-align:right;}
-            .total-vt div:nth-child(3){text-align:right;padding-right:8px;}
             .rodape-vt{margin-top:auto;font-size:16px;}
             .data-vt{text-align:right;font-weight:bold;margin-bottom:13mm;}
             .assinatura-diretor-vt{width:72mm;border-top:1px solid #000;text-align:center;margin:0 auto;padding-top:3px;}
         </style></head><body>`;
         paginas.forEach((pagina) => {
-            const total = pagina.reduce((acc, item) => acc + Number(item.valTotal || 0), 0);
             html += `<section class="vt-folha"><div class="vt-topo">${logoHtml}<div class="vt-razao">${escapeHTML(empresa)}</div><div class="vt-cnpj">CNPJ ${escapeHTML(db.empresa.cnpj || '')}</div></div><div class="titulo-vt">Folha de Pagamento dos Vales-Combustível</div><div class="texto-vt">Ao assinar esta folha, declaro que recebi da empresa supracitada a importância referente aos <b>vales-combustível</b> do mês de <b>${escapeHTML(mes)} de ${escapeHTML(ano)}</b>, que é <b>preferência minha recebê-los em dinheiro e que tenho ciência de que há previsão para tal na Convenção Coletiva da Categoria.</b></div><div class="lista-vt">`;
             pagina.forEach((item) => {
                 html += `<div class="linha-vt"><div class="nome">${escapeHTML(item.nome)}</div><div class="moeda">R$</div><div class="valor">${formatMoeda(item.valTotal)}</div><div class="assinatura"></div></div>`;
             });
-            html += `<div class="total-vt"><div>Total =</div><div>R$</div><div>${formatMoeda(total)}</div><div></div></div></div><div class="rodape-vt"><div class="data-vt">${escapeHTML(formatDataExtensoPrint(dataFolha, cidade))}</div><div class="assinatura-diretor-vt">Assinatura do Diretor</div></div></section>`;
+            html += `</div><div class="rodape-vt"><div class="data-vt">${escapeHTML(formatDataExtensoPrint(dataFolha, cidade))}</div><div class="assinatura-diretor-vt">Assinatura do Diretor</div></div></section>`;
         });
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintVT');
     }
@@ -154,11 +151,12 @@
             .titulo-doc{font-size:18px;font-weight:bold;margin:8mm 0 5mm;text-align:center;}
             .texto-declara{font-size:16px;margin-bottom:8mm;text-align:justify;line-height:1.35;}
             .lista-quinzena{margin-top:0;}
-            .linha-quinzena{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:16px;}
+            .linha-quinzena{display:grid;grid-template-columns:104mm 7mm 18mm 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:15.5px;}
             .linha-quinzena .nome,.linha-quinzena .moeda,.linha-quinzena .valor{border-bottom:1.5px solid #000;padding:0 3px 2px;}
+            .linha-quinzena .nome{white-space:nowrap;}
             .linha-quinzena .moeda{text-align:left;padding-left:4px;}
             .linha-quinzena .valor{text-align:right;padding-right:8px;}
-            .linha-quinzena .assinatura{border-bottom:1.5px solid #000;margin-left:18px;padding:0 3px 2px;}
+            .linha-quinzena .assinatura{border-bottom:1.5px solid #000;margin-left:10px;padding:0 3px 2px;}
             .rodape-data{text-align:right;margin-top:auto;font-size:17px;font-weight:bold;padding-right:8mm;}
         </style></head><body>`;
         paginas.forEach((pagina) => {
