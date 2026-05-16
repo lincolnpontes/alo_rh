@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.22</title>
+    <title>Alô RH v1.0.23</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.22">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.23">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.22</div>
+    <div class="splash-versao">v1.0.23</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -33,16 +33,19 @@
         <div class="header-title">Alô RH</div>
         <div class="header-actions">
             <button onclick="abrirModalAniversarios()">🎂</button>
+            <button class="btn-resumo-header" onclick="abrirModalResumo()">Resumo</button>
             <button onclick="document.getElementById('modalPainelUnificado').style.display='flex'">⚙️</button>
         </div>
     </div>
     
     <div class="area-conteudo">
         <div id="actionBar" class="action-bar">
-            <div style="display: flex; gap: 5px; flex-wrap: nowrap; align-items:center;" id="boxBarraAcoes">
-                <div id="boxFiltrosDias" style="display:flex; gap:5px;"></div>
-                <button class="btn-action-bar btn-selecionar-lista" id="btnSelecionarLista" onclick="toggleSelecionarTodosListados()">✓ Todos</button>
-                
+            <div class="selecao-lista-toolbar">
+                <button class="btn-selecionar-caixa" id="btnSelecionarLista" onclick="selecionarTodosListados()" title="Selecionar todos" aria-label="Selecionar todos"><span id="marcaSelecionarTodos"></span></button>
+                <button class="btn-limpar-selecao" id="btnLimparSelecao" onclick="limparSelecaoFuncionarios()" title="Limpar seleção" aria-label="Limpar seleção">X</button>
+            </div>
+            <div id="boxFiltrosDias" class="dias-filtro-toolbar"></div>
+            <div class="acoes-massa-toolbar" id="boxBarraAcoes">
                 <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
                 <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinz.</button>
                 <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
@@ -367,7 +370,8 @@
         <input type="hidden" id="acoesFuncId">
         
         <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento()">💸 Adiantamentos</button>
-        <button class="btn-outline" id="btnAcaoFalta" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Ausência / Atestado</button>
+        <button class="btn-outline" id="btnAcaoFalta" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Ausência</button>
+        <button class="btn-outline" id="btnAcaoAtraso" style="border-color:#795548; color:#795548;" onclick="abrirModalAtraso()">⏱️ Registrar Atraso</button>
         <button class="btn-outline" id="btnAcaoFerias" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Lançar Férias</button>
         
         <div id="btnPagarExtra" style="display:none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
@@ -430,7 +434,7 @@
             </div>
             <div class="form-group"><label>Motivo:</label><select id="adiantMotivo"></select></div>
             <div style="display: flex; gap: 10px;">
-                <div class="form-group" style="flex:1;"><label>Forma Pagto:</label><select id="adiantForma"><option value="Dinheiro">Dinheiro</option><option value="PIX">PIX</option></select></div>
+                <div class="form-group" style="flex:1;"><label>Forma Pagto:</label><select id="adiantForma"><option value="Pix" selected>Pix</option><option value="Dinheiro">Dinheiro</option><option value="Outros">Outros</option></select></div>
                 <div class="form-group" style="flex:1;"><label>Responsável:</label><select id="adiantAdmin"></select></div>
             </div>
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -463,7 +467,7 @@
         <div id="areaEditFalta" class="">
             <div style="display: flex; gap: 10px;">
                 <div class="form-group" style="flex:1;"><label>Início:</label><input type="date" id="faltaData"></div>
-                <div class="form-group" style="flex:1;"><label>Fim (Opc.):</label><input type="date" id="faltaDataFim"></div>
+                <div class="form-group" style="flex:1;"><label>Fim (opcional):</label><input type="date" id="faltaDataFim"></div>
             </div>
             <div class="form-group"><label>Tipo de Ausência:</label><select id="faltaTipo" onchange="changeTipoFalta()"><option value="Falta">Falta Injustificada</option><option value="Atestado">Atestado Médico</option><option value="Folga">Folga Extra</option></select></div>
             
@@ -487,6 +491,33 @@
         <div id="listaHistoricoFaltas" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:200px; overflow-y:auto; font-size:12px;"></div>
 
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFalta'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormAtraso">
+    <div class="modal">
+        <div class="modal-title" style="color:#795548; border-color:#795548;">Registrar Atraso</div>
+        <input type="hidden" id="atrasoEditId">
+        <div id="areaEditAtraso" class="">
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex:1;"><label>Data:</label><input type="date" id="atrasoData"></div>
+                <div class="form-group" style="flex:1;"><label>Responsável:</label><select id="atrasoAdmin"></select></div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex:1;"><label>Horário previsto:</label><input type="time" id="atrasoPrevisto"></div>
+                <div class="form-group" style="flex:1;"><label>Chegou às:</label><input type="time" id="atrasoChegada"></div>
+            </div>
+            <div class="form-group"><label>Observação:</label><input type="text" id="atrasoObs" placeholder="Ex: trânsito, transporte, justificativa"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="btnCancelEditAtraso" style="display:none;" onclick="cancelarEdicaoRegistro('atraso')">Cancelar Edição</button>
+                <button class="btn-action" id="btnSalvarAtraso" style="flex:2; background-color:#795548;" onclick="salvarAtraso()">Gravar Atraso</button>
+            </div>
+        </div>
+
+        <div class="section-title">Histórico de Atrasos</div>
+        <div id="listaHistoricoAtrasos" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:180px; overflow-y:auto; font-size:12px;"></div>
+
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormAtraso'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button></div>
     </div>
 </div>
 
@@ -551,11 +582,30 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalAniversarios')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.22"></script>
-<script src="js/calculos.js?v=1.0.22"></script>
-<script src="js/interface.js?v=1.0.22"></script>
-<script src="js/impressao.js?v=1.0.22"></script>
-<script src="js/sincronizacao.js?v=1.0.22"></script>
+
+<div class="modal-overlay" id="modalResumo">
+    <div class="modal">
+        <div class="modal-title">Resumo</div>
+        <div class="form-group"><label>Período:</label><select id="resumoTipo" onchange="alterarTipoResumo()"><option value="mes">Mês</option><option value="semana">Semana</option><option value="dia">Dia</option><option value="personalizado">Intervalo personalizado</option></select></div>
+        <div id="resumoCamposMes" class="resumo-campos"><div class="form-group"><label>Mês:</label><input type="month" id="resumoMes"></div></div>
+        <div id="resumoCamposSemana" class="resumo-campos" style="display:none;"><div class="form-group"><label>Dia da semana desejada:</label><input type="date" id="resumoSemana"></div></div>
+        <div id="resumoCamposDia" class="resumo-campos" style="display:none;"><div class="form-group"><label>Dia:</label><input type="date" id="resumoDia"></div></div>
+        <div id="resumoCamposPersonalizado" class="resumo-campos" style="display:none;">
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;"><label>Início:</label><input type="date" id="resumoInicio"></div>
+                <div class="form-group" style="flex:1;"><label>Fim:</label><input type="date" id="resumoFim"></div>
+            </div>
+        </div>
+        <button class="btn-action" style="width:100%; margin-bottom:12px;" onclick="gerarResumo()">Atualizar Resumo</button>
+        <div id="resultadoResumo"></div>
+        <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
+    </div>
+</div>
+<script src="js/dados.js?v=1.0.23"></script>
+<script src="js/calculos.js?v=1.0.23"></script>
+<script src="js/interface.js?v=1.0.23"></script>
+<script src="js/impressao.js?v=1.0.23"></script>
+<script src="js/sincronizacao.js?v=1.0.23"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

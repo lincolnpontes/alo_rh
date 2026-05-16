@@ -1,14 +1,14 @@
-const CACHE_NAME = 'alo-rh-v1.0.22';
+const CACHE_NAME = 'alo-rh-v1.0.23';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './css/styles.css?v=1.0.22',
-  './js/dados.js?v=1.0.22',
-  './js/calculos.js?v=1.0.22',
-  './js/interface.js?v=1.0.22',
-  './js/impressao.js?v=1.0.22',
-  './js/sincronizacao.js?v=1.0.22',
+  './css/styles.css?v=1.0.23',
+  './js/dados.js?v=1.0.23',
+  './js/calculos.js?v=1.0.23',
+  './js/interface.js?v=1.0.23',
+  './js/impressao.js?v=1.0.23',
+  './js/sincronizacao.js?v=1.0.23',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-192.png',

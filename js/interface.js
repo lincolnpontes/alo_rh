@@ -1,7 +1,7 @@
 function toggleDiv(id) { let el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
     function converterLogo(input) { if (input.files && input.files[0]) { let reader = new FileReader(); reader.onload = function(e) { document.getElementById('empLogoBase64').value = e.target.result; document.getElementById('previewLogo').innerHTML = `<img src="${e.target.result}" style="max-height:50px;">`; }; reader.readAsDataURL(input.files[0]); } }
     
-    window.onload = async () => { await migrarSenhaAvancadaLegada(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'flex'; initDiasFiltro(); atualizarAcoesMassa(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
+    window.onload = async () => { await migrarSenhaAvancadaLegada(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'grid'; initDiasFiltro(); atualizarAcoesMassa(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
 
     function toggleModoSelecao() { 
         atualizarAcoesMassa();
@@ -15,12 +15,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('btnAcaoMassa3').style.display = visivel;
         document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
         const btnSelecionarLista = document.getElementById('btnSelecionarLista');
+        const btnLimparSelecao = document.getElementById('btnLimparSelecao');
         if(btnSelecionarLista) {
             const funcs = obterFuncionariosListados();
             btnSelecionarLista.style.display = funcs.length ? 'flex' : 'none';
-            btnSelecionarLista.classList.toggle('limpar', temSelecionados);
-            btnSelecionarLista.innerText = temSelecionados ? 'Limpar' : '✓ Todos';
+            const todosSelecionados = funcs.length > 0 && funcs.every(f => itensSelecionados.has(f.id));
+            btnSelecionarLista.classList.toggle('selecionado', todosSelecionados);
         }
+        if(btnLimparSelecao) btnLimparSelecao.style.display = temSelecionados ? 'flex' : 'none';
     }
 
     function initDiasFiltro() {
@@ -107,6 +109,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function cliqueItem(id) {
         let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = f.nome; document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
+        document.getElementById('btnAcaoAtraso').style.display = 'block';
         if(catObj && catObj.semanal) { document.getElementById('btnAcaoFalta').style.display = (f.habFaltas) ? 'block' : 'none'; document.getElementById('btnAcaoFerias').style.display = (f.habFerias) ? 'block' : 'none'; } else { document.getElementById('btnAcaoFalta').style.display = 'block'; document.getElementById('btnAcaoFerias').style.display = 'block'; }
         document.getElementById('modalAcoesFunc').style.display = 'flex';
     }
@@ -118,18 +121,23 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         renderizarLista();
     }
 
-    function toggleSelecionarTodosListados() {
-        if(itensSelecionados.size > 0) {
-            itensSelecionados.clear();
-            renderizarLista();
-            return;
-        }
+    function selecionarTodosListados() {
         const funcs = obterFuncionariosListados();
         if(funcs.length === 0) return;
         funcs.forEach(f => {
             itensSelecionados.add(f.id);
         });
         renderizarLista();
+    }
+
+    function limparSelecaoFuncionarios() {
+        itensSelecionados.clear();
+        renderizarLista();
+    }
+
+    function toggleSelecionarTodosListados() {
+        if(itensSelecionados.size > 0) limparSelecaoFuncionarios();
+        else selecionarTodosListados();
     }
 
     function formatarFuncaoLista(funcao) {
@@ -392,11 +400,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let selMotivo = document.getElementById('adiantMotivo'); selMotivo.innerHTML = ''; db.configGerais.motivosAdiantamento.forEach(m => selMotivo.innerHTML += optionHTML(m, m)); if(db.configGerais.motivosAdiantamento.length === 0) selMotivo.innerHTML = optionHTML('Vale', 'Vale');
         document.getElementById('adiantAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
         let areaEdit = document.getElementById('areaEditAdiant');
-        if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('adiantEditId').value = editId; document.getElementById('adiantData').value = r.data; document.getElementById('adiantValor').value = formatMoeda(r.valor); document.getElementById('adiantMotivo').value = r.motivo; document.getElementById('adiantForma').value = r.forma; document.getElementById('adiantAdmin').value = r.adminId; document.getElementById('btnSalvarAdiantamento').innerText = "Salvar Edição"; document.getElementById('btnCancelEditAdiant').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
-        else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; document.getElementById('btnSalvarAdiantamento').innerText = "Gravar Lançamento"; document.getElementById('btnCancelEditAdiant').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
+        if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('adiantEditId').value = editId; document.getElementById('adiantData').value = r.data; document.getElementById('adiantValor').value = formatMoeda(r.valor); document.getElementById('adiantMotivo').value = r.motivo; document.getElementById('adiantForma').value = r.forma === 'PIX' ? 'Pix' : (r.forma || 'Pix'); document.getElementById('adiantAdmin').value = r.adminId; document.getElementById('btnSalvarAdiantamento').innerText = "Salvar Edição"; document.getElementById('btnCancelEditAdiant').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
+        else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; document.getElementById('adiantForma').value = 'Pix'; document.getElementById('btnSalvarAdiantamento').innerText = "Gravar Lançamento"; document.getElementById('btnCancelEditAdiant').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistAdiantamento(funcId); document.getElementById('modalFormAdiantamento').style.display = 'flex';
     }
-    function cancelarEdicaoRegistro(tipo) { if(tipo === 'adiantamento') abrirModalAdiantamento(null); else if(tipo === 'falta') abrirModalFalta(null); else if(tipo === 'ferias') abrirModalFerias(null); }
+    function cancelarEdicaoRegistro(tipo) { if(tipo === 'adiantamento') abrirModalAdiantamento(null); else if(tipo === 'falta') abrirModalFalta(null); else if(tipo === 'atraso') abrirModalAtraso(null); else if(tipo === 'ferias') abrirModalFerias(null); }
     function salvarAdiantamento() {
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('adiantEditId').value; const valorStr = document.getElementById('adiantValor').value; if(!valorStr) return alert("Digite um valor.");
         const novo = { type: 'adiantamento', funcId: funcId, data: document.getElementById('adiantData').value, valor: parseMoeda(valorStr), motivo: document.getElementById('adiantMotivo').value, forma: document.getElementById('adiantForma').value, adminId: document.getElementById('adiantAdmin').value, descontado: false };
@@ -494,6 +502,68 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         box.innerHTML = html;
     }
 
+    function minutosEntreHorarios(inicio, fim) {
+        if(!inicio || !fim) return 0;
+        const [h1, m1] = inicio.split(':').map(Number);
+        const [h2, m2] = fim.split(':').map(Number);
+        if(Number.isNaN(h1) || Number.isNaN(m1) || Number.isNaN(h2) || Number.isNaN(m2)) return 0;
+        return Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1));
+    }
+
+    function abrirModalAtraso(editId = null) {
+        fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value;
+        document.getElementById('atrasoAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
+        let areaEdit = document.getElementById('areaEditAtraso');
+        if(editId) {
+            let r = db.registros.find(x => x.id === editId); if(!r) return;
+            document.getElementById('atrasoEditId').value = editId;
+            document.getElementById('atrasoData').value = r.data || getHojeSTR();
+            document.getElementById('atrasoPrevisto').value = r.horaPrevista || '';
+            document.getElementById('atrasoChegada').value = r.horaChegada || '';
+            document.getElementById('atrasoObs').value = r.observacao || '';
+            document.getElementById('atrasoAdmin').value = r.adminId || '';
+            document.getElementById('btnSalvarAtraso').innerText = "Salvar Edição";
+            document.getElementById('btnCancelEditAtraso').style.display = 'block';
+            areaEdit.classList.add('edit-highlight');
+        } else {
+            const f = db.funcionarios.find(x => x.id === funcId) || {};
+            const hs = f.horarios || {};
+            document.getElementById('atrasoEditId').value = '';
+            document.getElementById('atrasoData').value = getHojeSTR();
+            document.getElementById('atrasoPrevisto').value = hs.entrada || '';
+            document.getElementById('atrasoChegada').value = '';
+            document.getElementById('atrasoObs').value = '';
+            document.getElementById('btnSalvarAtraso').innerText = "Gravar Atraso";
+            document.getElementById('btnCancelEditAtraso').style.display = 'none';
+            areaEdit.classList.remove('edit-highlight');
+        }
+        renderizarHistAtrasos(funcId); document.getElementById('modalFormAtraso').style.display = 'flex';
+    }
+
+    function salvarAtraso() {
+        const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('atrasoEditId').value;
+        const data = document.getElementById('atrasoData').value; if(!data) return alert("Informe a data do atraso.");
+        const horaPrevista = document.getElementById('atrasoPrevisto').value;
+        const horaChegada = document.getElementById('atrasoChegada').value;
+        const novo = { type: 'atraso', funcId: funcId, data: data, horaPrevista: horaPrevista, horaChegada: horaChegada, minutos: minutosEntreHorarios(horaPrevista, horaChegada), observacao: document.getElementById('atrasoObs').value, adminId: document.getElementById('atrasoAdmin').value };
+        if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); }
+        salvarBanco(); abrirModalAtraso(null); renderizarLista();
+    }
+
+    function renderizarHistAtrasos(funcId) {
+        let box = document.getElementById('listaHistoricoAtrasos'); let html = '';
+        let regs = db.registros.filter(r => r.type === 'atraso' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
+        if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum atraso registrado.</div>'; return; }
+        regs.forEach(r => {
+            let minutos = Number(r.minutos || minutosEntreHorarios(r.horaPrevista, r.horaChegada) || 0);
+            let detalhe = [r.horaPrevista ? `Previsto: ${escapeHTML(r.horaPrevista)}` : '', r.horaChegada ? `Chegou: ${escapeHTML(r.horaChegada)}` : '', minutos ? `${minutos} min` : ''].filter(Boolean).join(' • ');
+            let obs = r.observacao ? `<br><span style="color:#666;">${escapeHTML(r.observacao)}</span>` : '';
+            let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
+            html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:6px 0; gap:8px;"><div><b>${formatDataBR(r.data)}</b> ${msgEdit}<br><span style="color:#795548; font-size:11px; font-weight:bold;">${detalhe || 'Atraso registrado'}</span>${obs}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="flex-shrink:0;"><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAtraso(${jsArg(r.id)})">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro(${jsArg(r.id)}, 'atraso')">🗑️</button></div></div>`;
+        });
+        box.innerHTML = html;
+    }
+
     function abrirModalFerias(editId = null) {
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; document.getElementById('feriasAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
         let areaEdit = document.getElementById('areaEditFerias');
@@ -504,7 +574,88 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function salvarFerias() { const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); }
     function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
-    function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); else if(tela === 'presenca') renderizarPresencasPendentes(funcId); renderizarLista(); } }
+    function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'atraso') renderizarHistAtrasos(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); else if(tela === 'presenca') renderizarPresencasPendentes(funcId); renderizarLista(); } }
+
+    function dataISO(data) {
+        return `${data.getFullYear()}-${String(data.getMonth()+1).padStart(2,'0')}-${String(data.getDate()).padStart(2,'0')}`;
+    }
+    function somarDiasISO(dataStr, dias) {
+        const data = new Date(dataStr + "T00:00:00");
+        data.setDate(data.getDate() + dias);
+        return dataISO(data);
+    }
+    function registroNoIntervalo(registro, inicio, fim) {
+        const dataIni = registro.data || '';
+        const dataFim = registro.dataFim || registro.data || '';
+        return dataIni <= fim && dataFim >= inicio;
+    }
+    function abrirModalResumo() {
+        const hoje = getHojeSTR();
+        document.getElementById('resumoTipo').value = 'mes';
+        document.getElementById('resumoMes').value = hoje.substring(0, 7);
+        document.getElementById('resumoSemana').value = hoje;
+        document.getElementById('resumoDia').value = hoje;
+        document.getElementById('resumoInicio').value = hoje.substring(0, 7) + '-01';
+        document.getElementById('resumoFim').value = hoje;
+        alterarTipoResumo();
+        document.getElementById('modalResumo').style.display = 'flex';
+    }
+    function alterarTipoResumo() {
+        const tipo = document.getElementById('resumoTipo').value;
+        ['Mes','Semana','Dia','Personalizado'].forEach(nome => {
+            document.getElementById(`resumoCampos${nome}`).style.display = 'none';
+        });
+        const mapa = { mes: 'Mes', semana: 'Semana', dia: 'Dia', personalizado: 'Personalizado' };
+        document.getElementById(`resumoCampos${mapa[tipo]}`).style.display = 'block';
+        gerarResumo();
+    }
+    function obterIntervaloResumo() {
+        const tipo = document.getElementById('resumoTipo').value;
+        if(tipo === 'mes') {
+            const mesRef = document.getElementById('resumoMes').value || getHojeSTR().substring(0, 7);
+            const [ano, mes] = mesRef.split('-').map(Number);
+            const fim = new Date(ano, mes, 0);
+            return { inicio: `${mesRef}-01`, fim: dataISO(fim), label: getExtensoMes(mes) + ' de ' + ano };
+        }
+        if(tipo === 'semana') {
+            const base = document.getElementById('resumoSemana').value || getHojeSTR();
+            const data = new Date(base + "T00:00:00");
+            const offset = (data.getDay() + 6) % 7;
+            const segunda = new Date(data); segunda.setDate(data.getDate() - offset);
+            const domingo = new Date(segunda); domingo.setDate(segunda.getDate() + 6);
+            return { inicio: dataISO(segunda), fim: dataISO(domingo), label: `${formatDataBR(dataISO(segunda))} a ${formatDataBR(dataISO(domingo))}` };
+        }
+        if(tipo === 'dia') {
+            const dia = document.getElementById('resumoDia').value || getHojeSTR();
+            return { inicio: dia, fim: dia, label: formatDataBR(dia) };
+        }
+        const inicio = document.getElementById('resumoInicio').value || getHojeSTR();
+        const fim = document.getElementById('resumoFim').value || inicio;
+        return inicio <= fim ? { inicio, fim, label: `${formatDataBR(inicio)} a ${formatDataBR(fim)}` } : { inicio: fim, fim: inicio, label: `${formatDataBR(fim)} a ${formatDataBR(inicio)}` };
+    }
+    function gerarResumo() {
+        const box = document.getElementById('resultadoResumo'); if(!box) return;
+        const intervalo = obterIntervaloResumo();
+        const ativos = db.funcionarios.filter(f => !f.arquivado);
+        const faltas = db.registros.filter(r => r.type === 'falta' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const faltaram = new Set(faltas.map(r => r.funcId));
+        const atrasos = db.registros.filter(r => r.type === 'atraso' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const minutosAtraso = atrasos.reduce((acc, r) => acc + Number(r.minutos || minutosEntreHorarios(r.horaPrevista, r.horaChegada) || 0), 0);
+        const extras = db.registros.filter(r => r.type === 'presenca' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const totalExtrasLancados = extras.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const pagamentosExtras = db.registros.filter(r => r.type === 'pagamento_semana' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const totalPagoExtras = pagamentosExtras.reduce((acc, r) => acc + Number(r.valorTotal || 0), 0);
+        const adiantamentos = db.registros.filter(r => r.type === 'adiantamento' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const totalAdiantamentos = adiantamentos.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        box.innerHTML = `<div class="resumo-periodo-label">${escapeHTML(intervalo.label)}</div><div class="resumo-grid">
+            <div class="resumo-card"><strong>${ativos.length}</strong><span>funcionários ativos</span></div>
+            <div class="resumo-card"><strong>${faltaram.size}</strong><span>funcionários com ausência (${faltas.length} registros)</span></div>
+            <div class="resumo-card"><strong>${atrasos.length}</strong><span>atrasos registrados${minutosAtraso ? ` (${minutosAtraso} min)` : ''}</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(totalExtrasLancados)}</strong><span>${extras.length} extras lançados no período</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(totalPagoExtras)}</strong><span>pago para extras (${pagamentosExtras.length} pagamentos)</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(totalAdiantamentos)}</strong><span>adiantamentos (${adiantamentos.length} lançamentos)</span></div>
+        </div>`;
+    }
 
     function abrirModalAniversarios() {
         let box = document.getElementById('listaAniversarios'); let html = '';

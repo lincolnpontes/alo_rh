@@ -10,8 +10,12 @@
         
         let mesAnt = mes - 1; let anoAnt = ano; if(mesAnt === 0) { mesAnt = 12; anoAnt = ano - 1; } let mesAntStr = `${anoAnt}-${String(mesAnt).padStart(2,'0')}`;
 
-        Array.from(itensSelecionados).forEach(id => {
-            let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado || !f.vtRota) return;
+        Array.from(itensSelecionados)
+            .map(id => db.funcionarios.find(x => x.id === id))
+            .filter(f => f && !f.arquivado && f.vtRota)
+            .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')))
+            .forEach(f => {
+            const id = f.id;
             let rotaObj = (db.configGerais.valesTransporte || []).find(v => v.rota === f.vtRota); if(!rotaObj) return;
             
             let passagensPorDia = 2; let passagensMes = diasUteis * passagensPorDia;
@@ -87,21 +91,21 @@
             ? `<img class="logo-vt" src="${db.empresa.logo}">`
             : `<div class="logo-vt-texto">${escapeHTML(db.empresa.fantasia || '')}</div>`;
         const itensOrdenados = [...arrVTParaImprimir].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
-        const paginas = quebrarPaginas(itensOrdenados, 15);
+        const paginas = quebrarPaginas(itensOrdenados, 16);
         let w = window.open('','_blank'); let html = `<html><head><title>Recibo VT</title><style>
             @page{size:A4 portrait;margin:10mm;}
             body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:16px;}
-            .vt-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 7mm 6mm;display:flex;flex-direction:column;page-break-after:always;}
+            .vt-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 7mm 5mm;display:flex;flex-direction:column;page-break-after:always;}
             .vt-folha:last-child{page-break-after:auto;}
             .vt-topo{text-align:center;font-weight:bold;}
             .logo-vt{max-height:28mm;max-width:58mm;object-fit:contain;display:block;margin:0 auto 1mm;}
             .logo-vt-texto{min-height:14mm;font-size:20px;display:flex;align-items:center;justify-content:center;text-transform:uppercase;color:#5d3434;}
             .vt-razao{font-size:20px;line-height:1.1;}
             .vt-cnpj{font-size:16px;margin-top:2px;}
-            .titulo-vt{font-size:17px;text-align:center;font-weight:bold;margin-top:9mm;}
-            .texto-vt{font-size:16px;line-height:1.95;text-align:justify;margin-top:5mm;text-indent:0;}
-            .lista-vt{margin-top:5mm;}
-            .linha-vt{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;align-items:end;min-height:9.6mm;font-size:16px;}
+            .titulo-vt{font-size:17px;text-align:center;font-weight:bold;margin-top:7mm;}
+            .texto-vt{font-size:16px;line-height:1.65;text-align:justify;margin-top:4mm;text-indent:0;}
+            .lista-vt{margin-top:3mm;}
+            .linha-vt{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:16px;}
             .linha-vt .nome,.linha-vt .valor,.linha-vt .moeda{border-bottom:1.5px solid #000;padding:0 3px 2px;}
             .linha-vt .assinatura{border-bottom:1.5px solid #000;margin-left:18px;padding:0 3px 2px;}
             .linha-vt .moeda{text-align:left;padding-left:4px;}
@@ -110,7 +114,7 @@
             .total-vt div:nth-child(1){text-align:right;}
             .total-vt div:nth-child(3){text-align:right;padding-right:8px;}
             .rodape-vt{margin-top:auto;font-size:16px;}
-            .data-vt{text-align:right;font-weight:bold;margin-bottom:18mm;}
+            .data-vt{text-align:right;font-weight:bold;margin-bottom:13mm;}
             .assinatura-diretor-vt{width:72mm;border-top:1px solid #000;text-align:center;margin:0 auto;padding-top:3px;}
         </style></head><body>`;
         paginas.forEach((pagina) => {
@@ -130,27 +134,27 @@
         let mesRef = document.getElementById('quinzenaMesRef').value; if(!mesRef) return; let ano = mesRef.split('-')[0]; let mesNum = mesRef.split('-')[1]; let dataPgto = document.getElementById('quinzenaDataPagto').value || getHojeSTR(); let cidade = db.empresa.cidade || 'Cidade';
         let itensQuinzena = Array.from(itensSelecionados).map(id => {
             let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return;
-            let valFinal = quinzBase - parseMoeda(f.unidentis || "0");
+            let valFinal = quinzBase;
             return { nome: f.nome, valor: valFinal };
         }).filter(Boolean).sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
         if(itensQuinzena.length === 0) return alert("Nenhum funcionário ativo selecionado para imprimir.");
-        const paginas = quebrarPaginas(itensQuinzena, 15);
+        const paginas = quebrarPaginas(itensQuinzena, 16);
         let logoHtml = db.empresa.logo ? `<img class="logo-quinzena" src="${db.empresa.logo}">` : `<div class="logo-quinzena-texto">${escapeHTML(db.empresa.fantasia || 'NOME DA EMPRESA')}</div>`;
         let w = window.open('','_blank'); 
         let html = `<html><head><title>Quinzena</title><style>
             @page{size:A4 portrait;margin:10mm;}
             body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:16px;}
-            .quinzena-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 7mm 8mm;display:flex;flex-direction:column;page-break-after:always;}
+            .quinzena-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 7mm 6mm;display:flex;flex-direction:column;page-break-after:always;}
             .quinzena-folha:last-child{page-break-after:auto;}
             .logo-area{text-align:center;font-weight:bold;}
             .logo-quinzena{max-height:28mm;max-width:70mm;object-fit:contain;display:block;margin:0 auto 1mm;}
             .logo-quinzena-texto{min-height:18mm;font-size:28px;display:flex;align-items:center;justify-content:center;font-weight:normal;}
             .sub-empresa{font-size:18px;line-height:1.15;}
             .cnpj-empresa{font-size:16px;margin-top:2px;}
-            .titulo-doc{font-size:18px;font-weight:bold;margin:10mm 0 7mm;text-align:center;}
-            .texto-declara{font-size:16px;margin-bottom:13mm;text-align:justify;line-height:1.45;}
+            .titulo-doc{font-size:18px;font-weight:bold;margin:8mm 0 5mm;text-align:center;}
+            .texto-declara{font-size:16px;margin-bottom:8mm;text-align:justify;line-height:1.35;}
             .lista-quinzena{margin-top:0;}
-            .linha-quinzena{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;align-items:end;min-height:9.6mm;font-size:16px;}
+            .linha-quinzena{display:grid;grid-template-columns:1fr 24px 76px 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:16px;}
             .linha-quinzena .nome,.linha-quinzena .moeda,.linha-quinzena .valor{border-bottom:1.5px solid #000;padding:0 3px 2px;}
             .linha-quinzena .moeda{text-align:left;padding-left:4px;}
             .linha-quinzena .valor{text-align:right;padding-right:8px;}
