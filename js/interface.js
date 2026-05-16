@@ -15,12 +15,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('btnAcaoMassa1').style.display = visivel;
         document.getElementById('btnAcaoMassa2').style.display = visivel;
         document.getElementById('btnAcaoMassa3').style.display = visivel;
+        document.getElementById('btnAcaoMassa4').style.display = visivel;
         document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
         const btnSelecionarLista = document.getElementById('btnSelecionarLista');
         if(btnSelecionarLista) {
             const funcs = obterFuncionariosListados();
+            const todosListadosSelecionados = funcs.length > 0 && funcs.every(f => itensSelecionados.has(f.id));
             btnSelecionarLista.style.display = funcs.length ? 'flex' : 'none';
-            btnSelecionarLista.classList.toggle('selecionado', temSelecionados);
+            btnSelecionarLista.classList.toggle('selecionado', todosListadosSelecionados);
         }
     }
 
@@ -74,8 +76,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem vínculo', semanal: false };
             let isSelected = itensSelecionados.has(f.id);
             let badgeExtra = catObj.semanal ? `<div style="color:#E65100; font-size:11px; font-weight:bold; margin-bottom:2px; text-align:right;">SEMANAL</div>` : '';
-            let nomeFunc = escapeHTML(f.nome || 'Sem nome');
-            let inicialFunc = escapeHTML(String(f.nome || '?').charAt(0).toUpperCase());
+            let nomeBase = getNomeUsoFuncionario(f);
+            let nomeFunc = escapeHTML(nomeBase || 'Sem nome');
+            let inicialFunc = escapeHTML(String(nomeBase || '?').charAt(0).toUpperCase());
             let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${escapeHTML(f.codigo)}]</strong> ` : '';
             let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? formatarFuncaoLista(funName) : 'Sem função';
             
@@ -107,8 +110,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function cliqueItem(id) {
-        let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = f.nome; document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
-        document.getElementById('btnAcaoAtraso').style.display = 'block';
+        let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = getNomeUsoFuncionario(f); document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
+        document.getElementById('btnAcaoAtraso').style.display = (f.habAtrasos !== false) ? 'block' : 'none';
         if(catObj && catObj.semanal) { document.getElementById('btnAcaoFalta').style.display = (f.habFaltas) ? 'block' : 'none'; document.getElementById('btnAcaoFerias').style.display = (f.habFerias) ? 'block' : 'none'; } else { document.getElementById('btnAcaoFalta').style.display = 'block'; document.getElementById('btnAcaoFerias').style.display = 'block'; }
         document.getElementById('modalAcoesFunc').style.display = 'flex';
     }
@@ -135,8 +138,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function toggleSelecionarTodosListados() {
-        if(itensSelecionados.size > 0) limparSelecaoFuncionarios();
-        else selecionarTodosListados();
+        const funcs = obterFuncionariosListados();
+        if(funcs.length === 0) return;
+        const todosListadosSelecionados = funcs.every(f => itensSelecionados.has(f.id));
+        funcs.forEach(f => {
+            if(todosListadosSelecionados) itensSelecionados.delete(f.id);
+            else itensSelecionados.add(f.id);
+        });
+        renderizarLista();
     }
 
     function formatarFuncaoLista(funcao) {
@@ -223,16 +232,36 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function salvarAdmin() { let id = document.getElementById('adminId').value || 'adm_' + Date.now(); let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value }; const idx = db.administradores.findIndex(x => x.id === id); if(idx >= 0) db.administradores[idx] = novo; else db.administradores.push(novo); salvarBanco(); fecharModal('modalFormAdmin'); abrirGerenciar('administradores'); }
 
     // VINCULOS E SALARIOS
+    function getCamposFuncionarioClasse(c = {}) {
+        const campos = c.camposFuncionario || {};
+        return {
+            pedirVT: campos.pedirVT !== false,
+            pedirGratificacao: campos.pedirGratificacao !== false,
+            pedirSalFamilia: campos.pedirSalFamilia !== false,
+            pedirUnidentis: campos.pedirUnidentis !== false
+        };
+    }
+
+    function preencherCamposFuncionarioClasse(c = {}) {
+        const campos = getCamposFuncionarioClasse(c);
+        document.getElementById('classePedirVT').checked = campos.pedirVT;
+        document.getElementById('classePedirGratificacao').checked = campos.pedirGratificacao;
+        document.getElementById('classePedirSalFamilia').checked = campos.pedirSalFamilia;
+        document.getElementById('classePedirUnidentis').checked = campos.pedirUnidentis;
+    }
+
     function abrirFormClasse(id, origem = 'gerenciar') { 
         origemFormClasse = origem;
         fecharModal('modalListagem'); tempSalariosClasse = [];
         if(id) { 
             let c = db.categorias.find(x => x.id === id); document.getElementById('classeId').value = c.id; document.getElementById('classeNome').value = c.nome; document.getElementById('classeCorFundo').value = c.cor || '#00695C'; document.getElementById('classeCorTexto').value = c.corTexto || '#ffffff'; document.getElementById('classeSemanal').checked = c.semanal || false; 
             document.getElementById('classeHoraEntrada').value = (c.horarios && c.horarios.entrada) ? c.horarios.entrada : ''; document.getElementById('classeHoraSaida').value = (c.horarios && c.horarios.saida) ? c.horarios.saida : ''; document.getElementById('classeHoraIntEnt').value = (c.horarios && c.horarios.intEnt) ? c.horarios.intEnt : ''; document.getElementById('classeHoraIntSai').value = (c.horarios && c.horarios.intSai) ? c.horarios.intSai : ''; document.getElementById('classeSemIntervalo').checked = (c.horarios && c.horarios.semIntervalo) || false;
+            preencherCamposFuncionarioClasse(c);
             if(c.salarios) tempSalariosClasse = [...c.salarios];
         } else { 
             document.getElementById('classeId').value = ''; document.getElementById('classeNome').value = ''; document.getElementById('classeCorFundo').value = '#00695C'; document.getElementById('classeCorTexto').value = '#ffffff'; document.getElementById('classeSemanal').checked = false; 
             document.getElementById('classeHoraEntrada').value = ''; document.getElementById('classeHoraSaida').value = ''; document.getElementById('classeHoraIntEnt').value = ''; document.getElementById('classeHoraIntSai').value = ''; document.getElementById('classeSemIntervalo').checked = false;
+            preencherCamposFuncionarioClasse();
         } 
         toggleIntervaloClasse(); renderListaSalariosClasse(); document.getElementById('modalFormClasse').style.display = 'flex'; 
     }
@@ -243,7 +272,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     
     function voltarDepoisFormClasse() { if(origemFormClasse === 'inicio') { origemFormClasse = 'gerenciar'; renderizarFiltros(); renderizarLista(); return; } abrirGerenciar('categorias'); }
     function cancelarFormClasse() { fecharModal('modalFormClasse'); voltarDepoisFormClasse(); }
-    function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked, horarios: { entrada: document.getElementById('classeHoraEntrada').value, saida: document.getElementById('classeHoraSaida').value, intEnt: document.getElementById('classeHoraIntEnt').value, intSai: document.getElementById('classeHoraIntSai').value, semIntervalo: document.getElementById('classeSemIntervalo').checked }, salarios: tempSalariosClasse }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); voltarDepoisFormClasse(); renderizarFiltros(); renderizarLista(); }
+    function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked, camposFuncionario: { pedirVT: document.getElementById('classePedirVT').checked, pedirGratificacao: document.getElementById('classePedirGratificacao').checked, pedirSalFamilia: document.getElementById('classePedirSalFamilia').checked, pedirUnidentis: document.getElementById('classePedirUnidentis').checked }, horarios: { entrada: document.getElementById('classeHoraEntrada').value, saida: document.getElementById('classeHoraSaida').value, intEnt: document.getElementById('classeHoraIntEnt').value, intSai: document.getElementById('classeHoraIntSai').value, semIntervalo: document.getElementById('classeSemIntervalo').checked }, salarios: tempSalariosClasse }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); voltarDepoisFormClasse(); renderizarFiltros(); renderizarLista(); }
 
     function abrirFormFuncao(id, origem = 'gerenciar') { origemFormFuncao = origem; fecharModal('modalListagem'); if(id) { let fn = db.funcoes.find(x => x.id === id); document.getElementById('funcaoId').value = fn.id; document.getElementById('funcaoNumero').value = fn.numero || ''; document.getElementById('funcaoNome').value = fn.nome; } else { document.getElementById('funcaoId').value = ''; document.getElementById('funcaoNumero').value = ''; document.getElementById('funcaoNome').value = ''; } document.getElementById('modalFormFuncao').style.display = 'flex'; }
     function voltarDepoisFormFuncao() { if(origemFormFuncao === 'inicio') { origemFormFuncao = 'gerenciar'; renderizarLista(); return; } abrirGerenciar('funcoes'); }
@@ -257,9 +286,22 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const cVt = document.getElementById('funcVTRota'); cVt.innerHTML = optionHTML('', '-- Rota (Nenhuma) --'); (db.configGerais.valesTransporte || []).forEach(v => cVt.innerHTML += optionHTML(v.rota, v.rota, selVt === v.rota));
     }
 
+    function aplicarCamposVisiveisFuncionario(c = null) {
+        const campos = getCamposFuncionarioClasse(c || {});
+        const alternar = (id, visivel) => {
+            const el = document.getElementById(id);
+            if(el) el.style.display = visivel ? '' : 'none';
+        };
+        alternar('boxCampoVT', campos.pedirVT);
+        alternar('boxCampoGratificacao', campos.pedirGratificacao);
+        alternar('boxCampoSalFamilia', campos.pedirSalFamilia);
+        alternar('boxCampoUnidentis', campos.pedirUnidentis);
+    }
+
     function aplicarPadroesClasse() {
         let catId = document.getElementById('funcCategoria').value;
         let c = db.categorias.find(x => x.id === catId);
+        aplicarCamposVisiveisFuncionario(c);
         if(c) {
             if(c.horarios) {
                 document.getElementById('funcHoraEntrada').value = c.horarios.entrada || ''; document.getElementById('funcHoraSaida').value = c.horarios.saida || '';
@@ -289,25 +331,27 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(id) {
             let f = db.funcionarios.find(x => x.id === id); carregarComboCategorias(f.categoria, f.funcao, f.vtRota);
             let c = db.categorias.find(x => x.id === f.categoria); document.getElementById('boxPermissoesSemanais').style.display = (c && c.semanal) ? 'block' : 'none';
-            document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
-            document.getElementById('funcHabFaltas').checked = f.habFaltas !== undefined ? f.habFaltas : true; document.getElementById('funcHabFerias').checked = f.habFerias !== undefined ? f.habFerias : true;
+            aplicarCamposVisiveisFuncionario(c);
+            document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcNomeSocial').value = f.nomeSocial || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
+            document.getElementById('funcHabFaltas').checked = f.habFaltas !== undefined ? f.habFaltas : true; document.getElementById('funcHabFerias').checked = f.habFerias !== undefined ? f.habFerias : true; document.getElementById('funcHabAtrasos').checked = f.habAtrasos !== undefined ? f.habAtrasos : true;
             document.getElementById('funcHoraEntrada').value = (f.horarios && f.horarios.entrada) ? f.horarios.entrada : ''; document.getElementById('funcHoraSaida').value = (f.horarios && f.horarios.saida) ? f.horarios.saida : ''; document.getElementById('funcHoraIntEnt').value = (f.horarios && f.horarios.intEnt) ? f.horarios.intEnt : ''; document.getElementById('funcHoraIntSai').value = (f.horarios && f.horarios.intSai) ? f.horarios.intSai : ''; 
             renderizarDiasFolgaFuncionario(f.horarios ? f.horarios.folgas : []);
             if(f.pixList) tempPix = JSON.parse(JSON.stringify(f.pixList));
         } else {
             carregarComboCategorias(); document.getElementById('boxPermissoesSemanais').style.display = 'none';
-            document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
-            document.getElementById('funcHabFaltas').checked = true; document.getElementById('funcHabFerias').checked = true;
+            aplicarCamposVisiveisFuncionario(null);
+            document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcNomeSocial').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
+            document.getElementById('funcHabFaltas').checked = true; document.getElementById('funcHabFerias').checked = true; document.getElementById('funcHabAtrasos').checked = true;
             document.getElementById('funcHoraEntrada').value = ''; document.getElementById('funcHoraSaida').value = ''; document.getElementById('funcHoraIntEnt').value = ''; document.getElementById('funcHoraIntSai').value = ''; 
             renderizarDiasFolgaFuncionario(null);
         }
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
-    function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config" style="align-items:flex-start;"><div><span style="word-break: break-all;">${escapeHTML(p.chave)}</span><br><label class="radio-custom"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label></div><button onclick="removerPix(${i})" style="margin-top:5px;">X</button></div>`).join(''); }
+    function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config" style="align-items:flex-start;"><div><small style="color:#0277BD; font-weight:bold;">${escapeHTML(p.tipo || 'PIX')}</small><br><span style="word-break: break-all;">${escapeHTML(p.chave)}</span><br><label class="radio-custom"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label></div><button onclick="removerPix(${i})" style="margin-top:5px;">X</button></div>`).join(''); }
     function addPix() { 
         let tipo = document.getElementById('novoPixTipo').value; let chv = document.getElementById('novoPixInput').value.trim(); 
         if(tipo === 'E-mail') { chv = chv.toLowerCase(); if(!chv.includes('@') || !chv.includes('.')) return alert('Digite um e-mail válido com @ e domínio.'); }
-        if(chv) { tempPix.push({ chave: chv, principal: tempPix.length === 0 }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } 
+        if(chv) { tempPix.push({ tipo: tipo, chave: chv, principal: tempPix.length === 0 }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } 
     }
     function removerPix(idx) { tempPix.splice(idx, 1); if(tempPix.length > 0 && !tempPix.some(p => p.principal)) tempPix[0].principal = true; renderListaPix(); }
     function setPixPrincipal(idx) { tempPix.forEach((p, i) => p.principal = (i === idx)); }
@@ -317,7 +361,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const id = document.getElementById('funcId').value || 'f_'+Date.now(); 
         const existente = db.funcionarios.find(x => x.id === id);
         let folgas = Array.from(document.querySelectorAll('.chk-folga-func:checked')).map(el => el.value);
-        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, arquivado: existente ? !!existente.arquivado : false, arquivadoEm: existente ? existente.arquivadoEm : null, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
+        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, nomeSocial: document.getElementById('funcNomeSocial').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, arquivado: existente ? !!existente.arquivado : false, arquivadoEm: existente ? existente.arquivadoEm : null, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
         const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); 
     }
 
@@ -336,8 +380,69 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function getAdminOptions(selectedId = '') { let html = optionHTML('', '-- Selecione --'); db.administradores.forEach(a => { html += optionHTML(a.id, a.nome, selectedId === a.id); }); return html; }
     function getAdminNome(id) { let a = db.administradores.find(x => x.id === id); return a ? escapeHTML(a.nome) : 'N/I'; }
 
-    // PRESENÇA SEMANAL E PIX
-    function copiarPixFuncionario() { let funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId); if(f && f.pixList && f.pixList.length > 0) { let pix = f.pixList.find(p => p.principal) || f.pixList[0]; navigator.clipboard.writeText(pix.chave).then(() => alert('Chave PIX copiada: ' + pix.chave)).catch(()=>alert('Erro ao copiar')); } else { alert('Nenhuma chave PIX cadastrada para este funcionário.'); } }
+    // PRESENÇA SEMANAL, PIX E WHATSAPP
+    function getFuncionarioAcoes() {
+        const funcId = document.getElementById('acoesFuncId').value;
+        return db.funcionarios.find(x => x.id === funcId);
+    }
+
+    function getNomeUsoFuncionario(f) {
+        return (f && (f.nomeSocial || f.nome)) || 'Funcionário';
+    }
+
+    function copiarTextoSeguro(texto, sucesso) {
+        if(navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(texto).then(() => alert(sucesso)).catch(() => alert('Erro ao copiar.'));
+            return;
+        }
+        const area = document.createElement('textarea');
+        area.value = texto;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        document.body.removeChild(area);
+        alert(sucesso);
+    }
+
+    function copiarPixFuncionario() { abrirEscolhaPixFuncionario(); }
+
+    function abrirEscolhaPixFuncionario() {
+        const f = getFuncionarioAcoes();
+        const lista = (f && Array.isArray(f.pixList)) ? f.pixList.filter(p => p && p.chave) : [];
+        if(lista.length === 0) return alert('Nenhuma chave PIX cadastrada para este funcionário.');
+        if(lista.length === 1) return copiarChavePixFuncionario(0);
+        const box = document.getElementById('listaEscolhaPix');
+        box.innerHTML = lista.map((pix, i) => {
+            const principal = pix.principal ? 'Principal' : `PIX ${i + 1}`;
+            const tipo = pix.tipo ? ` • ${escapeHTML(pix.tipo)}` : '';
+            return `<button class="btn-outline" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left;" onclick="copiarChavePixFuncionario(${i})"><strong>${principal}${tipo}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></button>`;
+        }).join('');
+        document.getElementById('modalEscolhaPix').style.display = 'flex';
+    }
+
+    function copiarChavePixFuncionario(indice) {
+        const f = getFuncionarioAcoes();
+        const lista = (f && Array.isArray(f.pixList)) ? f.pixList.filter(p => p && p.chave) : [];
+        const pix = lista[indice];
+        if(!pix) return alert('Chave PIX não encontrada.');
+        fecharModal('modalEscolhaPix');
+        copiarTextoSeguro(pix.chave, 'Chave PIX copiada: ' + pix.chave);
+    }
+
+    function normalizarTelefoneWhatsapp(telefone) {
+        let digitos = String(telefone || '').replace(/\D/g, '');
+        if(digitos.length === 10 || digitos.length === 11) digitos = '55' + digitos;
+        return digitos.length >= 12 ? digitos : '';
+    }
+
+    function abrirWhatsappFuncionario(mensagem = '') {
+        const f = getFuncionarioAcoes();
+        if(!f) return alert('Funcionário não encontrado.');
+        const telefone = normalizarTelefoneWhatsapp(f.telefone);
+        if(!telefone) return alert('Cadastre um WhatsApp válido para este funcionário.');
+        const texto = mensagem ? `?text=${encodeURIComponent(mensagem)}` : '';
+        window.open(`https://wa.me/${telefone}${texto}`, '_blank');
+    }
     
     function abrirModalPresencaSemana() {
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId); if(!f) return;
@@ -445,6 +550,40 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         boxPendAnt.innerHTML = hAnt || '<div style="color:#999; text-align:center;">Nenhum pendente anterior.</div>';
         boxPendAtual.innerHTML = hAtual || '<div style="color:#999; text-align:center;">Nenhum pendente no mês atual.</div>';
         boxDesc.innerHTML = hDesc || '<div style="color:#999; text-align:center;">Nenhum histórico.</div>';
+    }
+
+    function enviarResumoDividaWhatsapp() {
+        const f = getFuncionarioAcoes();
+        if(!f) return alert('Funcionário não encontrado.');
+        const regs = db.registros
+            .filter(r => r.type === 'adiantamento' && r.funcId === f.id)
+            .sort((a, b) => new Date(a.data) - new Date(b.data));
+        if(regs.length === 0) return alert('Não há adiantamentos para enviar.');
+
+        const pendentes = regs.filter(r => !r.descontado);
+        const descontados = regs.filter(r => r.descontado);
+        const totalPendente = pendentes.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const totalDescontado = descontados.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const linhas = [
+            `Olá, ${getNomeUsoFuncionario(f)}.`,
+            '',
+            'Segue o resumo dos seus adiantamentos:',
+            '',
+            `Pendente: R$ ${formatMoeda(totalPendente)}`,
+            `Já descontado: R$ ${formatMoeda(totalDescontado)}`,
+            '',
+            'Histórico:'
+        ];
+
+        regs.forEach((r) => {
+            const status = r.descontado ? 'descontado' : 'pendente';
+            const motivo = r.motivo ? ` - ${r.motivo}` : '';
+            const forma = r.forma ? ` (${r.forma})` : '';
+            linhas.push(`• ${formatDataBR(r.data)}${motivo}${forma}: R$ ${formatMoeda(r.valor)} - ${status}`);
+        });
+
+        linhas.push('', 'Qualquer divergência, me avise por aqui.');
+        abrirWhatsappFuncionario(linhas.join('\n'));
     }
 
     // FALTAS E FÉRIAS
@@ -654,6 +793,108 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             <div class="resumo-card"><strong>R$ ${formatMoeda(totalPagoExtras)}</strong><span>pago para extras (${pagamentosExtras.length} pagamentos)</span></div>
             <div class="resumo-card"><strong>R$ ${formatMoeda(totalAdiantamentos)}</strong><span>adiantamentos (${adiantamentos.length} lançamentos)</span></div>
         </div>`;
+    }
+
+    function abrirConfigContracheque() {
+        if(itensSelecionados.size === 0) return alert("Selecione funcionários!");
+        document.getElementById('contraMesRef').value = getHojeSTR().substring(0, 7);
+        document.getElementById('contraDescontoPassagem').value = 'padrao';
+        gerarPreviaContracheque();
+        document.getElementById('modalContracheque').style.display = 'flex';
+    }
+
+    function contarDiasEmpresaNoMes(ano, mes) {
+        const diasNoMes = new Date(ano, mes, 0).getDate();
+        let total = 0;
+        for(let dia = 1; dia <= diasNoMes; dia++) {
+            const dt = new Date(ano, mes - 1, dia);
+            if(db.configGerais.diasFuncionamento.includes(String(dt.getDay()))) total++;
+        }
+        return total;
+    }
+
+    function contarDiasUteisRegistroNoMes(registro, ano, mes) {
+        const inicio = registro.data || '';
+        const fim = registro.dataFim || registro.data || '';
+        if(!inicio) return 0;
+        const limiteInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
+        const limiteFim = dataISO(new Date(ano, mes, 0));
+        if(fim < limiteInicio || inicio > limiteFim) return 0;
+        let atual = new Date((inicio < limiteInicio ? limiteInicio : inicio) + "T00:00:00");
+        const fimReal = new Date((fim > limiteFim ? limiteFim : fim) + "T00:00:00");
+        let total = 0;
+        for(; atual <= fimReal; atual.setDate(atual.getDate() + 1)) {
+            if(db.configGerais.diasFuncionamento.includes(String(atual.getDay()))) total++;
+        }
+        return total;
+    }
+
+    function calcularValesCombustivelMes(f, ano, mes) {
+        const rotaObj = (db.configGerais.valesTransporte || []).find(v => v.rota === f.vtRota);
+        if(!rotaObj) return { passagens: 0, total: 0 };
+        const diasBase = contarDiasEmpresaNoMes(ano, mes);
+        const faltas = db.registros
+            .filter(r => r.type === 'falta' && r.funcId === f.id && r.descontarPassagem)
+            .reduce((acc, r) => acc + contarDiasUteisRegistroNoMes(r, ano, mes), 0);
+        const ferias = db.registros
+            .filter(r => r.type === 'ferias' && r.funcId === f.id)
+            .reduce((acc, r) => acc + contarDiasUteisRegistroNoMes(r, ano, mes), 0);
+        const passagens = Math.max(0, (diasBase - faltas - ferias) * 2);
+        return { passagens, total: passagens * parseMoeda(rotaObj.valor) };
+    }
+
+    function calcularINSSPrevia(base) {
+        if(base <= 0) return 0;
+        if(base <= 1412.00) return base * 0.075;
+        if(base <= 2666.68) return base * 0.09;
+        if(base <= 4000.03) return base * 0.12;
+        if(base <= 7786.02) return base * 0.14;
+        return 908.85;
+    }
+
+    function gerarPreviaContracheque() {
+        const box = document.getElementById('areaContracheque'); if(!box) return;
+        const mesRef = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
+        const [ano, mes] = mesRef.split('-').map(Number);
+        const modoPassagem = document.getElementById('contraDescontoPassagem').value || 'padrao';
+        const funcs = Array.from(itensSelecionados)
+            .map(id => db.funcionarios.find(x => x.id === id))
+            .filter(f => f && !f.arquivado)
+            .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+
+        if(funcs.length === 0) { box.innerHTML = '<div style="padding:15px; color:#999; text-align:center;">Nenhum funcionário ativo selecionado.</div>'; return; }
+
+        let totalLiquido = 0;
+        let html = '';
+        funcs.forEach((f) => {
+            const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
+            const gratificacao = parseMoeda(f.gratificacao);
+            const salarioFamilia = parseMoeda(f.salFamilia);
+            const unidentis = parseMoeda(f.unidentis);
+            const vales = calcularValesCombustivelMes(f, ano, mes);
+            const baseInss = salario + gratificacao;
+            const inss = calcularINSSPrevia(baseInss);
+            let descontoPassagem = Math.min(salario * 0.06, vales.total);
+            if(modoPassagem === 'nao') descontoPassagem = 0;
+            if(modoPassagem === 'total') descontoPassagem = vales.total;
+            const proventos = salario + gratificacao + salarioFamilia + vales.total;
+            const descontos = unidentis + descontoPassagem + inss;
+            const liquido = proventos - descontos;
+            totalLiquido += liquido;
+            const nomeSocial = f.nomeSocial ? `<div style="font-size:11px; color:#666;">Nome social: ${escapeHTML(f.nomeSocial)}</div>` : '';
+            html += `<div style="border:1px solid #e0e0e0; border-left:4px solid #6A1B9A; border-radius:8px; padding:10px; margin-bottom:10px; background:#fff;">
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
+                    <div><strong>${escapeHTML(f.nome || 'Sem nome')}</strong>${nomeSocial}<div style="font-size:11px; color:#777;">${escapeHTML(getExtensoMes(mes))} de ${ano} • ${vales.passagens} passagens</div></div>
+                    <strong style="color:#6A1B9A; white-space:nowrap;">R$ ${formatMoeda(liquido)}</strong>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;">
+                    <div style="background:#f8fbf8; border-radius:6px; padding:8px;"><b style="color:#2E7D32;">Proventos</b><br>Salário: R$ ${formatMoeda(salario)}<br>Gratificação: R$ ${formatMoeda(gratificacao)}<br>Vales-combustível: R$ ${formatMoeda(vales.total)}<br>Salário Família: R$ ${formatMoeda(salarioFamilia)}</div>
+                    <div style="background:#fff8f8; border-radius:6px; padding:8px;"><b style="color:#D32F2F;">Descontos</b><br>Passagem: R$ ${formatMoeda(descontoPassagem)}<br>INSS estimado: R$ ${formatMoeda(inss)}<br>Desc. Unidentis: R$ ${formatMoeda(unidentis)}<br>Total descontos: R$ ${formatMoeda(descontos)}</div>
+                </div>
+            </div>`;
+        });
+
+        box.innerHTML = `<div style="background:#F3E5F5; color:#4A148C; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between;"><span>${funcs.length} funcionário(s)</span><span>Total líquido: R$ ${formatMoeda(totalLiquido)}</span></div>${html}`;
     }
 
     function abrirModalAniversarios() {

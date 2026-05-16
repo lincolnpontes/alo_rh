@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.24';
+    const APP_VERSION = 'v1.0.25';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -68,8 +68,13 @@
         normalizado.configs.ultimaMudancaLocal = Number(normalizado.configs.ultimaMudancaLocal || 0);
         normalizado.configs.ultimaSincronizacao = Number(normalizado.configs.ultimaSincronizacao || 0);
         normalizado.configs.registrosExcluidos = normalizarExclusoesRegistros(normalizado.configs.registrosExcluidos);
+        const camposFuncionarioPadrao = { pedirVT: true, pedirGratificacao: true, pedirSalFamilia: true, pedirUnidentis: true };
+        normalizado.categorias = normalizado.categorias.map((categoria) => ({
+            ...categoria,
+            camposFuncionario: { ...camposFuncionarioPadrao, ...((categoria && categoria.camposFuncionario) || {}) }
+        }));
         normalizado.funcoes = normalizado.funcoes.map((funcao) => ({ numero: "", ...funcao }));
-        normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => ({ arquivado: false, ...funcionario }));
+        normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => ({ nomeSocial: "", habAtrasos: true, arquivado: false, ...funcionario }));
         normalizado.registros = normalizado.registros.map((registro) => {
             const registroNormalizado = { ...registro };
             if(!registroNormalizado._syncAtualizadoEm) registroNormalizado._syncAtualizadoEm = Number(registroNormalizado.editadoEm || registroNormalizado.criadoEm || 0);

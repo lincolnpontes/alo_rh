@@ -380,10 +380,10 @@
     }
 
     const COLUNAS_MODELO_FUNCIONARIOS = [
-        'Código', 'Nome', 'Data Nasc.', 'Admissão', 'CPF', 'RG', 'RG UF', 'CTPS', 'WhatsApp',
-        'Vínculo', 'Função Nº', 'Função', 'Salário', 'Gratificação', 'Sal. Família', 'Desc. Unidentis',
+        'Código', 'Nome', 'Nome Social', 'Data Nasc.', 'Admissão', 'CPF', 'RG', 'RG UF', 'CTPS', 'WhatsApp',
+        'Vínculo', 'Função Nº', 'Função', 'Salário', 'Gratificação', 'Salário Família', 'Desc. Unidentis',
         'Rota VT', 'PIX Tipo', 'PIX Chave', 'Entrada', 'Saída', 'Intervalo Início', 'Intervalo Fim',
-        'Folgas', 'Habilitar Faltas', 'Habilitar Férias'
+        'Folgas', 'Habilitar Faltas', 'Habilitar Férias', 'Habilitar Atrasos'
     ];
 
     function xmlEscape(valor) {
@@ -466,6 +466,7 @@
         return [
             funcionario.codigo || '',
             funcionario.nome || '',
+            funcionario.nomeSocial || '',
             formatarDataModeloFuncionarios(funcionario.dataNasc),
             formatarDataModeloFuncionarios(funcionario.admissao),
             funcionario.cpf || '',
@@ -489,12 +490,13 @@
             horarios.intSai || '',
             nomesFolgasModelo(horarios.folgas || []),
             funcionario.habFaltas === false ? 'Não' : 'Sim',
-            funcionario.habFerias === false ? 'Não' : 'Sim'
+            funcionario.habFerias === false ? 'Não' : 'Sim',
+            funcionario.habAtrasos === false ? 'Não' : 'Sim'
         ];
     }
 
     function baixarModeloFuncionariosXLSX() {
-        const exemplo = ['001', 'ANTONIO DA SILVA', '15/03/1990', '03/11/2020', '000.000.000-00', '', 'PB', '0000000/00000', '(83) 99999-9999', 'Carteira Assinada', '002', 'Garçom', '1.500,00', '', '', '', 'Centro', 'CPF', '000.000.000-00', '07:00', '17:00', '11:00', '12:00', 'Seg, Ter', 'Sim', 'Sim'];
+        const exemplo = ['001', 'ANTONIO DA SILVA', '', '15/03/1990', '03/11/2020', '000.000.000-00', '', 'PB', '0000000/00000', '(83) 99999-9999', 'Carteira Assinada', '002', 'Garçom', '1.500,00', '', '', '', 'Centro', 'CPF', '000.000.000-00', '07:00', '17:00', '11:00', '12:00', 'Seg, Ter', 'Sim', 'Sim', 'Sim'];
         const linhasFuncionarios = (db.funcionarios || []).map(linhaModeloFuncionario);
         const sheet = worksheetXML([COLUNAS_MODELO_FUNCIONARIOS, ...(linhasFuncionarios.length ? linhasFuncionarios : [exemplo])]);
         const arquivos = [
@@ -548,7 +550,7 @@
         if(!texto) return '';
         let vinculo = db.categorias.find(c => String(c.nome || '').trim().toLowerCase() === texto.toLowerCase());
         if(vinculo) return vinculo.id;
-        vinculo = { id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), nome: texto, cor: '#00695C', corTexto: '#ffffff', semanal: false, horarios: { entrada: '', saida: '', intEnt: '', intSai: '', semIntervalo: false }, salarios: [] };
+        vinculo = { id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), nome: texto, cor: '#00695C', corTexto: '#ffffff', semanal: false, camposFuncionario: { pedirVT: true, pedirGratificacao: true, pedirSalFamilia: true, pedirUnidentis: true }, horarios: { entrada: '', saida: '', intEnt: '', intSai: '', semIntervalo: false }, salarios: [] };
         db.categorias.push(vinculo);
         return vinculo.id;
     }
@@ -685,6 +687,7 @@
                     id: existente ? existente.id : 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
                     codigo,
                     nome,
+                    nomeSocial: valorDaLinha(row, mapa, ['Nome Social', 'NomeSocial']) || (existente ? existente.nomeSocial || '' : ''),
                     dataNasc: normalizarDataImportada(valorDaLinha(row, mapa, ['Data Nasc.', 'Data Nasc', 'Nascimento'])),
                     admissao: normalizarDataImportada(valorDaLinha(row, mapa, ['Admissão', 'Admissao'])),
                     cpf,
@@ -696,12 +699,13 @@
                     funcao: funcaoId,
                     salario: valorDaLinha(row, mapa, ['Salário', 'Salario']),
                     gratificacao: valorDaLinha(row, mapa, ['Gratificação', 'Gratificacao']),
-                    salFamilia: valorDaLinha(row, mapa, ['Sal. Família', 'Sal Familia']),
+                    salFamilia: valorDaLinha(row, mapa, ['Salário Família', 'Salario Familia', 'Sal. Família', 'Sal Familia']),
                     unidentis: valorDaLinha(row, mapa, ['Desc. Unidentis', 'Unidentis']),
                     vtRota: valorDaLinha(row, mapa, ['Rota VT', 'VT']),
                     pixList,
                     habFaltas: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Faltas']), true),
                     habFerias: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Férias', 'Habilitar Ferias']), true),
+                    habAtrasos: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Atrasos', 'Habilitar Atraso']), true),
                     arquivado: existente ? !!existente.arquivado : false,
                     horarios: {
                         entrada: valorDaLinha(row, mapa, ['Entrada']),
