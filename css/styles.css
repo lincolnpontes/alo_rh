@@ -17,10 +17,10 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .header-actions .btn-resumo-header { border: none; border-radius: 0; width: auto; height: auto; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; letter-spacing: 0; background: transparent; }
         
         .action-bar { display: none; grid-template-columns: minmax(66px, 1fr) auto minmax(92px, 1fr); padding: 8px 10px; background: #37474F; align-items: center; flex-shrink: 0; gap: 8px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-        .action-bar.com-selecao { grid-template-columns: 38px minmax(0, 1fr) 38px; }
-        .action-bar.com-selecao .acoes-massa-toolbar { grid-column: 2; justify-content: center; min-width: 0; }
+        .action-bar.com-selecao { grid-template-columns: 38px minmax(0, 1fr); overflow: hidden; }
+        .action-bar.com-selecao .acoes-massa-toolbar { grid-column: 2; justify-content: flex-start; min-width: 0; max-width: 100%; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
         .action-bar.com-selecao .dias-filtro-toolbar { display: none !important; }
-        .btn-action-bar { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 6px; padding: 6px 10px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;}
+        .btn-action-bar { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 6px; padding: 6px 10px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; flex: 0 0 auto;}
         .btn-action-bar.ativo { background: #4CAF50; border-color: #388E3C; }
         .selecao-lista-toolbar { display: flex; align-items: center; justify-content: flex-start; gap: 7px; min-width: 66px; }
         .dias-filtro-toolbar { display: flex; gap: 5px; align-items: center; justify-content: center; }
@@ -103,3 +103,5 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .resumo-card strong { display: block; color: #004D40; font-size: 18px; line-height: 1.1; }
         .resumo-card span { display: block; color: #666; font-size: 11px; margin-top: 4px; line-height: 1.25; }
         .resumo-periodo-label { color: #555; font-size: 12px; font-weight: 700; margin-bottom: 10px; text-align: center; }
+        .toast-app { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: rgba(30,30,30,.92); color: #fff; padding: 10px 14px; border-radius: 999px; z-index: 12000; font-size: 13px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+        .toast-app.visivel { opacity: 1; transform: translateX(-50%) translateY(-4px); }

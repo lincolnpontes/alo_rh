@@ -157,7 +157,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     // 3. GERENCIAMENTO CRUD
     function abrirGerenciar(tipo) {
         fecharModal('modalPainelUnificado');
-        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
+        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
         if(tipo === 'empresa') { document.getElementById('empLogoBase64').value = db.empresa.logo || ''; document.getElementById('previewLogo').innerHTML = db.empresa.logo ? `<img src="${db.empresa.logo}" style="max-height:50px;">` : ''; document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
         
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
@@ -366,15 +366,55 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     // CONFIGS
-    function renderListasConfig() { const listVT = document.getElementById('listaVT'); const listMot = document.getElementById('listaMotivos'); listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${escapeHTML(v.rota)} - <b style="color:#00695C;">R$ ${escapeHTML(v.valor)}</b></span><div><button class="btn-edit-small" onclick="editarVT(${i})">✏️</button><button onclick="removerVT(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>'; listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${escapeHTML(m)}</span><div style="display:flex; gap:2px;"><button class="btn-edit-small" onclick="moverMotivo(${i}, -1)">⬆️</button><button class="btn-edit-small" onclick="moverMotivo(${i}, 1)">⬇️</button><button onclick="confirmarRemoverMotivo(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>'; }
+    function normalizarInputPercentual(el) { el.value = el.value.replace(/[^0-9,.]/g, '').replace(/\./g, ','); }
+    function parsePercentual(valor) { const texto = String(valor || '').replace(',', '.'); const numero = parseFloat(texto); return Number.isFinite(numero) ? numero : 0; }
+    function formatPercentual(valor) { return parsePercentual(valor).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+    function ordenarINSS(lista) { return [...(lista || [])].sort((a, b) => parseMoeda(a.limite) - parseMoeda(b.limite)); }
+
+    function renderListasConfig() {
+        const listVT = document.getElementById('listaVT');
+        const listMot = document.getElementById('listaMotivos');
+        const listINSS = document.getElementById('listaINSS');
+        listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${escapeHTML(v.rota)} - <b style="color:#00695C;">R$ ${escapeHTML(v.valor)}</b></span><div><button class="btn-edit-small" onclick="editarVT(${i})">✏️</button><button onclick="removerVT(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>';
+        listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${escapeHTML(m)}</span><div style="display:flex; gap:2px;"><button class="btn-edit-small" onclick="moverMotivo(${i}, -1)">⬆️</button><button class="btn-edit-small" onclick="moverMotivo(${i}, 1)">⬇️</button><button onclick="confirmarRemoverMotivo(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>';
+        if(listINSS) {
+            const ordenadas = ordenarINSS(tempINSS);
+            listINSS.innerHTML = ordenadas.length ? ordenadas.map((faixa, i) => `<div class="list-item-config"><span>Até <b>R$ ${escapeHTML(formatMoeda(parseMoeda(faixa.limite)))}</b> - <b style="color:#6A1B9A;">${escapeHTML(formatPercentual(faixa.aliquota))}%</b></span><div><button class="btn-edit-small" onclick="editarINSS(${i})">✏️</button><button onclick="removerINSS(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma faixa de INSS.</div>';
+        }
+    }
     function addVT() { let r = document.getElementById('novoVTRota').value.trim(); let v = document.getElementById('novoVTValor').value.trim(); let editIdx = document.getElementById('editIdxVT').value; if(r && v) { if(editIdx !== "") { tempVT[editIdx] = {rota: r, valor: v}; document.getElementById('editIdxVT').value = ""; document.getElementById('btnSalvarVT').innerText = "+"; } else { tempVT.push({rota: r, valor: v}); } document.getElementById('novoVTRota').value = ''; document.getElementById('novoVTValor').value = ''; renderListasConfig(); } }
     function editarVT(idx) { let v = tempVT[idx]; document.getElementById('novoVTRota').value = v.rota; document.getElementById('novoVTValor').value = v.valor; document.getElementById('editIdxVT').value = idx; document.getElementById('btnSalvarVT').innerText = "OK"; }
     function removerVT(idx) { tempVT.splice(idx, 1); renderListasConfig(); }
+    function addINSS() {
+        let limite = document.getElementById('novoINSSLimite').value.trim();
+        let aliquota = document.getElementById('novoINSSAliquota').value.trim();
+        let editIdx = document.getElementById('editIdxINSS').value;
+        if(!limite || !aliquota || parseMoeda(limite) <= 0 || parsePercentual(aliquota) <= 0) return alert('Informe o limite e a alíquota da faixa.');
+        const faixa = { limite: formatMoeda(parseMoeda(limite)), aliquota: formatPercentual(aliquota) };
+        const ordenadas = ordenarINSS(tempINSS);
+        if(editIdx !== "") ordenadas[Number(editIdx)] = faixa;
+        else ordenadas.push(faixa);
+        tempINSS = ordenarINSS(ordenadas);
+        document.getElementById('novoINSSLimite').value = '';
+        document.getElementById('novoINSSAliquota').value = '';
+        document.getElementById('editIdxINSS').value = '';
+        document.getElementById('btnSalvarINSS').innerText = '+';
+        renderListasConfig();
+    }
+    function editarINSS(idx) {
+        tempINSS = ordenarINSS(tempINSS);
+        let faixa = tempINSS[idx]; if(!faixa) return;
+        document.getElementById('novoINSSLimite').value = faixa.limite;
+        document.getElementById('novoINSSAliquota').value = faixa.aliquota;
+        document.getElementById('editIdxINSS').value = idx;
+        document.getElementById('btnSalvarINSS').innerText = 'OK';
+    }
+    function removerINSS(idx) { tempINSS = ordenarINSS(tempINSS); tempINSS.splice(idx, 1); renderListasConfig(); }
     function addMotivo() { let mot = document.getElementById('novoMotivo').value.trim(); if(mot) { tempMotivos.push(mot); document.getElementById('novoMotivo').value = ''; renderListasConfig(); } }
     function moverMotivo(idx, dir) { if(dir === -1 && idx > 0) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx-1]; tempMotivos[idx-1] = t; } if(dir === 1 && idx < tempMotivos.length-1) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx+1]; tempMotivos[idx+1] = t; } renderListasConfig(); }
     function confirmarRemoverMotivo(idx) { motivoToDelete = idx; document.getElementById('modalConfirmExclusaoMotivo').style.display = 'flex'; }
     function executarRemocaoMotivo() { if(motivoToDelete !== null) { tempMotivos.splice(motivoToDelete, 1); renderListasConfig(); } fecharModal('modalConfirmExclusaoMotivo'); }
-    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
+    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; db.configGerais.inssFaixas = ordenarINSS(tempINSS).length ? ordenarINSS(tempINSS) : criarTabelaINSSPadrao(); salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
 
     // POPULAR ADMIN SELECT
     function getAdminOptions(selectedId = '') { let html = optionHTML('', '-- Selecione --'); db.administradores.forEach(a => { html += optionHTML(a.id, a.nome, selectedId === a.id); }); return html; }
@@ -391,8 +431,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function copiarTextoSeguro(texto, sucesso) {
+        const mensagem = sucesso || 'Copiada para a área de transferência.';
         if(navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(texto).then(() => alert(sucesso)).catch(() => alert('Erro ao copiar.'));
+            navigator.clipboard.writeText(texto).then(() => mostrarMensagemBaixa(mensagem)).catch(() => mostrarMensagemBaixa('Não foi possível copiar.'));
             return;
         }
         const area = document.createElement('textarea');
@@ -401,7 +442,21 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         area.select();
         document.execCommand('copy');
         document.body.removeChild(area);
-        alert(sucesso);
+        mostrarMensagemBaixa(mensagem);
+    }
+
+    function mostrarMensagemBaixa(texto) {
+        let toast = document.getElementById('toastApp');
+        if(!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toastApp';
+            toast.className = 'toast-app';
+            document.body.appendChild(toast);
+        }
+        toast.innerText = texto;
+        toast.classList.add('visivel');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('visivel'), 1800);
     }
 
     function copiarPixFuncionario() { abrirEscolhaPixFuncionario(); }
@@ -426,7 +481,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const pix = lista[indice];
         if(!pix) return alert('Chave PIX não encontrada.');
         fecharModal('modalEscolhaPix');
-        copiarTextoSeguro(pix.chave, 'Chave PIX copiada: ' + pix.chave);
+        copiarTextoSeguro(pix.chave, 'Copiada para a área de transferência.');
     }
 
     function normalizarTelefoneWhatsapp(telefone) {
@@ -844,12 +899,19 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function calcularINSSPrevia(base) {
-        if(base <= 0) return 0;
-        if(base <= 1412.00) return base * 0.075;
-        if(base <= 2666.68) return base * 0.09;
-        if(base <= 4000.03) return base * 0.12;
-        if(base <= 7786.02) return base * 0.14;
-        return 908.85;
+        if(base <= 0) return { valor: 0, aliquotaEfetiva: 0 };
+        const faixas = ordenarINSS((db.configGerais && db.configGerais.inssFaixas) || criarTabelaINSSPadrao())
+            .map(f => ({ limite: parseMoeda(f.limite), aliquota: parsePercentual(f.aliquota) }))
+            .filter(f => f.limite > 0 && f.aliquota > 0);
+        let anterior = 0;
+        let total = 0;
+        for(const faixa of faixas) {
+            const limiteAplicado = Math.min(base, faixa.limite);
+            if(limiteAplicado > anterior) total += (limiteAplicado - anterior) * (faixa.aliquota / 100);
+            anterior = faixa.limite;
+            if(base <= faixa.limite) break;
+        }
+        return { valor: total, aliquotaEfetiva: base ? (total / base) * 100 : 0 };
     }
 
     function gerarPreviaContracheque() {
@@ -873,7 +935,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const unidentis = parseMoeda(f.unidentis);
             const vales = calcularValesCombustivelMes(f, ano, mes);
             const baseInss = salario + gratificacao;
-            const inss = calcularINSSPrevia(baseInss);
+            const inssCalc = calcularINSSPrevia(baseInss);
+            const inss = inssCalc.valor;
             let descontoPassagem = Math.min(salario * 0.06, vales.total);
             if(modoPassagem === 'nao') descontoPassagem = 0;
             if(modoPassagem === 'total') descontoPassagem = vales.total;
@@ -889,7 +952,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;">
                     <div style="background:#f8fbf8; border-radius:6px; padding:8px;"><b style="color:#2E7D32;">Proventos</b><br>Salário: R$ ${formatMoeda(salario)}<br>Gratificação: R$ ${formatMoeda(gratificacao)}<br>Vales-combustível: R$ ${formatMoeda(vales.total)}<br>Salário Família: R$ ${formatMoeda(salarioFamilia)}</div>
-                    <div style="background:#fff8f8; border-radius:6px; padding:8px;"><b style="color:#D32F2F;">Descontos</b><br>Passagem: R$ ${formatMoeda(descontoPassagem)}<br>INSS estimado: R$ ${formatMoeda(inss)}<br>Desc. Unidentis: R$ ${formatMoeda(unidentis)}<br>Total descontos: R$ ${formatMoeda(descontos)}</div>
+                    <div style="background:#fff8f8; border-radius:6px; padding:8px;"><b style="color:#D32F2F;">Descontos</b><br>Passagem: R$ ${formatMoeda(descontoPassagem)}<br>INSS estimado (${formatPercentual(inssCalc.aliquotaEfetiva)}%): R$ ${formatMoeda(inss)}<br>Desc. Unidentis: R$ ${formatMoeda(unidentis)}<br>Total descontos: R$ ${formatMoeda(descontos)}</div>
                 </div>
             </div>`;
         });

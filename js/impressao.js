@@ -1,12 +1,52 @@
 // IMPRESSÕES E VT
     let arrVTParaImprimir = [];
-    function abrirAjusteVT() { if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); document.getElementById('vtDataPagto').value = getHojeSTR(); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
+    let tempDiasFechadosVT = [];
+
+    function abrirAjusteVT() { if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); document.getElementById('vtDataPagto').value = getHojeSTR(); document.getElementById('vtDiaFechado').value = ''; tempDiasFechadosVT = []; renderDiasFechadosVT(); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
+
+    function renderDiasFechadosVT() {
+        const box = document.getElementById('listaDiasFechadosVT'); if(!box) return;
+        if(tempDiasFechadosVT.length === 0) { box.innerHTML = '<div style="font-size:11px; color:#777;">Nenhum dia extra descontado.</div>'; return; }
+        box.innerHTML = tempDiasFechadosVT
+            .sort()
+            .map((dia, i) => `<span style="display:inline-flex; align-items:center; gap:5px; margin:2px 4px 2px 0; padding:4px 7px; border-radius:999px; background:#fff; border:1px solid #fbc02d; font-size:12px;">${formatDataBR(dia)} <button style="border:none; background:none; color:#d32f2f; font-weight:bold; cursor:pointer;" onclick="removerDiaFechadoVT(${i})">x</button></span>`)
+            .join('');
+    }
+
+    function addDiaFechadoVT() {
+        const input = document.getElementById('vtDiaFechado');
+        const dia = input.value;
+        const mesRef = document.getElementById('vtMesRef').value;
+        if(!dia) return alert('Informe a data que o restaurante não abrirá.');
+        if(mesRef && !dia.startsWith(mesRef)) return alert('Esse dia não pertence ao mês de referência do VT.');
+        if(!tempDiasFechadosVT.includes(dia)) tempDiasFechadosVT.push(dia);
+        input.value = '';
+        renderDiasFechadosVT();
+        gerarListaAjusteVT();
+    }
+
+    function removerDiaFechadoVT(idx) {
+        tempDiasFechadosVT.sort();
+        tempDiasFechadosVT.splice(idx, 1);
+        renderDiasFechadosVT();
+        gerarListaAjusteVT();
+    }
+
+    function contarDiasFechadosVT(ano, mes) {
+        return tempDiasFechadosVT.filter((dia) => {
+            if(!dia || !dia.startsWith(`${ano}-${String(mes).padStart(2, '0')}`)) return false;
+            const dt = new Date(dia + "T00:00:00");
+            return db.configGerais.diasFuncionamento.includes(String(dt.getDay()));
+        }).length;
+    }
+
     function gerarListaAjusteVT() {
         let box = document.getElementById('areaListaAjusteVT'); let html = ''; arrVTParaImprimir = [];
         let mesRef = document.getElementById('vtMesRef').value; if(!mesRef) return;
         let ano = parseInt(mesRef.split('-')[0]); let mes = parseInt(mesRef.split('-')[1]);
         let diasNoMes = new Date(ano, mes, 0).getDate();
         let diasUteis = 0; for(let d=1; d<=diasNoMes; d++) { let dt = new Date(ano, mes-1, d); if(db.configGerais.diasFuncionamento.includes(dt.getDay().toString())) diasUteis++; }
+        let diasFechados = contarDiasFechadosVT(ano, mes);
         
         let mesAnt = mes - 1; let anoAnt = ano; if(mesAnt === 0) { mesAnt = 12; anoAnt = ano - 1; } let mesAntStr = `${anoAnt}-${String(mesAnt).padStart(2,'0')}`;
 
@@ -26,12 +66,14 @@
             // Abater Ferias em DIAS UTEIS do mes atual
             let feriasMesAt = db.registros.filter(r => r.type === 'ferias' && r.funcId === id).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasFeriasUteis = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(d.getFullYear()===ano && (d.getMonth()+1)===mes && db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasFeriasUteis++; } return acc + diasFeriasUteis; }, 0);
 
-            let descontoPassagens = (faltasAnt + feriasMesAt) * passagensPorDia; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
+            let descontoColetivo = diasFechados * passagensPorDia;
+            let descontoPassagens = ((faltasAnt + feriasMesAt) * passagensPorDia) + descontoColetivo; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
             let valorUnit = parseMoeda(rotaObj.valor); let valTotal = passagensFinais * valorUnit;
             arrVTParaImprimir.push({ id: f.id, codigo: f.codigo || '', nome: f.nome, rota: rotaObj.rota, valorUnit: valorUnit, passagens: passagensFinais, valTotal: valTotal });
+            const detalheFechado = descontoColetivo ? ` | Fech.: -${descontoColetivo}` : '';
             
             html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ddd;">
-                <div style="flex:1;"><strong>${escapeHTML(f.nome)}</strong><br><small>${escapeHTML(rotaObj.rota)} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc.: -${descontoPassagens}</small></div>
+                <div style="flex:1;"><strong>${escapeHTML(f.nome)}</strong><br><small>${escapeHTML(rotaObj.rota)} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc.: -${descontoPassagens}${detalheFechado}</small></div>
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:12px;">
                     <div style="display:flex; align-items:center; gap:5px;">
                         <label style="margin:0; color:#555;">Passagens:</label>
@@ -82,8 +124,8 @@
     }
     function getLayoutAssinaturaPrint(lista) {
         const maiorNome = Math.max(0, ...lista.map(item => String(item.nome || '').length));
-        const nomeMm = Math.min(104, Math.max(76, Math.ceil(maiorNome * 1.9)));
-        const fontPx = maiorNome > 52 ? 14 : (maiorNome > 44 ? 14.7 : 15.5);
+        const nomeMm = Math.min(112, Math.max(88, Math.ceil(maiorNome * 2.5)));
+        const fontPx = maiorNome > 52 ? 13.5 : (maiorNome > 44 ? 14.4 : 15.2);
         return { nomeMm, fontPx };
     }
     function executarPrintVT() {
@@ -113,7 +155,7 @@
             .lista-vt{margin-top:3mm;}
             .linha-vt{display:grid;grid-template-columns:var(--nome-col,92mm) 7mm 18mm 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:var(--linha-font,15.5px);}
             .linha-vt .nome,.linha-vt .valor,.linha-vt .moeda{border-bottom:1.5px solid #000;padding:0 3px 2px;}
-            .linha-vt .nome{white-space:nowrap;}
+            .linha-vt .nome{white-space:nowrap;overflow:hidden;text-overflow:clip;}
             .linha-vt .assinatura{border-bottom:1.5px solid #000;margin-left:10px;padding:0 3px 2px;}
             .linha-vt .moeda{text-align:left;padding-left:4px;}
             .linha-vt .valor{text-align:right;padding-right:8px;}
@@ -160,7 +202,7 @@
             .lista-quinzena{margin-top:0;}
             .linha-quinzena{display:grid;grid-template-columns:var(--nome-col,92mm) 7mm 18mm 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:var(--linha-font,15.5px);}
             .linha-quinzena .nome,.linha-quinzena .moeda,.linha-quinzena .valor{border-bottom:1.5px solid #000;padding:0 3px 2px;}
-            .linha-quinzena .nome{white-space:nowrap;}
+            .linha-quinzena .nome{white-space:nowrap;overflow:hidden;text-overflow:clip;}
             .linha-quinzena .moeda{text-align:left;padding-left:4px;}
             .linha-quinzena .valor{text-align:right;padding-right:8px;}
             .linha-quinzena .assinatura{border-bottom:1.5px solid #000;margin-left:10px;padding:0 3px 2px;}

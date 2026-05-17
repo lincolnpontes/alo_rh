@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.25';
+    const APP_VERSION = 'v1.0.26';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -28,7 +28,7 @@
     let db = carregarBanco();
     let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
     let isSyncingFundo = false; let syncPendente = false; let timerSincronizacao = null; let timerSyncRegistros = null; let isPuxandoNuvem = false;
-    let tempVT = []; let tempMotivos = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null;
+    let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null;
     let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar';
     let assinaturasRegistros = new Map(); let idsRegistrosConhecidos = new Set(); registrarEstadoRegistros();
 
@@ -40,10 +40,19 @@
             funcoes: [],
             funcionarios: [],
             administradores: [],
-            configGerais: { salarioMinimo: "1412,00", adiantamentoQuinzena: "500,00", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [] },
+            configGerais: { salarioMinimo: "1621,00", adiantamentoQuinzena: "500,00", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [], inssFaixas: criarTabelaINSSPadrao() },
             registros: [],
             configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, ultimaSincronizacao: 0, registrosExcluidos: {}, senhaAdminHash: "", senhaAdminSalt: "", segurancaVersao: 2 }
         };
+    }
+
+    function criarTabelaINSSPadrao() {
+        return [
+            { limite: "1621,00", aliquota: "7,5" },
+            { limite: "2902,84", aliquota: "9" },
+            { limite: "4354,27", aliquota: "12" },
+            { limite: "8475,55", aliquota: "14" }
+        ];
     }
 
     function normalizarBanco(dados) {
@@ -65,6 +74,7 @@
         normalizado.configGerais.diasFuncionamento = Array.isArray(normalizado.configGerais.diasFuncionamento) ? normalizado.configGerais.diasFuncionamento : ['1','2','3','4','5','6'];
         normalizado.configGerais.valesTransporte = Array.isArray(normalizado.configGerais.valesTransporte) ? normalizado.configGerais.valesTransporte : [];
         normalizado.configGerais.motivosAdiantamento = Array.isArray(normalizado.configGerais.motivosAdiantamento) ? normalizado.configGerais.motivosAdiantamento : [];
+        normalizado.configGerais.inssFaixas = Array.isArray(normalizado.configGerais.inssFaixas) && normalizado.configGerais.inssFaixas.length ? normalizado.configGerais.inssFaixas : criarTabelaINSSPadrao();
         normalizado.configs.ultimaMudancaLocal = Number(normalizado.configs.ultimaMudancaLocal || 0);
         normalizado.configs.ultimaSincronizacao = Number(normalizado.configs.ultimaSincronizacao || 0);
         normalizado.configs.registrosExcluidos = normalizarExclusoesRegistros(normalizado.configs.registrosExcluidos);

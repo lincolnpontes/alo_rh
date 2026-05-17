@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.25</title>
+    <title>Alô RH v1.0.26</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.25">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.26">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.25</div>
+    <div class="splash-versao">v1.0.26</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -349,6 +349,18 @@
         </div>
         <div id="listaVT" style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 15px; max-height: 120px; overflow-y: auto;"></div>
 
+        <div class="section-title">Tabela de INSS</div>
+        <p style="font-size:11px; color:#666; margin-top:-4px;">Faixas progressivas usadas na prévia do contracheque. Informe o limite da faixa e a alíquota em %.</p>
+        <input type="hidden" id="editIdxINSS" value="">
+        <div class="form-group" style="margin-bottom: 5px;">
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="novoINSSLimite" placeholder="Até R$" inputmode="decimal" oninput="maskMoeda(this)" style="flex: 1.4;">
+                <input type="text" id="novoINSSAliquota" placeholder="%" inputmode="decimal" oninput="normalizarInputPercentual(this)" style="flex: 1;">
+                <button class="btn-action" onclick="addINSS()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;" id="btnSalvarINSS">+</button>
+            </div>
+        </div>
+        <div id="listaINSS" style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 15px; max-height: 150px; overflow-y: auto;"></div>
+
         <div class="section-title">Motivos de Adiantamento</div>
         <div class="form-group" style="margin-bottom: 5px;">
             <div style="display: flex; gap: 5px;">
@@ -592,6 +604,14 @@
         <div class="modal-title">Ajuste de Vale Transporte</div>
         <div class="form-group"><label>Mês de Referência (que será pago):</label><input type="month" id="vtMesRef" onchange="gerarListaAjusteVT()"></div>
         <div class="form-group"><label>Data da folha:</label><input type="date" id="vtDataPagto"></div>
+        <div class="form-group" style="background:#fff8e1; border:1px solid #ffecb3; border-radius:6px; padding:8px;">
+            <label>Dias sem funcionamento para descontar de todos:</label>
+            <div style="display:flex; gap:6px;">
+                <input type="date" id="vtDiaFechado" style="flex:1;">
+                <button class="btn-action" style="flex:none; width:44px; padding:0;" onclick="addDiaFechadoVT()">+</button>
+            </div>
+            <div id="listaDiasFechadosVT" style="margin-top:8px;"></div>
+        </div>
         <p style="font-size:11px; color:#666;">*O sistema calcula: Dias úteis do mês - Faltas do mês anterior + Eventuais folgas não tiradas.</p>
         <div id="areaListaAjusteVT" style="max-height: 400px; overflow-y: auto;"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPrintVT')">Cancelar</button><button class="btn-action" onclick="executarPrintVT()">Gerar Recibos VT</button></div>
@@ -637,11 +657,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.25"></script>
-<script src="js/calculos.js?v=1.0.25"></script>
-<script src="js/interface.js?v=1.0.25"></script>
-<script src="js/impressao.js?v=1.0.25"></script>
-<script src="js/sincronizacao.js?v=1.0.25"></script>
+<script src="js/dados.js?v=1.0.26"></script>
+<script src="js/calculos.js?v=1.0.26"></script>
+<script src="js/interface.js?v=1.0.26"></script>
+<script src="js/impressao.js?v=1.0.26"></script>
+<script src="js/sincronizacao.js?v=1.0.26"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
