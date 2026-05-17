@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.29</title>
+    <title>Alô RH v1.0.30</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.29">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.30">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.29</div>
+    <div class="splash-versao">v1.0.30</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -47,7 +47,7 @@
             <div class="acoes-massa-toolbar" id="boxBarraAcoes">
                 <button class="btn-action-bar btn-folga-geral" id="btnFolgaGeral" onclick="abrirMenuAdicionar()" title="Adicionar" aria-label="Adicionar">+</button>
                 <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
-                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinz.</button>
+                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinzena</button>
                 <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
                 <button class="btn-action-bar" id="btnAcaoMassa4" style="display:none; background:#6A1B9A;" onclick="abrirConfigContracheque()">🧾 Contracheque</button>
             </div>
@@ -61,7 +61,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.29</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.30</small>
         </h2>
         <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
@@ -198,7 +198,7 @@
         <div class="section-title">Regras do Vínculo</div>
         <div class="switch-panel">
             <div class="switch-grid">
-                <label class="switch-row"><span class="switch-row-text">Rota VT</span><span class="switch"><input type="checkbox" id="classePedirVT" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Vale-Transporte</span><span class="switch"><input type="checkbox" id="classePedirVT" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Gratificação</span><span class="switch"><input type="checkbox" id="classePedirGratificacao" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Salário Família</span><span class="switch"><input type="checkbox" id="classePedirSalFamilia" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Desconto Unidentis</span><span class="switch"><input type="checkbox" id="classePedirUnidentis" checked><span class="slider"></span></span></label>
@@ -206,6 +206,7 @@
                 <label class="switch-row"><span class="switch-row-text">Desconto passagem</span><span class="switch"><input type="checkbox" id="classePedirDescontoPassagem" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Desconto INSS</span><span class="switch"><input type="checkbox" id="classePedirINSS" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Recebe quinzena</span><span class="switch"><input type="checkbox" id="classeRecebeQuinzena" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Recebe Contracheque</span><span class="switch"><input type="checkbox" id="classeRecebeContracheque" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Controle de ponto</span><span class="switch"><input type="checkbox" id="classeTemControlePonto" checked><span class="slider"></span></span></label>
             </div>
         </div>
@@ -332,6 +333,7 @@
                 <label id="linhaFuncPassagem" class="switch-row"><span class="switch-row-text">Desconto passagem</span><span class="switch"><input type="checkbox" id="funcDescontaPassagem" checked><span class="slider"></span></span></label>
                 <label id="linhaFuncINSS" class="switch-row"><span class="switch-row-text">Desconto INSS</span><span class="switch"><input type="checkbox" id="funcDescontaINSS" checked><span class="slider"></span></span></label>
                 <label id="linhaFuncQuinzena" class="switch-row"><span class="switch-row-text">Recebe quinzena</span><span class="switch"><input type="checkbox" id="funcRecebeQuinzena" checked><span class="slider"></span></span></label>
+                <label id="linhaFuncContracheque" class="switch-row"><span class="switch-row-text">Recebe Contracheque</span><span class="switch"><input type="checkbox" id="funcRecebeContracheque" checked><span class="slider"></span></span></label>
                 <label id="linhaFuncControlePonto" class="switch-row"><span class="switch-row-text">Controle de ponto</span><span class="switch"><input type="checkbox" id="funcTemControlePonto" checked><span class="slider"></span></span></label>
                 <div id="linhaFuncQuinquenio" class="switch-row">
                     <span class="switch-row-text">Quinquênio<small>5% por quinquênio</small></span>
@@ -647,9 +649,11 @@
 <div class="modal-overlay" id="modalPrintQuinzena">
     <div class="modal">
         <div class="modal-title">Folha de Quinzena</div>
-        <div class="form-group"><label>Mês de Referência:</label><input type="month" id="quinzenaMesRef"></div>
+        <div class="form-group"><label>Mês de Referência:</label><input type="month" id="quinzenaMesRef" onchange="renderListaQuinzenaRecebem()"></div>
         <div class="form-group"><label>Data de Pagamento (No rodapé):</label><input type="date" id="quinzenaDataPagto"></div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPrintQuinzena')">Cancelar</button><button class="btn-action" style="background:#2E7D32;" onclick="executarPrintQuinzena()">Gerar Folha Unificada</button></div>
+        <div class="section-title" style="margin-top:5px;">Funcionários que receberão</div>
+        <div id="listaQuinzenaRecebem" class="lista-previa-folha"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPrintQuinzena')">Cancelar</button><button class="btn-action" style="background:#2E7D32;" onclick="executarPrintQuinzena()">Gerar Folha e Desconto</button></div>
     </div>
 </div>
 
@@ -668,10 +672,9 @@
     <div class="modal" style="width:95%; max-width:720px;">
         <div class="modal-title" style="color:#6A1B9A; border-color:#6A1B9A;">Contracheque</div>
         <div style="display:flex; gap:10px;">
-            <div class="form-group" style="flex:1;"><label>Mês de referência:</label><input type="month" id="contraMesRef" onchange="gerarPreviaContracheque()"></div>
-            <div class="form-group" style="flex:1;"><label>Desconto de passagem:</label><select id="contraDescontoPassagem" onchange="gerarPreviaContracheque()"><option value="padrao">Até 6%</option><option value="nao">Não descontar</option><option value="total">Descontar todo VT</option></select></div>
+            <div class="form-group" style="flex:1;"><label>Mês de referência:</label><input type="month" id="contraMesRef" onchange="aoAlterarMesContracheque()"></div>
+            <div class="form-group" style="flex:1;"><label>Mês ref. da passagem:</label><input type="month" id="contraVTMesRef" onchange="gerarPreviaContracheque()"></div>
         </div>
-        <p style="font-size:11px; color:#666; margin-top:0;">Primeiro esboço para simular salário, gratificação, quinquênio, VT, Salário Família, Unidentis, faltas, DSR, passagem e INSS. A gente vai refinando as regras depois.</p>
         <div id="areaContracheque" style="max-height:55vh; overflow-y:auto;"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalContracheque')" style="width: 100%;">Fechar</button></div>
     </div>
@@ -713,11 +716,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.29"></script>
-<script src="js/calculos.js?v=1.0.29"></script>
-<script src="js/interface.js?v=1.0.29"></script>
-<script src="js/impressao.js?v=1.0.29"></script>
-<script src="js/sincronizacao.js?v=1.0.29"></script>
+<script src="js/dados.js?v=1.0.30"></script>
+<script src="js/calculos.js?v=1.0.30"></script>
+<script src="js/interface.js?v=1.0.30"></script>
+<script src="js/impressao.js?v=1.0.30"></script>
+<script src="js/sincronizacao.js?v=1.0.30"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

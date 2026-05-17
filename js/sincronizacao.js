@@ -382,8 +382,8 @@
     const COLUNAS_MODELO_FUNCIONARIOS = [
         'Código', 'Nome', 'Nome Social', 'Data Nasc.', 'Admissão', 'CPF', 'RG', 'RG UF', 'CTPS', 'WhatsApp',
         'Vínculo', 'Função Nº', 'Função', 'Salário', 'Gratificação', 'Salário Família', 'Desc. Unidentis',
-        'Tem Gratificação', 'Tem Salário Família', 'Tem Unidentis', 'Recebe Quinquênio', 'Qtd. Quinquênios', 'Recebe Quinzena', 'Desconta Passagem', 'Desconta INSS', 'Controle Ponto',
-        'Rota VT', 'PIX Tipo', 'PIX Chave', 'Entrada', 'Saída', 'Intervalo Início', 'Intervalo Fim',
+        'Tem Gratificação', 'Tem Salário Família', 'Tem Unidentis', 'Recebe Quinquênio', 'Qtd. Quinquênios', 'Recebe Quinzena', 'Recebe Contracheque', 'Desconta Passagem', 'Desconta INSS', 'Controle Ponto',
+        'Vale-Transporte', 'PIX Tipo', 'PIX Chave', 'Entrada', 'Saída', 'Intervalo Início', 'Intervalo Fim',
         'Folgas', 'Habilitar Faltas', 'Habilitar Férias', 'Habilitar Atrasos'
     ];
 
@@ -488,6 +488,7 @@
             funcionario.recebeQuinquenio === true ? 'Sim' : 'Não',
             funcionario.qtdQuinquenios || 1,
             funcionario.recebeQuinzena === false ? 'Não' : 'Sim',
+            funcionario.recebeContracheque === false ? 'Não' : 'Sim',
             funcionario.descontaPassagem === false ? 'Não' : 'Sim',
             funcionario.descontaINSS === false ? 'Não' : 'Sim',
             funcionario.temControlePonto === false ? 'Não' : 'Sim',
@@ -506,7 +507,7 @@
     }
 
     function baixarModeloFuncionariosXLSX() {
-        const exemplo = ['001', 'ANTONIO DA SILVA', '', '15/03/1990', '03/11/2020', '000.000.000-00', '', 'PB', '0000000/00000', '(83) 99999-9999', 'Carteira Assinada', '002', 'Garçom', '1.500,00', '', '', '', 'Sim', 'Sim', 'Sim', 'Não', '1', 'Sim', 'Sim', 'Sim', 'Sim', 'Centro', 'CPF', '000.000.000-00', '07:00', '17:00', '11:00', '12:00', 'Seg, Ter', 'Sim', 'Sim', 'Sim'];
+        const exemplo = ['001', 'ANTONIO DA SILVA', '', '15/03/1990', '03/11/2020', '000.000.000-00', '', 'PB', '0000000/00000', '(83) 99999-9999', 'Carteira Assinada', '002', 'Garçom', '1.500,00', '', '', '', 'Sim', 'Sim', 'Sim', 'Não', '1', 'Sim', 'Sim', 'Sim', 'Sim', 'Sim', 'Centro', 'CPF', '000.000.000-00', '07:00', '17:00', '11:00', '12:00', 'Seg, Ter', 'Sim', 'Sim', 'Sim'];
         const linhasFuncionarios = (db.funcionarios || []).map(linhaModeloFuncionario);
         const sheet = worksheetXML([COLUNAS_MODELO_FUNCIONARIOS, ...(linhasFuncionarios.length ? linhasFuncionarios : [exemplo])]);
         const arquivos = [
@@ -560,7 +561,7 @@
         if(!texto) return '';
         let vinculo = db.categorias.find(c => String(c.nome || '').trim().toLowerCase() === texto.toLowerCase());
         if(vinculo) return vinculo.id;
-        vinculo = { id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), nome: texto, cor: '#00695C', corTexto: '#ffffff', semanal: false, temQuinquenio: false, recebeQuinzena: true, camposFuncionario: { pedirVT: true, pedirGratificacao: true, pedirSalFamilia: true, pedirUnidentis: true, pedirDescontoPassagem: true, pedirINSS: true, temControlePonto: true }, horarios: { entrada: '', saida: '', intEnt: '', intSai: '', semIntervalo: false }, salarios: [] };
+        vinculo = { id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), nome: texto, cor: '#00695C', corTexto: '#ffffff', semanal: false, temQuinquenio: false, recebeQuinzena: true, recebeContracheque: true, camposFuncionario: { pedirVT: true, pedirGratificacao: true, pedirSalFamilia: true, pedirUnidentis: true, pedirDescontoPassagem: true, pedirINSS: true, temControlePonto: true }, horarios: { entrada: '', saida: '', intEnt: '', intSai: '', semIntervalo: false }, salarios: [] };
         db.categorias.push(vinculo);
         return vinculo.id;
     }
@@ -717,10 +718,11 @@
                     recebeQuinquenio: valorBooleanoImportado(valorDaLinha(row, mapa, ['Recebe Quinquênio', 'Recebe Quinquenio', 'Quinquênio', 'Quinquenio']), existente ? existente.recebeQuinquenio === true : false),
                     qtdQuinquenios: Math.max(1, Math.min(9, parseInt(valorDaLinha(row, mapa, ['Qtd. Quinquênios', 'Qtd Quinquenios', 'Quantidade Quinquênios', 'Quantidade Quinquenios']) || (existente ? existente.qtdQuinquenios || 1 : 1), 10) || 1)),
                     recebeQuinzena: valorBooleanoImportado(valorDaLinha(row, mapa, ['Recebe Quinzena', 'Quinzena']), existente ? existente.recebeQuinzena !== false : true),
+                    recebeContracheque: valorBooleanoImportado(valorDaLinha(row, mapa, ['Recebe Contracheque', 'Contracheque']), existente ? existente.recebeContracheque !== false : true),
                     descontaPassagem: valorBooleanoImportado(valorDaLinha(row, mapa, ['Desconta Passagem', 'Desconto Passagem']), existente ? existente.descontaPassagem !== false : true),
                     descontaINSS: valorBooleanoImportado(valorDaLinha(row, mapa, ['Desconta INSS', 'Desconto INSS']), existente ? existente.descontaINSS !== false : true),
                     temControlePonto: valorBooleanoImportado(valorDaLinha(row, mapa, ['Controle Ponto', 'Controle de Ponto']), existente ? existente.temControlePonto !== false : true),
-                    vtRota: valorDaLinha(row, mapa, ['Rota VT', 'VT']),
+                    vtRota: valorDaLinha(row, mapa, ['Vale-Transporte', 'Rota VT', 'VT']),
                     pixList,
                     habFaltas: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Faltas']), true),
                     habFerias: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Férias', 'Habilitar Ferias']), true),

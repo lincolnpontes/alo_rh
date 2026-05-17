@@ -137,19 +137,54 @@
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintVT');
     }
 
-    function abrirConfigQuinzena() { if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('quinzenaMesRef').value = getHojeSTR().substring(0,7); document.getElementById('quinzenaDataPagto').value = getHojeSTR(); document.getElementById('modalPrintQuinzena').style.display = 'flex'; }
-    function executarPrintQuinzena() {
-        let quinzBase = parseMoeda(db.configGerais.adiantamentoQuinzena || "0");
-        let mesRef = document.getElementById('quinzenaMesRef').value; if(!mesRef) return; let ano = mesRef.split('-')[0]; let mesNum = mesRef.split('-')[1]; let dataPgto = document.getElementById('quinzenaDataPagto').value || getHojeSTR(); let cidade = db.empresa.cidade || 'Cidade';
-        let itensQuinzena = Array.from(itensSelecionados).map(id => {
-            let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return;
-            let cat = db.categorias.find(c => c.id === f.categoria);
-            if(cat && cat.recebeQuinzena === false) return;
-            if(f.recebeQuinzena === false) return;
-            let valFinal = quinzBase;
-            return { nome: f.nome, valor: valFinal };
+    function obterItensQuinzenaSelecionados() {
+        const quinzBase = parseMoeda(db.configGerais.adiantamentoQuinzena || "0");
+        return Array.from(itensSelecionados).map(id => {
+            const f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return null;
+            const cat = db.categorias.find(c => c.id === f.categoria);
+            if(cat && cat.recebeQuinzena === false) return null;
+            if(f.recebeQuinzena === false) return null;
+            return { funcId: f.id, nome: f.nome, valor: quinzBase };
         }).filter(Boolean).sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+    }
+
+    function renderListaQuinzenaRecebem() {
+        const box = document.getElementById('listaQuinzenaRecebem'); if(!box) return;
+        const itens = obterItensQuinzenaSelecionados();
+        if(itens.length === 0) {
+            box.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">Nenhum funcionário selecionado recebe quinzena.</div>';
+            return;
+        }
+        box.innerHTML = itens.map(item => `<div class="linha-previa-folha"><span>${escapeHTML(item.nome || 'Sem nome')}</span><strong>R$ ${formatMoeda(item.valor)}</strong></div>`).join('');
+    }
+
+    function registrarDescontosQuinzena(itensQuinzena, mesRef, dataPgto) {
+        const ids = new Set(itensQuinzena.map(item => item.funcId));
+        db.registros = db.registros.filter(r => !(r.type === 'desconto_quinzena' && r.mesRef === mesRef && ids.has(r.funcId)));
+        const agora = Date.now();
+        itensQuinzena.forEach((item, idx) => {
+            db.registros.push({
+                id: `dq_${item.funcId}_${mesRef.replace('-', '')}_${agora}_${idx}`,
+                type: 'desconto_quinzena',
+                funcId: item.funcId,
+                data: dataPgto,
+                mesRef: mesRef,
+                valor: item.valor,
+                observacao: 'Gerado pela folha de quinzena',
+                criadoEm: agora,
+                editadoEm: agora,
+                _syncAtualizadoEm: agora
+            });
+        });
+        salvarBanco();
+    }
+
+    function abrirConfigQuinzena() { if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('quinzenaMesRef').value = getHojeSTR().substring(0,7); document.getElementById('quinzenaDataPagto').value = getHojeSTR(); renderListaQuinzenaRecebem(); document.getElementById('modalPrintQuinzena').style.display = 'flex'; }
+    function executarPrintQuinzena() {
+        let mesRef = document.getElementById('quinzenaMesRef').value; if(!mesRef) return; let ano = mesRef.split('-')[0]; let mesNum = mesRef.split('-')[1]; let dataPgto = document.getElementById('quinzenaDataPagto').value || getHojeSTR(); let cidade = db.empresa.cidade || 'Cidade';
+        let itensQuinzena = obterItensQuinzenaSelecionados();
         if(itensQuinzena.length === 0) return alert("Nenhum funcionário ativo selecionado para imprimir.");
+        registrarDescontosQuinzena(itensQuinzena, mesRef, dataPgto);
         const paginas = quebrarPaginas(itensQuinzena, 16);
         let logoHtml = db.empresa.logo ? `<img class="logo-quinzena" src="${db.empresa.logo}">` : `<div class="logo-quinzena-texto">${escapeHTML(db.empresa.fantasia || 'NOME DA EMPRESA')}</div>`;
         let w = window.open('','_blank'); 

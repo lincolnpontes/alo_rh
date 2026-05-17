@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.29';
+    const APP_VERSION = 'v1.0.30';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -28,7 +28,7 @@
     let db = carregarBanco();
     let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
     let isSyncingFundo = false; let syncPendente = false; let timerSincronizacao = null; let timerSyncRegistros = null; let isPuxandoNuvem = false;
-    let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null; let overridesContracheque = {};
+    let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null; let overridesContracheque = {}; let resumoContrachequeVisivel = false;
     let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar';
     let assinaturasRegistros = new Map(); let idsRegistrosConhecidos = new Set(); registrarEstadoRegistros();
 
@@ -84,11 +84,12 @@
             ...categoria,
             temQuinquenio: categoria && categoria.temQuinquenio === true,
             recebeQuinzena: !(categoria && categoria.recebeQuinzena === false),
+            recebeContracheque: !(categoria && categoria.recebeContracheque === false),
             camposFuncionario: { ...camposFuncionarioPadrao, ...((categoria && categoria.camposFuncionario) || {}) }
         }));
         normalizado.funcoes = normalizado.funcoes.map((funcao) => ({ numero: "", ...funcao }));
         normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => {
-            const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, temControlePonto: true, ...funcionario };
+            const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, recebeContracheque: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, temControlePonto: true, ...funcionario };
             f.qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
             return f;
         });
