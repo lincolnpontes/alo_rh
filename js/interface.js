@@ -77,12 +77,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         funcs.forEach(f => {
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem vínculo', semanal: false };
             let isSelected = itensSelecionados.has(f.id);
-            let badgeExtra = catObj.semanal ? `<div style="color:#E65100; font-size:11px; font-weight:bold; margin-bottom:2px; text-align:right;">SEMANAL</div>` : '';
             let nomeBase = getNomeUsoFuncionario(f);
             let nomeFunc = escapeHTML(nomeBase || 'Sem nome');
             let inicialFunc = escapeHTML(String(nomeBase || '?').charAt(0).toUpperCase());
-            let funcCodStr = f.codigo ? `<strong style="color:#00695C;">[${escapeHTML(f.codigo)}]</strong> ` : '';
-            let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? formatarFuncaoLista(funName) : 'Sem função';
             
             let feriasMsg = '';
             let feriasList = db.registros.filter(r => r.type === 'ferias' && r.funcId === f.id);
@@ -92,8 +89,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 else if (d1 > hj) { let diff = (d1 - hj) / 86400000; if(diff <= 15) { feriasMsg = `<div style="color:#F57F17; font-size:11px; font-weight:bold; text-align:right;">Férias em breve<br>(${formatDataCurta(r.data)})</div>`; break; } }
             }
 
-            let infoDireita = badgeExtra + feriasMsg;
-            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem(${jsArg(f.id)})"><div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><button class="item-avatar item-avatar-select ${isSelected ? 'selecionado' : ''}" style="background-color: ${safeColor(catObj.cor, '#999999')}; color: ${safeColor(catObj.corTexto, '#ffffff')};" onclick="toggleSelecaoFuncionario(event, ${jsArg(f.id)})">${inicialFunc}</button><div class="item-info"><div class="item-title">${nomeFunc}</div><div class="item-subtitle">${funcCodStr}${escapeHTML(funName)} • ${escapeHTML(catObj.nome)}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${infoDireita}</div></li>`;
+            let infoDireita = feriasMsg;
+            html += `<li class="item ${isSelected ? 'selecionado' : ''}" onclick="cliqueItem(${jsArg(f.id)})"><div style="display: flex; align-items: center; flex: 1; overflow:hidden;"><button class="item-avatar item-avatar-select ${isSelected ? 'selecionado' : ''}" style="background-color: ${safeColor(catObj.cor, '#999999')}; color: ${safeColor(catObj.corTexto, '#ffffff')};" onclick="toggleSelecaoFuncionario(event, ${jsArg(f.id)})">${inicialFunc}</button><div class="item-info"><div class="item-title">${nomeFunc}</div></div></div><div class="info-direita" style="text-align: right; margin-left: 10px; flex-shrink: 0;">${infoDireita}</div></li>`;
         });
         if(funcs.length === 0) html = renderizarEstadoVazio();
         lista.innerHTML = html;
@@ -428,13 +425,29 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const qtd = document.getElementById('funcQtdQuinquenios');
         if(qtd) qtd.value = Math.max(1, Math.min(9, Number((funcionario && funcionario.qtdQuinquenios) || 1)));
         toggleQtdQuinqueniosFuncionario();
+        atualizarCamposValoresBeneficios();
         box.style.display = temAlgum ? 'block' : 'none';
+    }
+
+    function toggleValorBeneficioFuncionario(inputSwitchId, inputValorId) {
+        const chk = document.getElementById(inputSwitchId);
+        const input = document.getElementById(inputValorId);
+        if(input && chk) input.style.display = chk.checked ? '' : 'none';
+    }
+
+    function atualizarCamposValoresBeneficios() {
+        toggleValorBeneficioFuncionario('funcTemGratificacao', 'funcGratificacao');
+        toggleValorBeneficioFuncionario('funcTemSalFamilia', 'funcSalFamilia');
+        toggleValorBeneficioFuncionario('funcTemUnidentis', 'funcUnidentis');
     }
 
     function toggleQtdQuinqueniosFuncionario() {
         const chk = document.getElementById('funcRecebeQuinquenio');
         const qtd = document.getElementById('funcQtdQuinquenios');
-        if(qtd && chk) qtd.disabled = !chk.checked;
+        if(qtd && chk) {
+            qtd.disabled = !chk.checked;
+            if(chk.checked && (!qtd.value || Number(qtd.value) < 1)) qtd.value = 1;
+        }
     }
 
     function aplicarPadroesClasse() {
@@ -487,6 +500,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             document.getElementById('funcHoraEntrada').value = ''; document.getElementById('funcHoraSaida').value = ''; document.getElementById('funcHoraIntEnt').value = ''; document.getElementById('funcHoraIntSai').value = ''; 
             renderizarDiasFolgaFuncionario(null);
         }
+        atualizarCamposValoresBeneficios();
+        toggleQtdQuinqueniosFuncionario();
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
     function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config" style="align-items:flex-start;"><div><small style="color:#0277BD; font-weight:bold;">${escapeHTML(p.tipo || 'PIX')}</small><br><span style="word-break: break-all;">${escapeHTML(p.chave)}</span><br><label class="radio-custom"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label></div><button onclick="removerPix(${i})" style="margin-top:5px;">X</button></div>`).join(''); }
@@ -1093,15 +1108,22 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return { valor: total, aliquotaEfetiva: base ? (total / base) * 100 : 0 };
     }
 
+    function formatMoedaContracheque(valor) {
+        const numero = Number(valor) || 0;
+        const ajuste = Number.EPSILON;
+        const duasCasas = numero < 0 ? Math.ceil((numero - ajuste) * 100) / 100 : Math.floor((numero + ajuste) * 100) / 100;
+        return duasCasas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     function linhaContracheque(label, valor, opcoes = {}) {
         const classe = opcoes.total ? 'contra-linha contra-total' : 'contra-linha';
-        return `<div class="${classe}"><span>${label}</span><strong class="valor">R$ ${formatMoeda(valor)}</strong></div>`;
+        return `<div class="${classe}"><span>${label}</span><strong class="valor">R$ ${formatMoedaContracheque(valor)}</strong></div>`;
     }
 
     function abrirEdicaoINSSContracheque(funcId, aliquota, valor) {
         document.getElementById('editINSSFuncId').value = funcId;
         document.getElementById('editINSSAliquota').value = formatPercentual(aliquota);
-        document.getElementById('editINSSValor').value = formatMoeda(valor);
+        document.getElementById('editINSSValor').value = formatMoedaContracheque(valor);
         document.getElementById('modalEditINSSContracheque').style.display = 'flex';
     }
 
@@ -1143,7 +1165,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const vales = calcularValesCombustivelMes(f, ano, mes);
             const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
             const podeDescontarINSS = campos.pedirINSS && f.descontaINSS !== false;
-            const baseInss = Math.max(0, salario - faltas.valorFaltas - faltas.valorDSR);
+            const baseInss = Math.max(0, salario + gratificacao + quinquenio - faltas.valorFaltas - faltas.valorDSR);
             const inssCalc = podeDescontarINSS ? calcularINSSPrevia(baseInss) : { valor: 0, aliquotaEfetiva: 0 };
             const overrideInss = overridesContracheque[f.id];
             const inss = podeDescontarINSS ? (overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
@@ -1160,7 +1182,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             html += `<div style="border:1px solid #e0e0e0; border-left:4px solid #6A1B9A; border-radius:8px; padding:10px; margin-bottom:10px; background:#fff;">
                 <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
                     <div><strong>${escapeHTML(f.nome || 'Sem nome')}</strong>${nomeSocial}<div style="font-size:11px; color:#777;">${escapeHTML(getExtensoMes(mes))} de ${ano} • ${vales.passagens} passagens${faltas.diasFalta ? ` • ${faltas.diasFalta} falta(s)` : ''}</div></div>
-                    <strong style="color:#6A1B9A; white-space:nowrap;">R$ ${formatMoeda(liquido)}</strong>
+                    <strong style="color:#6A1B9A; white-space:nowrap;">R$ ${formatMoedaContracheque(liquido)}</strong>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; font-size:12px;">
                     <div style="background:#f8fbf8; border-radius:6px; padding:8px;"><b style="color:#2E7D32;">Proventos</b>
@@ -1183,7 +1205,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             </div>`;
         });
 
-        box.innerHTML = `<div style="background:#F3E5F5; color:#4A148C; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between; gap:10px;"><span>${funcs.length} funcionário(s)</span><span style="text-align:right;">Total líquido: R$ ${formatMoeda(totalLiquido)}</span></div>${html}`;
+        box.innerHTML = `<div style="background:#F3E5F5; color:#4A148C; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between; gap:10px;"><span>${funcs.length} funcionário(s)</span><span style="text-align:right;">Total líquido: R$ ${formatMoedaContracheque(totalLiquido)}</span></div>${html}`;
     }
 
     function abrirModalAniversarios() {
