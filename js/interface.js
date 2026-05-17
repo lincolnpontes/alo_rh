@@ -150,6 +150,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         renderizarLista();
     }
 
+    function abrirMenuAdicionar() {
+        document.getElementById('modalMenuAdicionar').style.display = 'flex';
+    }
+
     function abrirModalFolgaGeral() {
         const hoje = getHojeSTR();
         document.getElementById('folgaGeralData').value = hoje;
@@ -278,7 +282,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             pedirVT: campos.pedirVT !== false,
             pedirGratificacao: campos.pedirGratificacao !== false,
             pedirSalFamilia: campos.pedirSalFamilia !== false,
-            pedirUnidentis: campos.pedirUnidentis !== false
+            pedirUnidentis: campos.pedirUnidentis !== false,
+            pedirDescontoPassagem: campos.pedirDescontoPassagem !== false,
+            pedirINSS: campos.pedirINSS !== false,
+            temControlePonto: campos.temControlePonto !== false
         };
     }
 
@@ -295,6 +302,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('classePedirGratificacao').checked = campos.pedirGratificacao;
         document.getElementById('classePedirSalFamilia').checked = campos.pedirSalFamilia;
         document.getElementById('classePedirUnidentis').checked = campos.pedirUnidentis;
+        document.getElementById('classePedirDescontoPassagem').checked = campos.pedirDescontoPassagem;
+        document.getElementById('classePedirINSS').checked = campos.pedirINSS;
+        document.getElementById('classeTemControlePonto').checked = campos.temControlePonto;
         const beneficios = getBeneficiosVinculo(c);
         document.getElementById('classeTemQuinquenio').checked = beneficios.temQuinquenio;
         document.getElementById('classeRecebeQuinzena').checked = beneficios.recebeQuinzena;
@@ -336,7 +346,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 pedirVT: document.getElementById('classePedirVT').checked,
                 pedirGratificacao: document.getElementById('classePedirGratificacao').checked,
                 pedirSalFamilia: document.getElementById('classePedirSalFamilia').checked,
-                pedirUnidentis: document.getElementById('classePedirUnidentis').checked
+                pedirUnidentis: document.getElementById('classePedirUnidentis').checked,
+                pedirDescontoPassagem: document.getElementById('classePedirDescontoPassagem').checked,
+                pedirINSS: document.getElementById('classePedirINSS').checked,
+                temControlePonto: document.getElementById('classeTemControlePonto').checked
             },
             horarios: {
                 entrada: document.getElementById('classeHoraEntrada').value,
@@ -382,18 +395,46 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function aplicarBeneficiosVinculoFuncionario(c = null, funcionario = null) {
+        const campos = getCamposFuncionarioClasse(c || {});
         const beneficios = getBeneficiosVinculo(c || {});
         const box = document.getElementById('boxBeneficiosVinculo');
-        const linhaQuinquenio = document.getElementById('linhaFuncQuinquenio');
-        const linhaQuinzena = document.getElementById('linhaFuncQuinzena');
-        const chkQuinquenio = document.getElementById('funcRecebeQuinquenio');
-        const chkQuinzena = document.getElementById('funcRecebeQuinzena');
-        if(!box || !linhaQuinquenio || !linhaQuinzena) return;
-        linhaQuinquenio.style.display = beneficios.temQuinquenio ? 'flex' : 'none';
-        linhaQuinzena.style.display = beneficios.recebeQuinzena ? 'flex' : 'none';
-        box.style.display = (beneficios.temQuinquenio || beneficios.recebeQuinzena) ? 'block' : 'none';
-        if(chkQuinquenio) chkQuinquenio.checked = beneficios.temQuinquenio && (funcionario ? funcionario.recebeQuinquenio === true : true);
-        if(chkQuinzena) chkQuinzena.checked = beneficios.recebeQuinzena && (funcionario ? funcionario.recebeQuinzena !== false : true);
+        if(!box) return;
+        if(!c) {
+            ['linhaFuncGratificacao','linhaFuncSalFamilia','linhaFuncUnidentis','linhaFuncPassagem','linhaFuncINSS','linhaFuncQuinzena','linhaFuncControlePonto','linhaFuncQuinquenio'].forEach((id) => {
+                const linha = document.getElementById(id);
+                if(linha) linha.style.display = 'none';
+            });
+            box.style.display = 'none';
+            return;
+        }
+        const configs = [
+            { linha: 'linhaFuncGratificacao', input: 'funcTemGratificacao', visivel: campos.pedirGratificacao, checked: funcionario ? funcionario.temGratificacao !== false : true },
+            { linha: 'linhaFuncSalFamilia', input: 'funcTemSalFamilia', visivel: campos.pedirSalFamilia, checked: funcionario ? funcionario.temSalFamilia !== false : true },
+            { linha: 'linhaFuncUnidentis', input: 'funcTemUnidentis', visivel: campos.pedirUnidentis, checked: funcionario ? funcionario.temUnidentis !== false : true },
+            { linha: 'linhaFuncPassagem', input: 'funcDescontaPassagem', visivel: campos.pedirDescontoPassagem, checked: funcionario ? funcionario.descontaPassagem !== false : true },
+            { linha: 'linhaFuncINSS', input: 'funcDescontaINSS', visivel: campos.pedirINSS, checked: funcionario ? funcionario.descontaINSS !== false : true },
+            { linha: 'linhaFuncQuinzena', input: 'funcRecebeQuinzena', visivel: beneficios.recebeQuinzena, checked: funcionario ? funcionario.recebeQuinzena !== false : true },
+            { linha: 'linhaFuncControlePonto', input: 'funcTemControlePonto', visivel: campos.temControlePonto, checked: funcionario ? funcionario.temControlePonto !== false : true },
+            { linha: 'linhaFuncQuinquenio', input: 'funcRecebeQuinquenio', visivel: beneficios.temQuinquenio, checked: funcionario ? funcionario.recebeQuinquenio === true : true }
+        ];
+        let temAlgum = false;
+        configs.forEach((cfg) => {
+            const linha = document.getElementById(cfg.linha);
+            const input = document.getElementById(cfg.input);
+            if(linha) linha.style.display = cfg.visivel ? 'flex' : 'none';
+            if(input) input.checked = !!(cfg.visivel && cfg.checked);
+            if(cfg.visivel) temAlgum = true;
+        });
+        const qtd = document.getElementById('funcQtdQuinquenios');
+        if(qtd) qtd.value = Math.max(1, Math.min(9, Number((funcionario && funcionario.qtdQuinquenios) || 1)));
+        toggleQtdQuinqueniosFuncionario();
+        box.style.display = temAlgum ? 'block' : 'none';
+    }
+
+    function toggleQtdQuinqueniosFuncionario() {
+        const chk = document.getElementById('funcRecebeQuinquenio');
+        const qtd = document.getElementById('funcQtdQuinquenios');
+        if(qtd && chk) qtd.disabled = !chk.checked;
     }
 
     function aplicarPadroesClasse() {
@@ -462,9 +503,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const id = document.getElementById('funcId').value || 'f_'+Date.now(); 
         const existente = db.funcionarios.find(x => x.id === id);
         let folgas = Array.from(document.querySelectorAll('.chk-folga-func:checked')).map(el => el.value);
-        const podeQuinquenio = document.getElementById('linhaFuncQuinquenio').style.display !== 'none';
-        const podeQuinzena = document.getElementById('linhaFuncQuinzena').style.display !== 'none';
-        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, nomeSocial: document.getElementById('funcNomeSocial').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, recebeQuinquenio: podeQuinquenio && document.getElementById('funcRecebeQuinquenio').checked, recebeQuinzena: podeQuinzena && document.getElementById('funcRecebeQuinzena').checked, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, arquivado: existente ? !!existente.arquivado : false, arquivadoEm: existente ? existente.arquivadoEm : null, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
+        const linhaVisivel = (idLinha) => {
+            const linha = document.getElementById(idLinha);
+            return linha && linha.style.display !== 'none';
+        };
+        const qtdQuinquenios = Math.max(1, Math.min(9, parseInt(document.getElementById('funcQtdQuinquenios').value, 10) || 1));
+        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, nomeSocial: document.getElementById('funcNomeSocial').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, temGratificacao: linhaVisivel('linhaFuncGratificacao') && document.getElementById('funcTemGratificacao').checked, temSalFamilia: linhaVisivel('linhaFuncSalFamilia') && document.getElementById('funcTemSalFamilia').checked, temUnidentis: linhaVisivel('linhaFuncUnidentis') && document.getElementById('funcTemUnidentis').checked, descontaPassagem: linhaVisivel('linhaFuncPassagem') && document.getElementById('funcDescontaPassagem').checked, descontaINSS: linhaVisivel('linhaFuncINSS') && document.getElementById('funcDescontaINSS').checked, recebeQuinquenio: linhaVisivel('linhaFuncQuinquenio') && document.getElementById('funcRecebeQuinquenio').checked, qtdQuinquenios: qtdQuinquenios, recebeQuinzena: linhaVisivel('linhaFuncQuinzena') && document.getElementById('funcRecebeQuinzena').checked, temControlePonto: linhaVisivel('linhaFuncControlePonto') && document.getElementById('funcTemControlePonto').checked, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, arquivado: existente ? !!existente.arquivado : false, arquivadoEm: existente ? existente.arquivadoEm : null, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
         const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); 
     }
 
@@ -646,14 +690,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let selMotivo = document.getElementById('adiantMotivo'); selMotivo.innerHTML = ''; db.configGerais.motivosAdiantamento.forEach(m => selMotivo.innerHTML += optionHTML(m, m)); if(db.configGerais.motivosAdiantamento.length === 0) selMotivo.innerHTML = optionHTML('Vale', 'Vale');
         document.getElementById('adiantAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
         let areaEdit = document.getElementById('areaEditAdiant');
-        if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('adiantEditId').value = editId; document.getElementById('adiantData').value = r.data; document.getElementById('adiantValor').value = formatMoeda(r.valor); document.getElementById('adiantMotivo').value = r.motivo; document.getElementById('adiantForma').value = r.forma === 'PIX' ? 'Pix' : (r.forma || 'Pix'); document.getElementById('adiantAdmin').value = r.adminId; document.getElementById('btnSalvarAdiantamento').innerText = "Salvar Edição"; document.getElementById('btnCancelEditAdiant').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
-        else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; document.getElementById('adiantForma').value = 'Pix'; document.getElementById('btnSalvarAdiantamento').innerText = "Gravar Lançamento"; document.getElementById('btnCancelEditAdiant').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
+        if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('adiantEditId').value = editId; document.getElementById('adiantData').value = r.data; document.getElementById('adiantValor').value = formatMoeda(r.valor); document.getElementById('adiantMotivo').value = r.motivo; document.getElementById('adiantObs').value = r.observacao || ''; document.getElementById('adiantForma').value = r.forma === 'PIX' ? 'Pix' : (r.forma || 'Pix'); document.getElementById('adiantAdmin').value = r.adminId; document.getElementById('btnSalvarAdiantamento').innerText = "Salvar Edição"; document.getElementById('btnCancelEditAdiant').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
+        else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; document.getElementById('adiantObs').value = ''; document.getElementById('adiantForma').value = 'Pix'; document.getElementById('btnSalvarAdiantamento').innerText = "Gravar Lançamento"; document.getElementById('btnCancelEditAdiant').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistAdiantamento(funcId); document.getElementById('modalFormAdiantamento').style.display = 'flex';
     }
     function cancelarEdicaoRegistro(tipo) { if(tipo === 'adiantamento') abrirModalAdiantamento(null); else if(tipo === 'falta') abrirModalFalta(null); else if(tipo === 'atraso') abrirModalAtraso(null); else if(tipo === 'ferias') abrirModalFerias(null); }
     function salvarAdiantamento() {
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('adiantEditId').value; const valorStr = document.getElementById('adiantValor').value; if(!valorStr) return alert("Digite um valor.");
-        const novo = { type: 'adiantamento', funcId: funcId, data: document.getElementById('adiantData').value, valor: parseMoeda(valorStr), motivo: document.getElementById('adiantMotivo').value, forma: document.getElementById('adiantForma').value, adminId: document.getElementById('adiantAdmin').value, descontado: false };
+        const novo = { type: 'adiantamento', funcId: funcId, data: document.getElementById('adiantData').value, valor: parseMoeda(valorStr), motivo: document.getElementById('adiantMotivo').value, observacao: document.getElementById('adiantObs').value.trim(), forma: document.getElementById('adiantForma').value, adminId: document.getElementById('adiantAdmin').value, descontado: false };
         if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); }
         salvarBanco(); abrirModalAdiantamento(null); // reseta tela
     }
@@ -672,13 +716,15 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let regs = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
         const htmlPendente = (r) => {
             let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
+            let obs = r.observacao ? `<br><span style="color:#777; font-size:10px;">Obs: ${escapeHTML(r.observacao)}</span>` : '';
             let btnAcao = r.aguardandoDesconto ? `<button style="background:#Fbc02d; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="desfazerDescontoTemp(${jsArg(r.id)})">Desfazer (10s)</button>` : `<button style="background:#2e7d32; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="marcarDesconto(${jsArg(r.id)})">Descontar</button>`;
-            return `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0; align-items:center; gap:8px;"><div><b>${formatDataBR(r.data)}</b> - ${escapeHTML(r.motivo)} ${msgEdit}<br><span style="color:#666; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center; flex-shrink:0;"><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAdiantamento(${jsArg(r.id)})">✏️</button> ${btnAcao} <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro(${jsArg(r.id)}, 'adiantamento')">🗑️</button></div></div>`;
+            return `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0; align-items:center; gap:8px;"><div><b>${formatDataBR(r.data)}</b> - ${escapeHTML(r.motivo)} ${msgEdit}${obs}<br><span style="color:#666; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center; flex-shrink:0;"><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAdiantamento(${jsArg(r.id)})">✏️</button> ${btnAcao} <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro(${jsArg(r.id)}, 'adiantamento')">🗑️</button></div></div>`;
         };
         regs.forEach(r => { 
             let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
+            let obs = r.observacao ? `<br><span style="color:#999; font-size:10px;">Obs: ${escapeHTML(r.observacao)}</span>` : '';
             if(r.descontado) {
-                hDesc += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0; gap:8px;"><div><b style="color:#777;">${formatDataBR(r.data)}</b> - ${escapeHTML(r.motivo)} ${msgEdit}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center; flex-shrink:0;"><b style="color:#777;">R$ ${formatMoeda(r.valor)}</b> <button style="background:#eee; border:none; border-radius:4px; padding:2px 5px; cursor:pointer; font-size:10px;" onclick="estornarDesconto(${jsArg(r.id)})">Desfazer</button></div></div>`;
+                hDesc += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0; gap:8px;"><div><b style="color:#777;">${formatDataBR(r.data)}</b> - ${escapeHTML(r.motivo)} ${msgEdit}${obs}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center; flex-shrink:0;"><b style="color:#777;">R$ ${formatMoeda(r.valor)}</b> <button style="background:#eee; border:none; border-radius:4px; padding:2px 5px; cursor:pointer; font-size:10px;" onclick="estornarDesconto(${jsArg(r.id)})">Desfazer</button></div></div>`;
             } else if(String(r.data || '').substring(0, 7) === mesAtual) {
                 totalAtual += Number(r.valor || 0);
                 hAtual += htmlPendente(r);
@@ -721,7 +767,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const status = r.descontado ? 'descontado' : 'pendente';
             const motivo = r.motivo ? ` - ${r.motivo}` : '';
             const forma = r.forma ? ` (${r.forma})` : '';
-            linhas.push(`• ${formatDataBR(r.data)}${motivo}${forma}: R$ ${formatMoeda(r.valor)} - ${status}`);
+            const obs = r.observacao ? ` | Obs: ${r.observacao}` : '';
+            linhas.push(`• ${formatDataBR(r.data)}${motivo}${forma}: R$ ${formatMoeda(r.valor)} - ${status}${obs}`);
         });
 
         linhas.push('', 'Qualquer divergência, me avise por aqui.');
@@ -1085,20 +1132,23 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let html = '';
         funcs.forEach((f) => {
             const categoria = db.categorias.find(c => c.id === f.categoria);
+            const campos = getCamposFuncionarioClasse(categoria || {});
             const beneficios = getBeneficiosVinculo(categoria || {});
             const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
-            const gratificacao = parseMoeda(f.gratificacao);
-            const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 : 0;
-            const salarioFamilia = parseMoeda(f.salFamilia);
-            const unidentis = parseMoeda(f.unidentis);
+            const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
+            const qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
+            const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 * qtdQuinquenios : 0;
+            const salarioFamilia = campos.pedirSalFamilia && f.temSalFamilia !== false ? parseMoeda(f.salFamilia) : 0;
+            const unidentis = campos.pedirUnidentis && f.temUnidentis !== false ? parseMoeda(f.unidentis) : 0;
             const vales = calcularValesCombustivelMes(f, ano, mes);
-            const baseInss = salario + gratificacao + quinquenio;
-            const inssCalc = calcularINSSPrevia(baseInss);
-            const overrideInss = overridesContracheque[f.id];
-            const inss = overrideInss ? overrideInss.valor : inssCalc.valor;
-            const inssAliquota = overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva;
             const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
-            let descontoPassagem = Math.min(salario * 0.06, vales.total);
+            const podeDescontarINSS = campos.pedirINSS && f.descontaINSS !== false;
+            const baseInss = Math.max(0, salario - faltas.valorFaltas - faltas.valorDSR);
+            const inssCalc = podeDescontarINSS ? calcularINSSPrevia(baseInss) : { valor: 0, aliquotaEfetiva: 0 };
+            const overrideInss = overridesContracheque[f.id];
+            const inss = podeDescontarINSS ? (overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
+            const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
+            let descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, vales.total) : 0;
             if(modoPassagem === 'nao') descontoPassagem = 0;
             if(modoPassagem === 'total') descontoPassagem = vales.total;
             const proventos = salario + gratificacao + quinquenio + salarioFamilia + vales.total;
@@ -1116,7 +1166,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     <div style="background:#f8fbf8; border-radius:6px; padding:8px;"><b style="color:#2E7D32;">Proventos</b>
                         ${linhaContracheque('Salário', salario)}
                         ${linhaContracheque('Gratificação', gratificacao)}
-                        ${linhaContracheque('Quinquênio', quinquenio)}
+                        ${linhaContracheque(`Quinquênio (${quinquenio ? qtdQuinquenios : 0})`, quinquenio)}
                         ${linhaContracheque('VT', vales.total)}
                         ${linhaContracheque('Salário Família', salarioFamilia)}
                         ${linhaContracheque('Total', proventos, { total: true })}

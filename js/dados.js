@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.27';
+    const APP_VERSION = 'v1.0.28';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -79,7 +79,7 @@
         normalizado.configs.ultimaMudancaLocal = Number(normalizado.configs.ultimaMudancaLocal || 0);
         normalizado.configs.ultimaSincronizacao = Number(normalizado.configs.ultimaSincronizacao || 0);
         normalizado.configs.registrosExcluidos = normalizarExclusoesRegistros(normalizado.configs.registrosExcluidos);
-        const camposFuncionarioPadrao = { pedirVT: true, pedirGratificacao: true, pedirSalFamilia: true, pedirUnidentis: true };
+        const camposFuncionarioPadrao = { pedirVT: true, pedirGratificacao: true, pedirSalFamilia: true, pedirUnidentis: true, pedirDescontoPassagem: true, pedirINSS: true, temControlePonto: true };
         normalizado.categorias = normalizado.categorias.map((categoria) => ({
             ...categoria,
             temQuinquenio: categoria && categoria.temQuinquenio === true,
@@ -87,7 +87,11 @@
             camposFuncionario: { ...camposFuncionarioPadrao, ...((categoria && categoria.camposFuncionario) || {}) }
         }));
         normalizado.funcoes = normalizado.funcoes.map((funcao) => ({ numero: "", ...funcao }));
-        normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => ({ nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, recebeQuinzena: true, ...funcionario }));
+        normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => {
+            const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, temControlePonto: true, ...funcionario };
+            f.qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
+            return f;
+        });
         normalizado.registros = normalizado.registros.map((registro) => {
             const registroNormalizado = { ...registro };
             if(!registroNormalizado._syncAtualizadoEm) registroNormalizado._syncAtualizadoEm = Number(registroNormalizado.editadoEm || registroNormalizado.criadoEm || 0);

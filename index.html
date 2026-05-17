@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.27</title>
+    <title>Alô RH v1.0.28</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.27">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.28">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.27</div>
+    <div class="splash-versao">v1.0.28</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -45,7 +45,7 @@
             </div>
             <div id="boxFiltrosDias" class="dias-filtro-toolbar"></div>
             <div class="acoes-massa-toolbar" id="boxBarraAcoes">
-                <button class="btn-action-bar btn-folga-geral" id="btnFolgaGeral" onclick="abrirModalFolgaGeral()" title="Cadastrar folga geral" aria-label="Cadastrar folga geral">+</button>
+                <button class="btn-action-bar btn-folga-geral" id="btnFolgaGeral" onclick="abrirMenuAdicionar()" title="Adicionar" aria-label="Adicionar">+</button>
                 <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
                 <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinz.</button>
                 <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
@@ -193,18 +193,19 @@
             <span style="font-weight:bold; font-size:14px; color:#E65100;">Pagamento por semana</span>
         </div>
 
-        <div class="section-title">Campos do Funcionário</div>
-        <div class="checkbox-dias" style="margin-bottom:15px;">
-            <label><input type="checkbox" id="classePedirVT" checked> Informar rota do vale transporte</label>
-            <label><input type="checkbox" id="classePedirGratificacao" checked> Informar gratificação</label>
-            <label><input type="checkbox" id="classePedirSalFamilia" checked> Informar Salário Família</label>
-            <label><input type="checkbox" id="classePedirUnidentis" checked> Informar Desc. Unidentis</label>
-        </div>
-
-        <div class="section-title">Benefícios do Vínculo</div>
-        <div class="checkbox-dias" style="margin-bottom:15px;">
-            <label><input type="checkbox" id="classeTemQuinquenio"> Permitir quinquênio</label>
-            <label><input type="checkbox" id="classeRecebeQuinzena" checked> Recebe quinzena</label>
+        <div class="section-title">Regras do Vínculo</div>
+        <div class="switch-panel">
+            <div class="switch-grid">
+                <label class="switch-row"><span class="switch-row-text">Rota VT</span><span class="switch"><input type="checkbox" id="classePedirVT" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Gratificação</span><span class="switch"><input type="checkbox" id="classePedirGratificacao" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Salário Família</span><span class="switch"><input type="checkbox" id="classePedirSalFamilia" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Desconto Unidentis</span><span class="switch"><input type="checkbox" id="classePedirUnidentis" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Quinquênio</span><span class="switch"><input type="checkbox" id="classeTemQuinquenio"><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Desconto passagem</span><span class="switch"><input type="checkbox" id="classePedirDescontoPassagem" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Desconto INSS</span><span class="switch"><input type="checkbox" id="classePedirINSS" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Recebe quinzena</span><span class="switch"><input type="checkbox" id="classeRecebeQuinzena" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Controle de ponto</span><span class="switch"><input type="checkbox" id="classeTemControlePonto" checked><span class="slider"></span></span></label>
+            </div>
         </div>
 
         <div class="section-title">Salários Base do Vínculo</div>
@@ -280,12 +281,6 @@
             <label style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" id="funcHabAtrasos" checked> Habilitar registro de atraso</label>
         </div>
 
-        <div id="boxBeneficiosVinculo" style="display:none; background:#F3E5F5; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #E1BEE7;">
-            <div style="font-size:12px; font-weight:bold; color:#6A1B9A; margin-bottom:5px;">Benefícios deste funcionário:</div>
-            <label id="linhaFuncQuinquenio" style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:5px;"><input type="checkbox" id="funcRecebeQuinquenio"> Recebe quinquênio</label>
-            <label id="linhaFuncQuinzena" style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" id="funcRecebeQuinzena" checked> Recebe quinzena</label>
-        </div>
-
         <div class="form-group" style="background:#f9f9f9; padding:10px; border-radius:5px; border:1px solid #eee;">
             <div style="display: flex; justify-content: space-between; font-weight:bold; font-size:12px; color:#555; margin-bottom:5px;">
                 <span style="flex:1;">Expediente:</span>
@@ -322,6 +317,26 @@
         <div style="display: flex; gap: 10px;">
             <div class="form-group" id="boxCampoSalFamilia" style="flex:1;"><label>Salário Família:</label><input type="text" id="funcSalFamilia" inputmode="numeric" oninput="maskMoeda(this)" placeholder="Opcional"></div>
             <div class="form-group" id="boxCampoUnidentis" style="flex:1;"><label>Desc. Unidentis:</label><input type="text" id="funcUnidentis" inputmode="numeric" oninput="maskMoeda(this)" placeholder="Opcional"></div>
+        </div>
+
+        <div id="boxBeneficiosVinculo" class="switch-panel" style="display:none;">
+            <div style="font-size:12px; font-weight:bold; color:#00695C; margin-bottom:8px;">Regras e benefícios do funcionário</div>
+            <div class="switch-grid">
+                <label id="linhaFuncGratificacao" class="switch-row"><span class="switch-row-text">Gratificação</span><span class="switch"><input type="checkbox" id="funcTemGratificacao" checked><span class="slider"></span></span></label>
+                <label id="linhaFuncSalFamilia" class="switch-row"><span class="switch-row-text">Salário Família</span><span class="switch"><input type="checkbox" id="funcTemSalFamilia" checked><span class="slider"></span></span></label>
+                <label id="linhaFuncUnidentis" class="switch-row"><span class="switch-row-text">Desconto Unidentis</span><span class="switch"><input type="checkbox" id="funcTemUnidentis" checked><span class="slider"></span></span></label>
+                <label id="linhaFuncPassagem" class="switch-row"><span class="switch-row-text">Desconto passagem</span><span class="switch"><input type="checkbox" id="funcDescontaPassagem" checked><span class="slider"></span></span></label>
+                <label id="linhaFuncINSS" class="switch-row"><span class="switch-row-text">Desconto INSS</span><span class="switch"><input type="checkbox" id="funcDescontaINSS" checked><span class="slider"></span></span></label>
+                <label id="linhaFuncQuinzena" class="switch-row"><span class="switch-row-text">Recebe quinzena</span><span class="switch"><input type="checkbox" id="funcRecebeQuinzena" checked><span class="slider"></span></span></label>
+                <label id="linhaFuncControlePonto" class="switch-row"><span class="switch-row-text">Controle de ponto</span><span class="switch"><input type="checkbox" id="funcTemControlePonto" checked><span class="slider"></span></span></label>
+                <div id="linhaFuncQuinquenio" class="switch-row">
+                    <span class="switch-row-text">Quinquênio<small>5% por quinquênio</small></span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="number" id="funcQtdQuinquenios" class="switch-extra-input" min="1" max="9" value="1">
+                        <span class="switch"><input type="checkbox" id="funcRecebeQuinquenio" onchange="toggleQtdQuinqueniosFuncionario()"><span class="slider"></span></span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="modal-actions">
@@ -480,6 +495,7 @@
                 <div class="form-group" style="flex:1;"><label>Valor (R$):</label><input type="text" id="adiantValor" inputmode="numeric" oninput="maskMoeda(this)"></div>
             </div>
             <div class="form-group"><label>Motivo:</label><select id="adiantMotivo"></select></div>
+            <div class="form-group"><label>Observação (opcional):</label><input type="text" id="adiantObs" placeholder="Ex: pedido de carne, valor a confirmar"></div>
             <div style="display: flex; gap: 10px;">
                 <div class="form-group" style="flex:1;"><label>Forma Pagto:</label><select id="adiantForma"><option value="Pix" selected>Pix</option><option value="Dinheiro">Dinheiro</option><option value="Outros">Outros</option></select></div>
                 <div class="form-group" style="flex:1;"><label>Responsável:</label><select id="adiantAdmin"></select></div>
@@ -595,6 +611,14 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalMenuAdicionar">
+    <div class="modal">
+        <div class="modal-title">Adicionar</div>
+        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirModalFolgaGeral()"><span style="font-size:20px;">+</span><span>Folga Geral</span></button>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalMenuAdicionar')" style="width: 100%;">Fechar</button></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalFolgaGeral">
     <div class="modal">
         <div class="modal-title" style="color:#F57F17; border-color:#F57F17;">Folga Geral</div>
@@ -685,11 +709,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.27"></script>
-<script src="js/calculos.js?v=1.0.27"></script>
-<script src="js/interface.js?v=1.0.27"></script>
-<script src="js/impressao.js?v=1.0.27"></script>
-<script src="js/sincronizacao.js?v=1.0.27"></script>
+<script src="js/dados.js?v=1.0.28"></script>
+<script src="js/calculos.js?v=1.0.28"></script>
+<script src="js/interface.js?v=1.0.28"></script>
+<script src="js/impressao.js?v=1.0.28"></script>
+<script src="js/sincronizacao.js?v=1.0.28"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

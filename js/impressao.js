@@ -230,6 +230,9 @@
         let folhasGeradas = 0;
         Array.from(itensSelecionados).forEach((id) => {
             let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return;
+            let cat = db.categorias.find(c => c.id === f.categoria);
+            let campos = typeof getCamposFuncionarioClasse === 'function' ? getCamposFuncionarioClasse(cat || {}) : { temControlePonto: true };
+            if(!campos.temControlePonto || f.temControlePonto === false) return;
             folhasGeradas++;
             let hsOrigem = f.horarios || {};
             let hs = { entrada: hsOrigem.entrada || '07:00', saida: hsOrigem.saida || '17:00', intEnt: hsOrigem.intEnt || '11:00', intSai: hsOrigem.intSai || '12:00', folgas: Array.isArray(hsOrigem.folgas) ? hsOrigem.folgas : [] };
@@ -260,6 +263,6 @@
             }
             html += `</tbody></table><div class="rodape-ponto"><div>Reconheço a exatidão destas anotações.</div><div class="rodape-linhas"><div class="data-ponto"><b>Data:</b><span class="data-campo curto"></span>/<span class="data-campo curto"></span>/<span class="data-campo longo"></span></div><div class="diretor-ponto"><span class="linha-diretor"></span><div>Assinatura do Diretor</div></div></div></div></section>`;
         });
-        if(folhasGeradas === 0) { w.close(); return alert("Nenhum funcionário ativo selecionado para imprimir."); }
+        if(folhasGeradas === 0) { w.close(); return alert("Nenhum funcionário selecionado está com controle de ponto ativo."); }
         html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintPonto');
     }
