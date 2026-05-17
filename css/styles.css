@@ -25,6 +25,7 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .selecao-lista-toolbar { display: flex; align-items: center; justify-content: flex-start; gap: 7px; min-width: 66px; }
         .dias-filtro-toolbar { display: flex; gap: 5px; align-items: center; justify-content: center; }
         .acoes-massa-toolbar { display: flex; gap: 5px; flex-wrap: nowrap; align-items: center; justify-content: flex-end; min-width: 92px; }
+        .btn-folga-geral { width: 30px; height: 30px; padding: 0; border-radius: 8px; font-size: 22px; line-height: 1; background: #F57F17; border-color: rgba(255,255,255,.35); }
         .btn-selecionar-caixa { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 900; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.42); color: #fff; padding: 0; }
         .btn-selecionar-caixa span { width: 16px; height: 16px; border-radius: 4px; border: 2px solid #fff; box-sizing: border-box; display: block; position: relative; background: rgba(255,255,255,.08); }
         .btn-selecionar-caixa.selecionado span { background: #4CAF50; border-color: #C8E6C9; }
@@ -103,5 +104,8 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .resumo-card strong { display: block; color: #004D40; font-size: 18px; line-height: 1.1; }
         .resumo-card span { display: block; color: #666; font-size: 11px; margin-top: 4px; line-height: 1.25; }
         .resumo-periodo-label { color: #555; font-size: 12px; font-weight: 700; margin-bottom: 10px; text-align: center; }
-        .toast-app { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: rgba(30,30,30,.92); color: #fff; padding: 10px 14px; border-radius: 999px; z-index: 12000; font-size: 13px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
-        .toast-app.visivel { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+        .contra-linha { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,0,0,.06); padding: 4px 0; }
+        .contra-linha span:first-child { min-width: 0; }
+        .contra-linha .valor { margin-left: auto; text-align: right; min-width: 82px; font-variant-numeric: tabular-nums; }
+        .contra-total { font-weight: 800; border-top: 1px solid rgba(0,0,0,.15); border-bottom: 0; margin-top: 4px; padding-top: 6px; }
+        .btn-mini-edit { border: none; background: transparent; color: #6A1B9A; font-size: 14px; padding: 0 2px; cursor: pointer; line-height: 1; }

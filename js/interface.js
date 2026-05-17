@@ -17,6 +17,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('btnAcaoMassa3').style.display = visivel;
         document.getElementById('btnAcaoMassa4').style.display = visivel;
         document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
+        const btnFolgaGeral = document.getElementById('btnFolgaGeral');
+        if(btnFolgaGeral) btnFolgaGeral.style.display = temSelecionados ? 'none' : 'flex';
         const btnSelecionarLista = document.getElementById('btnSelecionarLista');
         if(btnSelecionarLista) {
             const funcs = obterFuncionariosListados();
@@ -148,6 +150,44 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         renderizarLista();
     }
 
+    function abrirModalFolgaGeral() {
+        const hoje = getHojeSTR();
+        document.getElementById('folgaGeralData').value = hoje;
+        document.getElementById('folgaGeralMes').value = hoje.substring(0, 7);
+        document.getElementById('folgaGeralObs').value = '';
+        renderFolgasGerais();
+        document.getElementById('modalFolgaGeral').style.display = 'flex';
+    }
+
+    function salvarFolgaGeral() {
+        const data = document.getElementById('folgaGeralData').value;
+        const mesDesconto = document.getElementById('folgaGeralMes').value;
+        const observacao = document.getElementById('folgaGeralObs').value.trim();
+        if(!data || !mesDesconto) return alert('Informe a data da folga e o mês de desconto no VT.');
+        if(!db.configGerais.folgasGerais) db.configGerais.folgasGerais = [];
+        db.configGerais.folgasGerais.push({ id: 'fg_' + Date.now(), data, mesDesconto, observacao });
+        salvarBanco();
+        document.getElementById('folgaGeralObs').value = '';
+        renderFolgasGerais();
+    }
+
+    function excluirFolgaGeral(id) {
+        db.configGerais.folgasGerais = (db.configGerais.folgasGerais || []).filter(f => f.id !== id);
+        salvarBanco();
+        renderFolgasGerais();
+    }
+
+    function renderFolgasGerais() {
+        const box = document.getElementById('listaFolgasGerais'); if(!box) return;
+        const lista = [...(db.configGerais.folgasGerais || [])].sort((a, b) => String(b.mesDesconto || '').localeCompare(String(a.mesDesconto || '')) || String(b.data || '').localeCompare(String(a.data || '')));
+        if(lista.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma folga geral cadastrada.</div>'; return; }
+        box.innerHTML = lista.map((folga) => {
+            const obs = folga.observacao ? `<br><small style="color:#666;">${escapeHTML(folga.observacao)}</small>` : '';
+            const mes = folga.mesDesconto ? folga.mesDesconto.split('-').reverse().join('/') : '';
+            return `<div class="list-item-config"><span><b>${formatDataBR(folga.data)}</b> <small style="color:#F57F17; font-weight:bold;">VT ${escapeHTML(mes)}</small>${obs}</span><button onclick="excluirFolgaGeral(${jsArg(folga.id)})">X</button></div>`;
+        }).join('');
+    }
+
     function formatarFuncaoLista(funcao) {
         if(!funcao) return '';
         const numero = String(funcao.numero || '').trim();
@@ -242,12 +282,22 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         };
     }
 
+    function getBeneficiosVinculo(c = {}) {
+        return {
+            temQuinquenio: c && c.temQuinquenio === true,
+            recebeQuinzena: !(c && c.recebeQuinzena === false)
+        };
+    }
+
     function preencherCamposFuncionarioClasse(c = {}) {
         const campos = getCamposFuncionarioClasse(c);
         document.getElementById('classePedirVT').checked = campos.pedirVT;
         document.getElementById('classePedirGratificacao').checked = campos.pedirGratificacao;
         document.getElementById('classePedirSalFamilia').checked = campos.pedirSalFamilia;
         document.getElementById('classePedirUnidentis').checked = campos.pedirUnidentis;
+        const beneficios = getBeneficiosVinculo(c);
+        document.getElementById('classeTemQuinquenio').checked = beneficios.temQuinquenio;
+        document.getElementById('classeRecebeQuinzena').checked = beneficios.recebeQuinzena;
     }
 
     function abrirFormClasse(id, origem = 'gerenciar') { 
@@ -272,7 +322,40 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     
     function voltarDepoisFormClasse() { if(origemFormClasse === 'inicio') { origemFormClasse = 'gerenciar'; renderizarFiltros(); renderizarLista(); return; } abrirGerenciar('categorias'); }
     function cancelarFormClasse() { fecharModal('modalFormClasse'); voltarDepoisFormClasse(); }
-    function salvarClasse() { let id = document.getElementById('classeId').value || 'c_' + Date.now(); let novo = { id: id, nome: document.getElementById('classeNome').value, cor: document.getElementById('classeCorFundo').value, corTexto: document.getElementById('classeCorTexto').value, semanal: document.getElementById('classeSemanal').checked, camposFuncionario: { pedirVT: document.getElementById('classePedirVT').checked, pedirGratificacao: document.getElementById('classePedirGratificacao').checked, pedirSalFamilia: document.getElementById('classePedirSalFamilia').checked, pedirUnidentis: document.getElementById('classePedirUnidentis').checked }, horarios: { entrada: document.getElementById('classeHoraEntrada').value, saida: document.getElementById('classeHoraSaida').value, intEnt: document.getElementById('classeHoraIntEnt').value, intSai: document.getElementById('classeHoraIntSai').value, semIntervalo: document.getElementById('classeSemIntervalo').checked }, salarios: tempSalariosClasse }; const idx = db.categorias.findIndex(x => x.id === id); if(idx >= 0) db.categorias[idx] = novo; else db.categorias.push(novo); salvarBanco(); fecharModal('modalFormClasse'); voltarDepoisFormClasse(); renderizarFiltros(); renderizarLista(); }
+    function salvarClasse() {
+        let id = document.getElementById('classeId').value || 'c_' + Date.now();
+        let novo = {
+            id: id,
+            nome: document.getElementById('classeNome').value,
+            cor: document.getElementById('classeCorFundo').value,
+            corTexto: document.getElementById('classeCorTexto').value,
+            semanal: document.getElementById('classeSemanal').checked,
+            temQuinquenio: document.getElementById('classeTemQuinquenio').checked,
+            recebeQuinzena: document.getElementById('classeRecebeQuinzena').checked,
+            camposFuncionario: {
+                pedirVT: document.getElementById('classePedirVT').checked,
+                pedirGratificacao: document.getElementById('classePedirGratificacao').checked,
+                pedirSalFamilia: document.getElementById('classePedirSalFamilia').checked,
+                pedirUnidentis: document.getElementById('classePedirUnidentis').checked
+            },
+            horarios: {
+                entrada: document.getElementById('classeHoraEntrada').value,
+                saida: document.getElementById('classeHoraSaida').value,
+                intEnt: document.getElementById('classeHoraIntEnt').value,
+                intSai: document.getElementById('classeHoraIntSai').value,
+                semIntervalo: document.getElementById('classeSemIntervalo').checked
+            },
+            salarios: tempSalariosClasse
+        };
+        const idx = db.categorias.findIndex(x => x.id === id);
+        if(idx >= 0) db.categorias[idx] = novo;
+        else db.categorias.push(novo);
+        salvarBanco();
+        fecharModal('modalFormClasse');
+        voltarDepoisFormClasse();
+        renderizarFiltros();
+        renderizarLista();
+    }
 
     function abrirFormFuncao(id, origem = 'gerenciar') { origemFormFuncao = origem; fecharModal('modalListagem'); if(id) { let fn = db.funcoes.find(x => x.id === id); document.getElementById('funcaoId').value = fn.id; document.getElementById('funcaoNumero').value = fn.numero || ''; document.getElementById('funcaoNome').value = fn.nome; } else { document.getElementById('funcaoId').value = ''; document.getElementById('funcaoNumero').value = ''; document.getElementById('funcaoNome').value = ''; } document.getElementById('modalFormFuncao').style.display = 'flex'; }
     function voltarDepoisFormFuncao() { if(origemFormFuncao === 'inicio') { origemFormFuncao = 'gerenciar'; renderizarLista(); return; } abrirGerenciar('funcoes'); }
@@ -298,10 +381,26 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         alternar('boxCampoUnidentis', campos.pedirUnidentis);
     }
 
+    function aplicarBeneficiosVinculoFuncionario(c = null, funcionario = null) {
+        const beneficios = getBeneficiosVinculo(c || {});
+        const box = document.getElementById('boxBeneficiosVinculo');
+        const linhaQuinquenio = document.getElementById('linhaFuncQuinquenio');
+        const linhaQuinzena = document.getElementById('linhaFuncQuinzena');
+        const chkQuinquenio = document.getElementById('funcRecebeQuinquenio');
+        const chkQuinzena = document.getElementById('funcRecebeQuinzena');
+        if(!box || !linhaQuinquenio || !linhaQuinzena) return;
+        linhaQuinquenio.style.display = beneficios.temQuinquenio ? 'flex' : 'none';
+        linhaQuinzena.style.display = beneficios.recebeQuinzena ? 'flex' : 'none';
+        box.style.display = (beneficios.temQuinquenio || beneficios.recebeQuinzena) ? 'block' : 'none';
+        if(chkQuinquenio) chkQuinquenio.checked = beneficios.temQuinquenio && (funcionario ? funcionario.recebeQuinquenio === true : true);
+        if(chkQuinzena) chkQuinzena.checked = beneficios.recebeQuinzena && (funcionario ? funcionario.recebeQuinzena !== false : true);
+    }
+
     function aplicarPadroesClasse() {
         let catId = document.getElementById('funcCategoria').value;
         let c = db.categorias.find(x => x.id === catId);
         aplicarCamposVisiveisFuncionario(c);
+        aplicarBeneficiosVinculoFuncionario(c);
         if(c) {
             if(c.horarios) {
                 document.getElementById('funcHoraEntrada').value = c.horarios.entrada || ''; document.getElementById('funcHoraSaida').value = c.horarios.saida || '';
@@ -332,6 +431,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             let f = db.funcionarios.find(x => x.id === id); carregarComboCategorias(f.categoria, f.funcao, f.vtRota);
             let c = db.categorias.find(x => x.id === f.categoria); document.getElementById('boxPermissoesSemanais').style.display = (c && c.semanal) ? 'block' : 'none';
             aplicarCamposVisiveisFuncionario(c);
+            aplicarBeneficiosVinculoFuncionario(c, f);
             document.getElementById('funcId').value = f.id; document.getElementById('funcCodigo').value = f.codigo || ''; document.getElementById('funcNome').value = f.nome || ''; document.getElementById('funcNomeSocial').value = f.nomeSocial || ''; document.getElementById('funcDataNasc').value = f.dataNasc || ''; document.getElementById('funcAdmissao').value = f.admissao || ''; document.getElementById('funcCPF').value = f.cpf || ''; document.getElementById('funcRG').value = f.rg || ''; document.getElementById('funcRGUF').value = f.rgUF || 'PB'; document.getElementById('funcCTPS').value = f.ctps || ''; document.getElementById('funcTel').value = f.telefone || ''; document.getElementById('funcSalario').value = f.salario || db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = f.gratificacao || ''; document.getElementById('funcSalFamilia').value = f.salFamilia || ''; document.getElementById('funcUnidentis').value = f.unidentis || '';
             document.getElementById('funcHabFaltas').checked = f.habFaltas !== undefined ? f.habFaltas : true; document.getElementById('funcHabFerias').checked = f.habFerias !== undefined ? f.habFerias : true; document.getElementById('funcHabAtrasos').checked = f.habAtrasos !== undefined ? f.habAtrasos : true;
             document.getElementById('funcHoraEntrada').value = (f.horarios && f.horarios.entrada) ? f.horarios.entrada : ''; document.getElementById('funcHoraSaida').value = (f.horarios && f.horarios.saida) ? f.horarios.saida : ''; document.getElementById('funcHoraIntEnt').value = (f.horarios && f.horarios.intEnt) ? f.horarios.intEnt : ''; document.getElementById('funcHoraIntSai').value = (f.horarios && f.horarios.intSai) ? f.horarios.intSai : ''; 
@@ -340,6 +440,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         } else {
             carregarComboCategorias(); document.getElementById('boxPermissoesSemanais').style.display = 'none';
             aplicarCamposVisiveisFuncionario(null);
+            aplicarBeneficiosVinculoFuncionario(null);
             document.getElementById('funcId').value = ''; document.getElementById('funcCodigo').value = ''; document.getElementById('funcNome').value = ''; document.getElementById('funcNomeSocial').value = ''; document.getElementById('funcDataNasc').value = ''; document.getElementById('funcAdmissao').value = ''; document.getElementById('funcCPF').value = ''; document.getElementById('funcRG').value = ''; document.getElementById('funcRGUF').value = 'PB'; document.getElementById('funcCTPS').value = ''; document.getElementById('funcTel').value = ''; document.getElementById('funcSalario').value = db.configGerais.salarioMinimo; document.getElementById('funcGratificacao').value = ''; document.getElementById('funcSalFamilia').value = ''; document.getElementById('funcUnidentis').value = '';
             document.getElementById('funcHabFaltas').checked = true; document.getElementById('funcHabFerias').checked = true; document.getElementById('funcHabAtrasos').checked = true;
             document.getElementById('funcHoraEntrada').value = ''; document.getElementById('funcHoraSaida').value = ''; document.getElementById('funcHoraIntEnt').value = ''; document.getElementById('funcHoraIntSai').value = ''; 
@@ -361,7 +462,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const id = document.getElementById('funcId').value || 'f_'+Date.now(); 
         const existente = db.funcionarios.find(x => x.id === id);
         let folgas = Array.from(document.querySelectorAll('.chk-folga-func:checked')).map(el => el.value);
-        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, nomeSocial: document.getElementById('funcNomeSocial').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, arquivado: existente ? !!existente.arquivado : false, arquivadoEm: existente ? existente.arquivadoEm : null, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
+        const podeQuinquenio = document.getElementById('linhaFuncQuinquenio').style.display !== 'none';
+        const podeQuinzena = document.getElementById('linhaFuncQuinzena').style.display !== 'none';
+        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, nomeSocial: document.getElementById('funcNomeSocial').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: document.getElementById('funcVTRota').value, pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, recebeQuinquenio: podeQuinquenio && document.getElementById('funcRecebeQuinquenio').checked, recebeQuinzena: podeQuinzena && document.getElementById('funcRecebeQuinzena').checked, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, arquivado: existente ? !!existente.arquivado : false, arquivadoEm: existente ? existente.arquivadoEm : null, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
         const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); 
     }
 
@@ -430,10 +533,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return (f && (f.nomeSocial || f.nome)) || 'Funcionário';
     }
 
-    function copiarTextoSeguro(texto, sucesso) {
-        const mensagem = sucesso || 'Copiada para a área de transferência.';
+    function copiarTextoSeguro(texto) {
         if(navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(texto).then(() => mostrarMensagemBaixa(mensagem)).catch(() => mostrarMensagemBaixa('Não foi possível copiar.'));
+            navigator.clipboard.writeText(texto).catch(() => alert('Não foi possível copiar.'));
             return;
         }
         const area = document.createElement('textarea');
@@ -442,21 +544,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         area.select();
         document.execCommand('copy');
         document.body.removeChild(area);
-        mostrarMensagemBaixa(mensagem);
-    }
-
-    function mostrarMensagemBaixa(texto) {
-        let toast = document.getElementById('toastApp');
-        if(!toast) {
-            toast = document.createElement('div');
-            toast.id = 'toastApp';
-            toast.className = 'toast-app';
-            document.body.appendChild(toast);
-        }
-        toast.innerText = texto;
-        toast.classList.add('visivel');
-        clearTimeout(toast._timer);
-        toast._timer = setTimeout(() => toast.classList.remove('visivel'), 1800);
     }
 
     function copiarPixFuncionario() { abrirEscolhaPixFuncionario(); }
@@ -481,7 +568,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const pix = lista[indice];
         if(!pix) return alert('Chave PIX não encontrada.');
         fecharModal('modalEscolhaPix');
-        copiarTextoSeguro(pix.chave, 'Copiada para a área de transferência.');
+        copiarTextoSeguro(pix.chave);
     }
 
     function normalizarTelefoneWhatsapp(telefone) {
@@ -852,6 +939,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function abrirConfigContracheque() {
         if(itensSelecionados.size === 0) return alert("Selecione funcionários!");
+        overridesContracheque = {};
         document.getElementById('contraMesRef').value = getHojeSTR().substring(0, 7);
         document.getElementById('contraDescontoPassagem').value = 'padrao';
         gerarPreviaContracheque();
@@ -866,6 +954,15 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             if(db.configGerais.diasFuncionamento.includes(String(dt.getDay()))) total++;
         }
         return total;
+    }
+
+    function contarFolgasGeraisNoVT(ano, mes) {
+        const mesRef = `${ano}-${String(mes).padStart(2, '0')}`;
+        return (db.configGerais.folgasGerais || []).filter((folga) => {
+            if(!folga || folga.mesDesconto !== mesRef || !folga.data) return false;
+            const dt = new Date(folga.data + "T00:00:00");
+            return db.configGerais.diasFuncionamento.includes(String(dt.getDay()));
+        }).length;
     }
 
     function contarDiasUteisRegistroNoMes(registro, ano, mes) {
@@ -884,17 +981,52 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return total;
     }
 
+    function chaveSemanaAno(data) {
+        const inicioAno = new Date(data.getFullYear(), 0, 1);
+        const diaAno = Math.floor((data - inicioAno) / 86400000) + 1;
+        const semana = Math.ceil((diaAno + inicioAno.getDay()) / 7);
+        return `${data.getFullYear()}-${semana}`;
+    }
+
+    function calcularDescontosFaltasContracheque(f, ano, mes, salario) {
+        const limiteInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
+        const limiteFim = dataISO(new Date(ano, mes, 0));
+        const salarioDia = salario > 0 ? salario / 30 : 0;
+        let diasFalta = 0;
+        const semanasDSR = new Set();
+        db.registros
+            .filter(r => r.type === 'falta' && r.funcId === f.id && r.descontarDia !== false && registroNoIntervalo(r, limiteInicio, limiteFim))
+            .forEach((registro) => {
+                const inicio = registro.data < limiteInicio ? limiteInicio : registro.data;
+                const fim = (registro.dataFim || registro.data) > limiteFim ? limiteFim : (registro.dataFim || registro.data);
+                let atual = new Date(inicio + "T00:00:00");
+                const fimReal = new Date(fim + "T00:00:00");
+                for(; atual <= fimReal; atual.setDate(atual.getDate() + 1)) {
+                    if(!db.configGerais.diasFuncionamento.includes(String(atual.getDay()))) continue;
+                    diasFalta++;
+                    semanasDSR.add(chaveSemanaAno(atual));
+                }
+            });
+        return {
+            diasFalta,
+            dsr: semanasDSR.size,
+            valorFaltas: diasFalta * salarioDia,
+            valorDSR: semanasDSR.size * salarioDia
+        };
+    }
+
     function calcularValesCombustivelMes(f, ano, mes) {
         const rotaObj = (db.configGerais.valesTransporte || []).find(v => v.rota === f.vtRota);
         if(!rotaObj) return { passagens: 0, total: 0 };
         const diasBase = contarDiasEmpresaNoMes(ano, mes);
+        const folgasGerais = contarFolgasGeraisNoVT(ano, mes);
         const faltas = db.registros
             .filter(r => r.type === 'falta' && r.funcId === f.id && r.descontarPassagem)
             .reduce((acc, r) => acc + contarDiasUteisRegistroNoMes(r, ano, mes), 0);
         const ferias = db.registros
             .filter(r => r.type === 'ferias' && r.funcId === f.id)
             .reduce((acc, r) => acc + contarDiasUteisRegistroNoMes(r, ano, mes), 0);
-        const passagens = Math.max(0, (diasBase - faltas - ferias) * 2);
+        const passagens = Math.max(0, (diasBase - faltas - ferias - folgasGerais) * 2);
         return { passagens, total: passagens * parseMoeda(rotaObj.valor) };
     }
 
@@ -914,6 +1046,29 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return { valor: total, aliquotaEfetiva: base ? (total / base) * 100 : 0 };
     }
 
+    function linhaContracheque(label, valor, opcoes = {}) {
+        const classe = opcoes.total ? 'contra-linha contra-total' : 'contra-linha';
+        return `<div class="${classe}"><span>${label}</span><strong class="valor">R$ ${formatMoeda(valor)}</strong></div>`;
+    }
+
+    function abrirEdicaoINSSContracheque(funcId, aliquota, valor) {
+        document.getElementById('editINSSFuncId').value = funcId;
+        document.getElementById('editINSSAliquota').value = formatPercentual(aliquota);
+        document.getElementById('editINSSValor').value = formatMoeda(valor);
+        document.getElementById('modalEditINSSContracheque').style.display = 'flex';
+    }
+
+    function salvarEdicaoINSSContracheque() {
+        const funcId = document.getElementById('editINSSFuncId').value;
+        if(!funcId) return;
+        overridesContracheque[funcId] = {
+            aliquota: parsePercentual(document.getElementById('editINSSAliquota').value),
+            valor: parseMoeda(document.getElementById('editINSSValor').value)
+        };
+        fecharModal('modalEditINSSContracheque');
+        gerarPreviaContracheque();
+    }
+
     function gerarPreviaContracheque() {
         const box = document.getElementById('areaContracheque'); if(!box) return;
         const mesRef = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
@@ -929,35 +1084,56 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let totalLiquido = 0;
         let html = '';
         funcs.forEach((f) => {
+            const categoria = db.categorias.find(c => c.id === f.categoria);
+            const beneficios = getBeneficiosVinculo(categoria || {});
             const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
             const gratificacao = parseMoeda(f.gratificacao);
+            const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 : 0;
             const salarioFamilia = parseMoeda(f.salFamilia);
             const unidentis = parseMoeda(f.unidentis);
             const vales = calcularValesCombustivelMes(f, ano, mes);
-            const baseInss = salario + gratificacao;
+            const baseInss = salario + gratificacao + quinquenio;
             const inssCalc = calcularINSSPrevia(baseInss);
-            const inss = inssCalc.valor;
+            const overrideInss = overridesContracheque[f.id];
+            const inss = overrideInss ? overrideInss.valor : inssCalc.valor;
+            const inssAliquota = overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva;
+            const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
             let descontoPassagem = Math.min(salario * 0.06, vales.total);
             if(modoPassagem === 'nao') descontoPassagem = 0;
             if(modoPassagem === 'total') descontoPassagem = vales.total;
-            const proventos = salario + gratificacao + salarioFamilia + vales.total;
-            const descontos = unidentis + descontoPassagem + inss;
+            const proventos = salario + gratificacao + quinquenio + salarioFamilia + vales.total;
+            const descontos = unidentis + descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
             const liquido = proventos - descontos;
             totalLiquido += liquido;
             const nomeSocial = f.nomeSocial ? `<div style="font-size:11px; color:#666;">Nome social: ${escapeHTML(f.nomeSocial)}</div>` : '';
+            const inssLabel = `INSS (${formatPercentual(inssAliquota)}%) <button class="btn-mini-edit" onclick="abrirEdicaoINSSContracheque(${jsArg(f.id)}, ${inssAliquota}, ${inss})" title="Editar INSS">✏️</button>`;
             html += `<div style="border:1px solid #e0e0e0; border-left:4px solid #6A1B9A; border-radius:8px; padding:10px; margin-bottom:10px; background:#fff;">
                 <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;">
-                    <div><strong>${escapeHTML(f.nome || 'Sem nome')}</strong>${nomeSocial}<div style="font-size:11px; color:#777;">${escapeHTML(getExtensoMes(mes))} de ${ano} • ${vales.passagens} passagens</div></div>
+                    <div><strong>${escapeHTML(f.nome || 'Sem nome')}</strong>${nomeSocial}<div style="font-size:11px; color:#777;">${escapeHTML(getExtensoMes(mes))} de ${ano} • ${vales.passagens} passagens${faltas.diasFalta ? ` • ${faltas.diasFalta} falta(s)` : ''}</div></div>
                     <strong style="color:#6A1B9A; white-space:nowrap;">R$ ${formatMoeda(liquido)}</strong>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;">
-                    <div style="background:#f8fbf8; border-radius:6px; padding:8px;"><b style="color:#2E7D32;">Proventos</b><br>Salário: R$ ${formatMoeda(salario)}<br>Gratificação: R$ ${formatMoeda(gratificacao)}<br>Vales-combustível: R$ ${formatMoeda(vales.total)}<br>Salário Família: R$ ${formatMoeda(salarioFamilia)}</div>
-                    <div style="background:#fff8f8; border-radius:6px; padding:8px;"><b style="color:#D32F2F;">Descontos</b><br>Passagem: R$ ${formatMoeda(descontoPassagem)}<br>INSS estimado (${formatPercentual(inssCalc.aliquotaEfetiva)}%): R$ ${formatMoeda(inss)}<br>Desc. Unidentis: R$ ${formatMoeda(unidentis)}<br>Total descontos: R$ ${formatMoeda(descontos)}</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; font-size:12px;">
+                    <div style="background:#f8fbf8; border-radius:6px; padding:8px;"><b style="color:#2E7D32;">Proventos</b>
+                        ${linhaContracheque('Salário', salario)}
+                        ${linhaContracheque('Gratificação', gratificacao)}
+                        ${linhaContracheque('Quinquênio', quinquenio)}
+                        ${linhaContracheque('VT', vales.total)}
+                        ${linhaContracheque('Salário Família', salarioFamilia)}
+                        ${linhaContracheque('Total', proventos, { total: true })}
+                    </div>
+                    <div style="background:#fff8f8; border-radius:6px; padding:8px;"><b style="color:#D32F2F;">Descontos</b>
+                        ${linhaContracheque('Passagem', descontoPassagem)}
+                        ${linhaContracheque(`Falta (${faltas.diasFalta})`, faltas.valorFaltas)}
+                        ${linhaContracheque(`DSR (${faltas.dsr})`, faltas.valorDSR)}
+                        ${linhaContracheque(inssLabel, inss)}
+                        ${linhaContracheque('Unidentis', unidentis)}
+                        ${linhaContracheque('Total', descontos, { total: true })}
+                    </div>
                 </div>
             </div>`;
         });
 
-        box.innerHTML = `<div style="background:#F3E5F5; color:#4A148C; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between;"><span>${funcs.length} funcionário(s)</span><span>Total líquido: R$ ${formatMoeda(totalLiquido)}</span></div>${html}`;
+        box.innerHTML = `<div style="background:#F3E5F5; color:#4A148C; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between; gap:10px;"><span>${funcs.length} funcionário(s)</span><span style="text-align:right;">Total líquido: R$ ${formatMoeda(totalLiquido)}</span></div>${html}`;
     }
 
     function abrirModalAniversarios() {

@@ -1,44 +1,7 @@
 // IMPRESSÕES E VT
     let arrVTParaImprimir = [];
-    let tempDiasFechadosVT = [];
 
-    function abrirAjusteVT() { if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); document.getElementById('vtDataPagto').value = getHojeSTR(); document.getElementById('vtDiaFechado').value = ''; tempDiasFechadosVT = []; renderDiasFechadosVT(); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
-
-    function renderDiasFechadosVT() {
-        const box = document.getElementById('listaDiasFechadosVT'); if(!box) return;
-        if(tempDiasFechadosVT.length === 0) { box.innerHTML = '<div style="font-size:11px; color:#777;">Nenhum dia extra descontado.</div>'; return; }
-        box.innerHTML = tempDiasFechadosVT
-            .sort()
-            .map((dia, i) => `<span style="display:inline-flex; align-items:center; gap:5px; margin:2px 4px 2px 0; padding:4px 7px; border-radius:999px; background:#fff; border:1px solid #fbc02d; font-size:12px;">${formatDataBR(dia)} <button style="border:none; background:none; color:#d32f2f; font-weight:bold; cursor:pointer;" onclick="removerDiaFechadoVT(${i})">x</button></span>`)
-            .join('');
-    }
-
-    function addDiaFechadoVT() {
-        const input = document.getElementById('vtDiaFechado');
-        const dia = input.value;
-        const mesRef = document.getElementById('vtMesRef').value;
-        if(!dia) return alert('Informe a data que o restaurante não abrirá.');
-        if(mesRef && !dia.startsWith(mesRef)) return alert('Esse dia não pertence ao mês de referência do VT.');
-        if(!tempDiasFechadosVT.includes(dia)) tempDiasFechadosVT.push(dia);
-        input.value = '';
-        renderDiasFechadosVT();
-        gerarListaAjusteVT();
-    }
-
-    function removerDiaFechadoVT(idx) {
-        tempDiasFechadosVT.sort();
-        tempDiasFechadosVT.splice(idx, 1);
-        renderDiasFechadosVT();
-        gerarListaAjusteVT();
-    }
-
-    function contarDiasFechadosVT(ano, mes) {
-        return tempDiasFechadosVT.filter((dia) => {
-            if(!dia || !dia.startsWith(`${ano}-${String(mes).padStart(2, '0')}`)) return false;
-            const dt = new Date(dia + "T00:00:00");
-            return db.configGerais.diasFuncionamento.includes(String(dt.getDay()));
-        }).length;
-    }
+    function abrirAjusteVT() { if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); document.getElementById('vtDataPagto').value = getHojeSTR(); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
 
     function gerarListaAjusteVT() {
         let box = document.getElementById('areaListaAjusteVT'); let html = ''; arrVTParaImprimir = [];
@@ -46,7 +9,7 @@
         let ano = parseInt(mesRef.split('-')[0]); let mes = parseInt(mesRef.split('-')[1]);
         let diasNoMes = new Date(ano, mes, 0).getDate();
         let diasUteis = 0; for(let d=1; d<=diasNoMes; d++) { let dt = new Date(ano, mes-1, d); if(db.configGerais.diasFuncionamento.includes(dt.getDay().toString())) diasUteis++; }
-        let diasFechados = contarDiasFechadosVT(ano, mes);
+        let diasFechados = contarFolgasGeraisNoVT(ano, mes);
         
         let mesAnt = mes - 1; let anoAnt = ano; if(mesAnt === 0) { mesAnt = 12; anoAnt = ano - 1; } let mesAntStr = `${anoAnt}-${String(mesAnt).padStart(2,'0')}`;
 
@@ -70,7 +33,7 @@
             let descontoPassagens = ((faltasAnt + feriasMesAt) * passagensPorDia) + descontoColetivo; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
             let valorUnit = parseMoeda(rotaObj.valor); let valTotal = passagensFinais * valorUnit;
             arrVTParaImprimir.push({ id: f.id, codigo: f.codigo || '', nome: f.nome, rota: rotaObj.rota, valorUnit: valorUnit, passagens: passagensFinais, valTotal: valTotal });
-            const detalheFechado = descontoColetivo ? ` | Fech.: -${descontoColetivo}` : '';
+            const detalheFechado = descontoColetivo ? ` | Folga geral: -${descontoColetivo}` : '';
             
             html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ddd;">
                 <div style="flex:1;"><strong>${escapeHTML(f.nome)}</strong><br><small>${escapeHTML(rotaObj.rota)} (R$ ${formatMoeda(valorUnit)})<br>Base: ${passagensMes} | Desc.: -${descontoPassagens}${detalheFechado}</small></div>
@@ -180,6 +143,9 @@
         let mesRef = document.getElementById('quinzenaMesRef').value; if(!mesRef) return; let ano = mesRef.split('-')[0]; let mesNum = mesRef.split('-')[1]; let dataPgto = document.getElementById('quinzenaDataPagto').value || getHojeSTR(); let cidade = db.empresa.cidade || 'Cidade';
         let itensQuinzena = Array.from(itensSelecionados).map(id => {
             let f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return;
+            let cat = db.categorias.find(c => c.id === f.categoria);
+            if(cat && cat.recebeQuinzena === false) return;
+            if(f.recebeQuinzena === false) return;
             let valFinal = quinzBase;
             return { nome: f.nome, valor: valFinal };
         }).filter(Boolean).sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));

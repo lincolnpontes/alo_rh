@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.26</title>
+    <title>Alô RH v1.0.27</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.26">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.27">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.26</div>
+    <div class="splash-versao">v1.0.27</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -45,6 +45,7 @@
             </div>
             <div id="boxFiltrosDias" class="dias-filtro-toolbar"></div>
             <div class="acoes-massa-toolbar" id="boxBarraAcoes">
+                <button class="btn-action-bar btn-folga-geral" id="btnFolgaGeral" onclick="abrirModalFolgaGeral()" title="Cadastrar folga geral" aria-label="Cadastrar folga geral">+</button>
                 <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
                 <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinz.</button>
                 <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
@@ -200,6 +201,12 @@
             <label><input type="checkbox" id="classePedirUnidentis" checked> Informar Desc. Unidentis</label>
         </div>
 
+        <div class="section-title">Benefícios do Vínculo</div>
+        <div class="checkbox-dias" style="margin-bottom:15px;">
+            <label><input type="checkbox" id="classeTemQuinquenio"> Permitir quinquênio</label>
+            <label><input type="checkbox" id="classeRecebeQuinzena" checked> Recebe quinzena</label>
+        </div>
+
         <div class="section-title">Salários Base do Vínculo</div>
         <div class="form-group" style="margin-bottom: 5px;">
             <div style="display: flex; gap: 5px;">
@@ -271,6 +278,12 @@
             <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:5px;"><input type="checkbox" id="funcHabFaltas" checked> Habilitar botão de Registrar Ausência</label>
             <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:5px;"><input type="checkbox" id="funcHabFerias" checked> Habilitar botão de Lançar Férias</label>
             <label style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" id="funcHabAtrasos" checked> Habilitar registro de atraso</label>
+        </div>
+
+        <div id="boxBeneficiosVinculo" style="display:none; background:#F3E5F5; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #E1BEE7;">
+            <div style="font-size:12px; font-weight:bold; color:#6A1B9A; margin-bottom:5px;">Benefícios deste funcionário:</div>
+            <label id="linhaFuncQuinquenio" style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:5px;"><input type="checkbox" id="funcRecebeQuinquenio"> Recebe quinquênio</label>
+            <label id="linhaFuncQuinzena" style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" id="funcRecebeQuinzena" checked> Recebe quinzena</label>
         </div>
 
         <div class="form-group" style="background:#f9f9f9; padding:10px; border-radius:5px; border:1px solid #eee;">
@@ -582,6 +595,19 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalFolgaGeral">
+    <div class="modal">
+        <div class="modal-title" style="color:#F57F17; border-color:#F57F17;">Folga Geral</div>
+        <div class="form-group"><label>Dia sem funcionamento:</label><input type="date" id="folgaGeralData"></div>
+        <div class="form-group"><label>Descontar no VT do mês:</label><input type="month" id="folgaGeralMes"></div>
+        <div class="form-group"><label>Observação:</label><input type="text" id="folgaGeralObs" placeholder="Ex: Sexta-feira Santa"></div>
+        <button class="btn-action" onclick="salvarFolgaGeral()" style="width:100%; background:#F57F17;">Salvar Folga Geral</button>
+        <div class="section-title">Folgas gerais cadastradas</div>
+        <div id="listaFolgasGerais" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:220px; overflow-y:auto;"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFolgaGeral')" style="width: 100%;">Fechar</button></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalPrintPonto">
     <div class="modal">
         <div class="modal-title">Gerar Folha de Ponto</div>
@@ -604,15 +630,7 @@
         <div class="modal-title">Ajuste de Vale Transporte</div>
         <div class="form-group"><label>Mês de Referência (que será pago):</label><input type="month" id="vtMesRef" onchange="gerarListaAjusteVT()"></div>
         <div class="form-group"><label>Data da folha:</label><input type="date" id="vtDataPagto"></div>
-        <div class="form-group" style="background:#fff8e1; border:1px solid #ffecb3; border-radius:6px; padding:8px;">
-            <label>Dias sem funcionamento para descontar de todos:</label>
-            <div style="display:flex; gap:6px;">
-                <input type="date" id="vtDiaFechado" style="flex:1;">
-                <button class="btn-action" style="flex:none; width:44px; padding:0;" onclick="addDiaFechadoVT()">+</button>
-            </div>
-            <div id="listaDiasFechadosVT" style="margin-top:8px;"></div>
-        </div>
-        <p style="font-size:11px; color:#666;">*O sistema calcula: Dias úteis do mês - Faltas do mês anterior + Eventuais folgas não tiradas.</p>
+        <p style="font-size:11px; color:#666;">*O sistema calcula: Dias úteis do mês - Faltas do mês anterior - Folgas gerais cadastradas + Eventuais folgas não tiradas.</p>
         <div id="areaListaAjusteVT" style="max-height: 400px; overflow-y: auto;"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPrintVT')">Cancelar</button><button class="btn-action" onclick="executarPrintVT()">Gerar Recibos VT</button></div>
     </div>
@@ -625,9 +643,19 @@
             <div class="form-group" style="flex:1;"><label>Mês de referência:</label><input type="month" id="contraMesRef" onchange="gerarPreviaContracheque()"></div>
             <div class="form-group" style="flex:1;"><label>Desconto de passagem:</label><select id="contraDescontoPassagem" onchange="gerarPreviaContracheque()"><option value="padrao">Até 6%</option><option value="nao">Não descontar</option><option value="total">Descontar todo VT</option></select></div>
         </div>
-        <p style="font-size:11px; color:#666; margin-top:0;">Primeiro esboço para simular salário, gratificação, vales-combustível, Salário Família, Unidentis, passagem e INSS estimado. A gente vai refinando as regras depois.</p>
+        <p style="font-size:11px; color:#666; margin-top:0;">Primeiro esboço para simular salário, gratificação, quinquênio, VT, Salário Família, Unidentis, faltas, DSR, passagem e INSS. A gente vai refinando as regras depois.</p>
         <div id="areaContracheque" style="max-height:55vh; overflow-y:auto;"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalContracheque')" style="width: 100%;">Fechar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalEditINSSContracheque" style="z-index:1500;">
+    <div class="modal">
+        <div class="modal-title" style="color:#6A1B9A; border-color:#6A1B9A;">Ajustar INSS</div>
+        <input type="hidden" id="editINSSFuncId">
+        <div class="form-group"><label>Alíquota INSS (%):</label><input type="text" id="editINSSAliquota" inputmode="decimal" oninput="normalizarInputPercentual(this)"></div>
+        <div class="form-group"><label>Valor INSS (R$):</label><input type="text" id="editINSSValor" inputmode="numeric" oninput="maskMoeda(this)"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalEditINSSContracheque')">Cancelar</button><button class="btn-action" style="background:#6A1B9A;" onclick="salvarEdicaoINSSContracheque()">Aplicar</button></div>
     </div>
 </div>
 
@@ -657,11 +685,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.26"></script>
-<script src="js/calculos.js?v=1.0.26"></script>
-<script src="js/interface.js?v=1.0.26"></script>
-<script src="js/impressao.js?v=1.0.26"></script>
-<script src="js/sincronizacao.js?v=1.0.26"></script>
+<script src="js/dados.js?v=1.0.27"></script>
+<script src="js/calculos.js?v=1.0.27"></script>
+<script src="js/interface.js?v=1.0.27"></script>
+<script src="js/impressao.js?v=1.0.27"></script>
+<script src="js/sincronizacao.js?v=1.0.27"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
