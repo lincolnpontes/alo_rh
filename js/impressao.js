@@ -142,6 +142,7 @@
         const quinzBase = parseMoeda(db.configGerais.adiantamentoQuinzena || "0");
         return Array.from(itensSelecionados).map(id => {
             const f = db.funcionarios.find(x => x.id === id); if(!f || f.arquivado) return null;
+            if(typeof isFuncionarioSemanal === 'function' && isFuncionarioSemanal(f)) return null;
             const cat = db.categorias.find(c => c.id === f.categoria);
             if(cat && cat.recebeQuinzena === false) return null;
             if(f.recebeQuinzena === false) return null;

@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.39</title>
+    <title>Alô RH v1.0.40</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.39">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.40">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.39</div>
+    <div class="splash-versao">v1.0.40</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -32,9 +32,9 @@
     <div class="header">
         <div class="header-title">Alô RH</div>
         <div class="header-actions">
-            <button onclick="abrirModalAniversarios()">🎂</button>
-            <button onclick="abrirCalendarioFerias()" title="Férias" aria-label="Férias">🏖️</button>
-            <button class="btn-resumo-header" onclick="abrirModalResumo()" title="Resumo" aria-label="Resumo">📝</button>
+            <button id="btnHeaderAniversarios" onclick="abrirModalAniversarios()">🎂</button>
+            <button id="btnHeaderFerias" onclick="abrirCalendarioFerias()" title="Férias" aria-label="Férias">🏖️</button>
+            <button id="btnHeaderResumo" class="btn-resumo-header" onclick="abrirModalResumo()" title="Resumo" aria-label="Resumo">📝</button>
             <button onclick="abrirMenuPrincipal()">⚙️</button>
         </div>
     </div>
@@ -50,7 +50,7 @@
                 <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
                 <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinzena</button>
                 <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
-                <button class="btn-action-bar" id="btnAcaoMassa4" style="display:none; background:#6A1B9A;" onclick="abrirConfigContracheque()">🧾 Contracheque</button>
+                <button class="btn-action-bar" id="btnAcaoMassa4" style="display:none; background:#6A1B9A;" onclick="abrirDocumentosPagamento()">🧾 Contracheque</button>
                 <button class="btn-action-bar" id="btnAcaoMassaSemana" style="display:none; background:#E65100;" onclick="abrirModalPresencaMassaSemana()">✅ Registrar Presença</button>
             </div>
         </div>
@@ -63,14 +63,14 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.39</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.40</small>
         </h2>
         <div id="perfilAdminBox" class="perfil-admin-box"></div>
-        <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
+        <button class="btn-outline menu-perm" data-perm="dadosEmpresa" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
-        <button class="btn-outline" onclick="abrirGerenciar('configGerais')">⚙️ Configurações Gerais</button>
-        <button class="btn-outline" onclick="abrirGerenciar('administradores')">🛡️ Gerenciar Administradores</button>
-        <button class="btn-outline" onclick="abrirAuditoria()">📋 Registro do Sistema</button>
+        <button class="btn-outline menu-perm" data-perm="configGerais" onclick="abrirGerenciar('configGerais')">⚙️ Configurações Gerais</button>
+        <button class="btn-outline menu-perm" data-perm="gerenciarAdministradores" onclick="abrirGerenciar('administradores')">🛡️ Gerenciar Administradores</button>
+        <button class="btn-outline menu-perm" data-perm="auditoria" onclick="abrirAuditoria()">📋 Registro do Sistema</button>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
         <h3 style="font-size: 16px; color: #d32f2f; margin-top: 15px; margin-bottom: 10px;">Avançado</h3>
         <button class="btn-danger" style="width: 100%; margin-bottom: 10px;" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
@@ -204,7 +204,15 @@
         </div>
         <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:15px;"><input type="checkbox" id="classeSemIntervalo" onchange="toggleIntervaloClasse()"> Vínculo sem intervalo de descanso</label>
 
-        <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:8px; margin-bottom: 15px; border: 1px solid #FFE0B2;">
+        <div class="form-group">
+            <label>Tipo de pagamento:</label>
+            <select id="classeTipoPagamento" onchange="aoMudarTipoPagamentoVinculo()">
+                <option value="contracheque">Pagamento por contracheque</option>
+                <option value="mensal_sem_carteira">Pagamento mensal sem carteira</option>
+                <option value="semanal">Pagamento por semana</option>
+            </select>
+        </div>
+        <div class="form-group" style="display:none; align-items:center; background:#FFF3E0; padding:10px; border-radius:8px; margin-bottom: 15px; border: 1px solid #FFE0B2;">
             <label class="switch"><input type="checkbox" id="classeSemanal" onchange="toggleRegrasVinculoSemanal()"><span class="slider"></span></label>
             <span style="font-weight:bold; font-size:14px; color:#E65100;">Pagamento por semana</span>
         </div>
@@ -220,7 +228,7 @@
                 <label class="switch-row"><span class="switch-row-text">Desconto passagem</span><span class="switch"><input type="checkbox" id="classePedirDescontoPassagem" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Desconto INSS</span><span class="switch"><input type="checkbox" id="classePedirINSS" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Recebe quinzena</span><span class="switch"><input type="checkbox" id="classeRecebeQuinzena" checked><span class="slider"></span></span></label>
-                <label class="switch-row"><span class="switch-row-text">Recebe Contracheque</span><span class="switch"><input type="checkbox" id="classeRecebeContracheque" checked><span class="slider"></span></span></label>
+                <label class="switch-row" id="linhaClasseRecebeContracheque"><span class="switch-row-text">Recebe Contracheque</span><span class="switch"><input type="checkbox" id="classeRecebeContracheque" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Controle de ponto</span><span class="switch"><input type="checkbox" id="classeTemControlePonto" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Direito a férias</span><span class="switch"><input type="checkbox" id="classeTemFerias" checked><span class="slider"></span></span></label>
             </div>
@@ -455,7 +463,7 @@
         <div class="modal-title" id="tituloAcoesFunc">Nome do Funcionário</div>
         <input type="hidden" id="acoesFuncId">
         
-        <button class="btn-outline" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento()">💸 Adiantamentos</button>
+        <button class="btn-outline" id="btnAcaoAdiantamento" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento()">💸 Adiantamentos</button>
         <button class="btn-outline" id="btnAcaoFalta" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Ausência</button>
         <button class="btn-outline" id="btnAcaoAtraso" style="border-color:#795548; color:#795548;" onclick="abrirModalAtraso()">⏱️ Registrar Atraso</button>
         <button class="btn-outline" id="btnAcaoFerias" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Lançar Férias</button>
@@ -659,7 +667,7 @@
         <div class="section-title">Histórico de Férias</div>
         <div id="listaHistoricoFerias" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px;"></div>
 
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormFerias'); document.getElementById('modalAcoesFunc').style.display='flex';" style="width: 100%;">Voltar</button></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="voltarModalFerias()" style="width: 100%;">Voltar</button></div>
     </div>
 </div>
 
@@ -667,7 +675,17 @@
     <div class="modal">
         <div class="modal-title">Adicionar</div>
         <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirModalFolgaGeral()"><span style="font-size:20px;">+</span><span>Folga Geral</span></button>
+        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirPagamentosPendentes()"><span style="font-size:20px;">💳</span><span>Pagamentos Pendentes</span></button>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalMenuAdicionar')" style="width: 100%;">Fechar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalPagamentosPendentes">
+    <div class="modal" style="width:95%; max-width:720px;">
+        <div class="modal-title">Pagamentos Pendentes<button class="modal-x" onclick="fecharModal('modalPagamentosPendentes')">X</button></div>
+        <div class="form-group"><label>Mês de referência:</label><input type="month" id="pendentesMesRef" onchange="renderPagamentosPendentes()"></div>
+        <div id="listaPagamentosPendentes" class="pendentes-lista"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPagamentosPendentes')" style="width:100%;">Fechar</button></div>
     </div>
 </div>
 
@@ -727,6 +745,15 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalReciboMensal">
+    <div class="modal" style="width:95%; max-width:720px;">
+        <div class="modal-title" style="color:#795548; border-color:#795548;">Recibo Mensal<button class="modal-x" onclick="fecharModal('modalReciboMensal')">X</button></div>
+        <div class="form-group"><label>Mês de referência:</label><input type="month" id="reciboMesRef" onchange="gerarPreviaReciboMensal()"></div>
+        <div id="areaReciboMensal" style="max-height:55vh; overflow-y:auto;"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalReciboMensal')">Fechar</button><button class="btn-action" style="background:#795548;" onclick="imprimirRecibosMensaisSelecionados()">Gerar Recibo(s)</button></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalSenhaAdminContracheque" style="z-index:1500;">
     <div class="modal">
         <div class="modal-title" style="color:#2E7D32; border-color:#2E7D32;">Reabrir Contracheque</div>
@@ -771,7 +798,7 @@
 
 <div class="modal-overlay" id="modalResumo">
     <div class="modal">
-        <div class="modal-title">Resumo</div>
+        <div class="modal-title">Resumo<button class="modal-x" onclick="fecharModal('modalResumo')">X</button></div>
         <div class="form-group"><label>Período:</label><select id="resumoTipo" onchange="alterarTipoResumo()"><option value="mes">Mês</option><option value="semana">Semana</option><option value="dia">Dia</option><option value="personalizado">Intervalo personalizado</option></select></div>
         <div id="resumoCamposMes" class="resumo-campos"><div class="form-group"><label>Mês:</label><input type="month" id="resumoMes"></div></div>
         <div id="resumoCamposSemana" class="resumo-campos" style="display:none;"><div class="form-group"><label>Dia da semana desejada:</label><input type="date" id="resumoSemana"></div></div>
@@ -790,7 +817,7 @@
 
 <div class="modal-overlay" id="modalCalendarioFerias">
     <div class="modal" style="width:95%; max-width:720px;">
-        <div class="modal-title" style="color:#F57F17; border-color:#F57F17;">Calendário de Férias</div>
+        <div class="modal-title" style="color:#F57F17; border-color:#F57F17;">Calendário de Férias<button class="modal-x" onclick="fecharModal('modalCalendarioFerias')">X</button></div>
         <div class="ferias-legenda">
             <strong>Regra usada:</strong> período aquisitivo configurado + 12 meses de concessivo. O limite exibido é o último dia para iniciar 30 dias de férias.
         </div>
@@ -803,11 +830,11 @@
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalCalendarioFerias')" style="width: 100%;">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.39"></script>
-<script src="js/calculos.js?v=1.0.39"></script>
-<script src="js/interface.js?v=1.0.39"></script>
-<script src="js/impressao.js?v=1.0.39"></script>
-<script src="js/sincronizacao.js?v=1.0.39"></script>
+<script src="js/dados.js?v=1.0.40"></script>
+<script src="js/calculos.js?v=1.0.40"></script>
+<script src="js/interface.js?v=1.0.40"></script>
+<script src="js/impressao.js?v=1.0.40"></script>
+<script src="js/sincronizacao.js?v=1.0.40"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

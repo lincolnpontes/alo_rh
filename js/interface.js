@@ -14,14 +14,22 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function funcionarioTemDireitoFerias(f) {
         if(!f) return false;
         const cat = getCategoriaFuncionario(f);
-        if(cat && cat.semanal) return false;
+        if(getTipoPagamentoFuncionario(f) === 'semanal') return false;
         if(cat && cat.temFerias === false) return false;
         return f.temFerias !== false;
     }
 
     function isFuncionarioSemanal(f) {
+        return getTipoPagamentoFuncionario(f) === 'semanal';
+    }
+
+    function getTipoPagamentoFuncionario(f) {
         const cat = getCategoriaFuncionario(f);
-        return !!(cat && cat.semanal);
+        return getTipoPagamentoVinculo(cat || {});
+    }
+
+    function isFuncionarioMensalSemCarteira(f) {
+        return getTipoPagamentoFuncionario(f) === 'mensal_sem_carteira';
     }
 
     function obterFuncionariosSelecionados() {
@@ -39,6 +47,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('btnAcaoMassa2').style.display = visivel;
         document.getElementById('btnAcaoMassa3').style.display = visivel;
         document.getElementById('btnAcaoMassa4').style.display = visivel;
+        const btnDocPagamento = document.getElementById('btnAcaoMassa4');
+        if(btnDocPagamento) {
+            const temMensalSemCarteira = selecionados.some(isFuncionarioMensalSemCarteira);
+            const temContracheque = selecionados.some(funcionarioRecebeContracheque);
+            btnDocPagamento.innerHTML = temMensalSemCarteira && !temContracheque ? '🧾 Recibo' : (temMensalSemCarteira && temContracheque ? '🧾 Docs' : '🧾 Contracheque');
+            btnDocPagamento.onclick = abrirDocumentosPagamento;
+        }
         const btnSemana = document.getElementById('btnAcaoMassaSemana');
         if(btnSemana) btnSemana.style.display = temSelecionados && somenteSemanais ? 'flex' : 'none';
         document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
@@ -51,6 +66,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             btnSelecionarLista.style.display = funcs.length ? 'flex' : 'none';
             btnSelecionarLista.classList.toggle('selecionado', todosListadosSelecionados);
         }
+        if(typeof atualizarVisibilidadePermissoes === 'function') atualizarVisibilidadePermissoes();
     }
 
     function initDiasFiltro() {
@@ -141,9 +157,16 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function cliqueItem(id) {
+        origemModalFerias = 'acoes';
         let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = getNomeUsoFuncionario(f); document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
         document.getElementById('btnAcaoAtraso').style.display = (f.habAtrasos !== false) ? 'block' : 'none';
         if(catObj && catObj.semanal) { document.getElementById('btnAcaoFalta').style.display = (f.habFaltas) ? 'block' : 'none'; document.getElementById('btnAcaoFerias').style.display = (f.habFerias && funcionarioTemDireitoFerias(f)) ? 'block' : 'none'; } else { document.getElementById('btnAcaoFalta').style.display = 'block'; document.getElementById('btnAcaoFerias').style.display = funcionarioTemDireitoFerias(f) ? 'block' : 'none'; }
+        const ocultarSemPermissao = (idBotao, permissao, display = 'block') => { const botao = document.getElementById(idBotao); if(botao) botao.style.display = (temPermissaoAtual(permissao) && botao.style.display !== 'none') ? display : 'none'; };
+        ocultarSemPermissao('btnAcaoAdiantamento', 'registrarAdiantamentos');
+        ocultarSemPermissao('btnAcaoFalta', 'registrarAusencia');
+        ocultarSemPermissao('btnAcaoAtraso', 'registrarAtraso');
+        ocultarSemPermissao('btnAcaoFerias', 'lancarFerias');
+        ocultarSemPermissao('btnPagarExtra', 'registrarPresencaSemanal');
         document.getElementById('modalAcoesFunc').style.display = 'flex';
     }
 
@@ -180,7 +203,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirMenuAdicionar() {
-        if(!garantirPermissao('gerarVT', () => abrirMenuAdicionar(), 'abrir opções adicionais')) return;
+        if(!garantirAlgumaPermissao(['gerarVT', 'gerarContracheque', 'registrarPresencaSemanal'], () => abrirMenuAdicionar(), 'abrir opções adicionais')) return;
+        const opcoes = document.querySelectorAll('#modalMenuAdicionar .add-menu-opcao');
+        if(opcoes[0]) opcoes[0].style.display = temPermissaoAtual('gerarVT') ? 'flex' : 'none';
+        if(opcoes[1]) opcoes[1].style.display = (temPermissaoAtual('gerarContracheque') || temPermissaoAtual('registrarPresencaSemanal')) ? 'flex' : 'none';
         document.getElementById('modalMenuAdicionar').style.display = 'flex';
     }
 
@@ -281,6 +307,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const listaChaves = Array.isArray(chaves) ? chaves : [chaves];
         const atual = getAdminAtual();
         if(atual && listaChaves.some(chave => adminTemPermissao(atual, chave))) return true;
+        if(atual) {
+            alert('Este perfil não tem permissão para esta ferramenta.');
+            return false;
+        }
         const senha = prompt(`Digite a senha do administrador para ${texto}:`);
         if(senha === null) return false;
         const admin = db.administradores.find(a => String(a.senha || '') === String(senha || ''));
@@ -358,7 +388,30 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function abrirMenuPrincipal() {
         atualizarBoxPerfilAdmin();
+        atualizarVisibilidadePermissoes();
         document.getElementById('modalPainelUnificado').style.display = 'flex';
+    }
+
+    function aplicarDisplayPermissao(id, permissao, display = '') {
+        const el = document.getElementById(id);
+        if(el) el.style.display = temPermissaoAtual(permissao) ? display : 'none';
+    }
+
+    function atualizarVisibilidadePermissoes() {
+        document.querySelectorAll('.menu-perm[data-perm]').forEach((el) => {
+            el.style.display = temPermissaoAtual(el.dataset.perm) ? '' : 'none';
+        });
+        aplicarDisplayPermissao('btnHeaderFerias', 'lancarFerias');
+        aplicarDisplayPermissao('btnHeaderResumo', 'acessoResumo', 'flex');
+        aplicarDisplayPermissao('btnAcaoMassa1', 'gerarPonto', document.getElementById('btnAcaoMassa1').style.display === 'none' ? 'none' : 'flex');
+        aplicarDisplayPermissao('btnAcaoMassa2', 'gerarQuinzena', document.getElementById('btnAcaoMassa2').style.display === 'none' ? 'none' : 'flex');
+        aplicarDisplayPermissao('btnAcaoMassa3', 'gerarVT', document.getElementById('btnAcaoMassa3').style.display === 'none' ? 'none' : 'flex');
+        aplicarDisplayPermissao('btnAcaoMassa4', 'gerarContracheque', document.getElementById('btnAcaoMassa4').style.display === 'none' ? 'none' : 'flex');
+        aplicarDisplayPermissao('btnAcaoMassaSemana', 'registrarPresencaSemanal', document.getElementById('btnAcaoMassaSemana').style.display === 'none' ? 'none' : 'flex');
+        const btnMais = document.getElementById('btnFolgaGeral');
+        if(btnMais && btnMais.style.display !== 'none') {
+            btnMais.style.display = (temPermissaoAtual('gerarVT') || temPermissaoAtual('gerarContracheque') || temPermissaoAtual('registrarPresencaSemanal')) ? 'flex' : 'none';
+        }
     }
 
     function trocarPerfilAdmin() {
@@ -552,12 +605,20 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         };
     }
 
+    function getTipoPagamentoVinculo(c = {}) {
+        if(c && c.tipoPagamento) return c.tipoPagamento;
+        if(c && c.semanal) return 'semanal';
+        if(c && c.recebeContracheque === false) return 'mensal_sem_carteira';
+        return 'contracheque';
+    }
+
     function getBeneficiosVinculo(c = {}) {
+        const tipoPagamento = getTipoPagamentoVinculo(c);
         return {
             temQuinquenio: c && c.temQuinquenio === true,
-            temFerias: !(c && c.semanal) && !(c && c.temFerias === false),
+            temFerias: tipoPagamento !== 'semanal' && !(c && c.temFerias === false),
             recebeQuinzena: !(c && c.recebeQuinzena === false),
-            recebeContracheque: !(c && c.recebeContracheque === false)
+            recebeContracheque: tipoPagamento === 'contracheque' && !(c && c.recebeContracheque === false)
         };
     }
 
@@ -578,11 +639,20 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function toggleRegrasVinculoSemanal() {
-        const semanal = document.getElementById('classeSemanal').checked;
+        const tipo = document.getElementById('classeTipoPagamento') ? document.getElementById('classeTipoPagamento').value : (document.getElementById('classeSemanal').checked ? 'semanal' : 'contracheque');
+        const semanal = tipo === 'semanal';
+        document.getElementById('classeSemanal').checked = semanal;
+        document.getElementById('classeRecebeContracheque').checked = tipo === 'contracheque';
         const titulo = document.getElementById('tituloRegrasVinculo');
         const box = document.getElementById('boxRegrasVinculo');
+        const linhaContracheque = document.getElementById('linhaClasseRecebeContracheque');
         if(titulo) titulo.style.display = semanal ? 'none' : '';
         if(box) box.style.display = semanal ? 'none' : '';
+        if(linhaContracheque) linhaContracheque.style.display = 'none';
+    }
+
+    function aoMudarTipoPagamentoVinculo() {
+        toggleRegrasVinculoSemanal();
     }
 
     function abrirFormClasse(id, origem = 'gerenciar') { 
@@ -590,11 +660,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         fecharModal('modalListagem'); tempSalariosClasse = [];
         if(id) { 
             let c = db.categorias.find(x => x.id === id); document.getElementById('classeId').value = c.id; document.getElementById('classeNome').value = c.nome; document.getElementById('classeCorFundo').value = c.cor || '#00695C'; document.getElementById('classeCorTexto').value = c.corTexto || '#ffffff'; document.getElementById('classeSemanal').checked = c.semanal || false; 
+            document.getElementById('classeTipoPagamento').value = getTipoPagamentoVinculo(c);
             document.getElementById('classeHoraEntrada').value = (c.horarios && c.horarios.entrada) ? c.horarios.entrada : ''; document.getElementById('classeHoraSaida').value = (c.horarios && c.horarios.saida) ? c.horarios.saida : ''; document.getElementById('classeHoraIntEnt').value = (c.horarios && c.horarios.intEnt) ? c.horarios.intEnt : ''; document.getElementById('classeHoraIntSai').value = (c.horarios && c.horarios.intSai) ? c.horarios.intSai : ''; document.getElementById('classeSemIntervalo').checked = (c.horarios && c.horarios.semIntervalo) || false;
             preencherCamposFuncionarioClasse(c);
             if(c.salarios) tempSalariosClasse = [...c.salarios];
         } else { 
             document.getElementById('classeId').value = ''; document.getElementById('classeNome').value = ''; document.getElementById('classeCorFundo').value = '#00695C'; document.getElementById('classeCorTexto').value = '#ffffff'; document.getElementById('classeSemanal').checked = false; 
+            document.getElementById('classeTipoPagamento').value = 'contracheque';
             document.getElementById('classeHoraEntrada').value = ''; document.getElementById('classeHoraSaida').value = ''; document.getElementById('classeHoraIntEnt').value = ''; document.getElementById('classeHoraIntSai').value = ''; document.getElementById('classeSemIntervalo').checked = false;
             preencherCamposFuncionarioClasse();
         } 
@@ -609,17 +681,19 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function cancelarFormClasse() { fecharModal('modalFormClasse'); voltarDepoisFormClasse(); }
     function salvarClasse() {
         let id = document.getElementById('classeId').value || 'c_' + Date.now();
-        const semanal = document.getElementById('classeSemanal').checked;
+        const tipoPagamento = document.getElementById('classeTipoPagamento').value || 'contracheque';
+        const semanal = tipoPagamento === 'semanal';
         let novo = {
             id: id,
             nome: document.getElementById('classeNome').value,
             cor: document.getElementById('classeCorFundo').value,
             corTexto: document.getElementById('classeCorTexto').value,
+            tipoPagamento: tipoPagamento,
             semanal: semanal,
             temQuinquenio: document.getElementById('classeTemQuinquenio').checked,
             temFerias: !semanal && document.getElementById('classeTemFerias').checked,
             recebeQuinzena: document.getElementById('classeRecebeQuinzena').checked,
-            recebeContracheque: document.getElementById('classeRecebeContracheque').checked,
+            recebeContracheque: tipoPagamento === 'contracheque',
             camposFuncionario: {
                 pedirVT: document.getElementById('classePedirVT').checked,
                 pedirGratificacao: document.getElementById('classePedirGratificacao').checked,
@@ -677,7 +751,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const beneficios = getBeneficiosVinculo(c || {});
         const box = document.getElementById('boxBeneficiosVinculo');
         if(!box) return;
-        const linhasBeneficios = ['linhaFuncVT','linhaFuncGratificacao','linhaFuncSalFamilia','linhaFuncUnidentis','linhaFuncPassagem','linhaFuncINSS','linhaFuncQuinzena','linhaFuncContracheque','linhaFuncControlePonto','linhaFuncQuinquenio'];
+        const linhasBeneficios = ['linhaFuncVT','linhaFuncGratificacao','linhaFuncSalFamilia','linhaFuncUnidentis','linhaFuncPassagem','linhaFuncINSS','linhaFuncQuinzena','linhaFuncContracheque','linhaFuncControlePonto','linhaFuncFerias','linhaFuncQuinquenio'];
         if(!c) {
             linhasBeneficios.forEach((id) => {
                 const linha = document.getElementById(id);
@@ -1083,7 +1157,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; document.getElementById('adiantObs').value = ''; document.getElementById('adiantForma').value = 'Pix'; document.getElementById('btnSalvarAdiantamento').innerText = "Gravar Lançamento"; document.getElementById('btnCancelEditAdiant').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistAdiantamento(funcId); document.getElementById('modalFormAdiantamento').style.display = 'flex';
     }
-    function cancelarEdicaoRegistro(tipo) { if(tipo === 'adiantamento') abrirModalAdiantamento(null); else if(tipo === 'falta') abrirModalFalta(null); else if(tipo === 'atraso') abrirModalAtraso(null); else if(tipo === 'ferias') abrirModalFerias(null); }
+    function cancelarEdicaoRegistro(tipo) { if(tipo === 'adiantamento') abrirModalAdiantamento(null); else if(tipo === 'falta') abrirModalFalta(null); else if(tipo === 'atraso') abrirModalAtraso(null); else if(tipo === 'ferias') abrirModalFerias(null, origemModalFerias); }
     function salvarAdiantamento() {
         if(!adminSelecionadoTemPermissao('adiantAdmin', 'registrarAdiantamentos')) return;
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('adiantEditId').value; const valorStr = document.getElementById('adiantValor').value; if(!valorStr) return alert("Digite um valor.");
@@ -1331,8 +1405,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         atualizarRetornoFerias();
     }
 
-    function abrirModalFerias(editId = null) {
-        if(!garantirPermissao('lancarFerias', () => abrirModalFerias(editId), 'lançar férias')) return;
+    function abrirModalFerias(editId = null, origem = '') {
+        if(origem) origemModalFerias = origem;
+        if(!garantirPermissao('lancarFerias', () => abrirModalFerias(editId, origemModalFerias), 'lançar férias')) return;
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; document.getElementById('feriasAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
         const funcionario = db.funcionarios.find(x => x.id === funcId);
         if(!editId && funcionario && !funcionarioTemDireitoFerias(funcionario)) return alert('Este funcionário está marcado como sem direito a férias.');
@@ -1342,7 +1417,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         else { const periodo = sugerirPeriodoAquisitivoFuncionario(funcId); document.getElementById('feriasEditId').value = ''; document.getElementById('feriasData').value = getHojeSTR(); document.getElementById('feriasAquisitivoInicio').value = periodo.inicio; document.getElementById('feriasAquisitivoFim').value = periodo.fim; atualizarPeriodoFeriasPorInicio(); document.getElementById('btnSalvarFerias').innerText = "Gravar Férias"; document.getElementById('btnCancelEditFerias').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistFerias(funcId); document.getElementById('modalFormFerias').style.display = 'flex';
     }
-    function salvarFerias() { if(!adminSelecionadoTemPermissao('feriasAdmin', 'lancarFerias')) return; const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const aqInicio = document.getElementById('feriasAquisitivoInicio').value; const aqFim = document.getElementById('feriasAquisitivoFim').value; const dataInicio = document.getElementById('feriasData').value; const dataFim = document.getElementById('feriasDataFim').value; if(aqInicio && aqFim && aqInicio > aqFim) return alert('O período aquisitivo está invertido.'); if(dataInicio && dataFim && dataInicio > dataFim) return alert('A data final das férias está antes da data inicial.'); const novo = { type: 'ferias', funcId: funcId, data: dataInicio, dataFim: dataFim, periodoAquisitivoInicio: aqInicio, periodoAquisitivoFim: aqFim, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; const func = db.funcionarios.find(f => f.id === funcId); if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Férias editadas', `${getNomeUsoFuncionario(func)}: ${formatDataBR(dataInicio)} a ${formatDataBR(dataFim)}. Aquisitivo ${formatDataBR(aqInicio)} a ${formatDataBR(aqFim)}.`, 'ferias', editId); } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); registrarAuditoria('Férias registradas', `${getNomeUsoFuncionario(func)}: ${formatDataBR(dataInicio)} a ${formatDataBR(dataFim)}. Aquisitivo ${formatDataBR(aqInicio)} a ${formatDataBR(aqFim)}.`, 'ferias', novo.id); } salvarBanco(); abrirModalFerias(null); renderizarLista(); if(document.getElementById('modalCalendarioFerias').style.display === 'flex') renderCalendarioFerias(); }
+    function salvarFerias() { if(!adminSelecionadoTemPermissao('feriasAdmin', 'lancarFerias')) return; const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const aqInicio = document.getElementById('feriasAquisitivoInicio').value; const aqFim = document.getElementById('feriasAquisitivoFim').value; const dataInicio = document.getElementById('feriasData').value; const dataFim = document.getElementById('feriasDataFim').value; if(aqInicio && aqFim && aqInicio > aqFim) return alert('O período aquisitivo está invertido.'); if(dataInicio && dataFim && dataInicio > dataFim) return alert('A data final das férias está antes da data inicial.'); const novo = { type: 'ferias', funcId: funcId, data: dataInicio, dataFim: dataFim, periodoAquisitivoInicio: aqInicio, periodoAquisitivoFim: aqFim, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; const func = db.funcionarios.find(f => f.id === funcId); if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Férias editadas', `${getNomeUsoFuncionario(func)}: ${formatDataBR(dataInicio)} a ${formatDataBR(dataFim)}. Aquisitivo ${formatDataBR(aqInicio)} a ${formatDataBR(aqFim)}.`, 'ferias', editId); } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); registrarAuditoria('Férias registradas', `${getNomeUsoFuncionario(func)}: ${formatDataBR(dataInicio)} a ${formatDataBR(dataFim)}. Aquisitivo ${formatDataBR(aqInicio)} a ${formatDataBR(aqFim)}.`, 'ferias', novo.id); } salvarBanco(); abrirModalFerias(null, origemModalFerias); renderizarLista(); if(origemModalFerias === 'calendario') renderCalendarioFerias(); }
+
+    function voltarModalFerias() {
+        fecharModal('modalFormFerias');
+        if(origemModalFerias === 'calendario') {
+            renderCalendarioFerias();
+            document.getElementById('modalCalendarioFerias').style.display = 'flex';
+            return;
+        }
+        document.getElementById('modalAcoesFunc').style.display = 'flex';
+    }
     function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = getRegistrosFeriasFuncionario(funcId); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; const periodo = r.periodoAquisitivoInicio || r.periodoAquisitivoFim ? `<br><span style="color:#795548; font-size:11px; font-weight:bold;">Aquisitivo: ${formatDataBR(r.periodoAquisitivoInicio)} a ${formatDataBR(r.periodoAquisitivoFim)}</span>` : ''; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b>${periodo}<br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
     function somarMesesISO(dataStr, meses) {
@@ -1418,8 +1503,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(!f) return alert('Funcionário não encontrado.');
         document.getElementById('acoesFuncId').value = f.id;
         document.getElementById('tituloAcoesFunc').innerText = getNomeUsoFuncionario(f);
+        origemModalFerias = 'calendario';
         fecharModal('modalCalendarioFerias');
-        abrirModalFerias(null);
+        abrirModalFerias(null, 'calendario');
     }
 
     function renderCalendarioFerias() {
@@ -1858,8 +1944,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function funcionarioRecebeContracheque(f) {
         if(!f || f.arquivado) return false;
         const categoria = db.categorias.find(c => c.id === f.categoria);
+        if(getTipoPagamentoVinculo(categoria || {}) !== 'contracheque') return false;
         if(categoria && categoria.recebeContracheque === false) return false;
         return f.recebeContracheque !== false;
+    }
+
+    function funcionarioRecebeReciboMensal(f) {
+        if(!f || f.arquivado) return false;
+        return getTipoPagamentoFuncionario(f) === 'mensal_sem_carteira';
     }
 
     function calcularDadosContrachequeFuncionario(f, mesRef, vtMesRef) {
@@ -1933,6 +2025,18 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         gerarPreviaContracheque();
     }
 
+    function abrirDocumentosPagamento() {
+        const selecionados = obterFuncionariosSelecionados();
+        if(selecionados.length === 0) return alert('Selecione funcionários!');
+        const comContracheque = selecionados.filter(funcionarioRecebeContracheque);
+        const comRecibo = selecionados.filter(funcionarioRecebeReciboMensal);
+        if(comContracheque.length && comRecibo.length) {
+            return alert('Selecione só funcionários de contracheque ou só mensal sem carteira para gerar o documento.');
+        }
+        if(comRecibo.length) return abrirConfigReciboMensal();
+        return abrirConfigContracheque();
+    }
+
     function abrirConfigContracheque() {
         if(!garantirPermissao('gerarContracheque', () => abrirConfigContracheque(), 'gerar contracheque')) return;
         if(itensSelecionados.size === 0) return alert("Selecione funcionários!");
@@ -1944,6 +2048,252 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('contraVTMesRef').value = somarMesReferencia(mesAtual, 1);
         gerarPreviaContracheque();
         document.getElementById('modalContracheque').style.display = 'flex';
+    }
+
+    function getUltimoDiaMesRef(mesRef) {
+        const [ano, mes] = String(mesRef || getHojeSTR().substring(0, 7)).split('-').map(Number);
+        return dataISO(new Date(ano, mes, 0));
+    }
+
+    function mesRefEncerrado(mesRef) {
+        return getHojeSTR() > getUltimoDiaMesRef(mesRef);
+    }
+
+    function obterReciboMensalPago(funcId, mesRef) {
+        return db.registros.find(r => r.type === 'recibo_mensal_pago' && r.funcId === funcId && r.mesRef === mesRef);
+    }
+
+    function calcularDadosReciboMensalFuncionario(f, mesRef) {
+        const [ano, mes] = mesRef.split('-').map(Number);
+        const vtMesRef = somarMesReferencia(mesRef, 1);
+        const [anoVT, mesVT] = vtMesRef.split('-').map(Number);
+        const categoria = db.categorias.find(c => c.id === f.categoria);
+        const campos = getCamposFuncionarioClasse(categoria || {});
+        const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
+        const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
+        const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
+        const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
+        const baseRemuneracao = Math.max(0, salario + gratificacao - faltas.valorFaltas - faltas.valorDSR);
+        const fgts = baseRemuneracao * 0.08;
+        const multaFgts = fgts * 0.40;
+        const ferias = baseRemuneracao / 12;
+        const tercoFerias = ferias / 3;
+        const decimoTerceiro = baseRemuneracao / 12;
+        const inss = (campos.pedirINSS && f.descontaINSS !== false) ? baseRemuneracao * 0.075 : 0;
+        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, vales.total) : 0;
+        const proventos = salario + gratificacao + vales.total + fgts + multaFgts + ferias + tercoFerias + decimoTerceiro;
+        const descontos = descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
+        const liquido = proventos - descontos;
+        return { ano, mes, vtMesRef, salario, gratificacao, vales, faltas, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, proventos, descontos, liquido };
+    }
+
+    function linhaReciboMensal(label, valor, opcoes = {}) {
+        if(!opcoes.total && Math.abs(Number(valor) || 0) < 0.0001) return '';
+        const classe = opcoes.total ? ' style="font-weight:900; border-top:1px solid #ddd; margin-top:3px;"' : '';
+        return `<div${classe}><span>${label}</span><strong>R$ ${formatMoedaContracheque(valor)}</strong></div>`;
+    }
+
+    function abrirConfigReciboMensal(mesRefForcado = '') {
+        if(!garantirPermissao('gerarContracheque', () => abrirConfigReciboMensal(mesRefForcado), 'gerar recibo mensal')) return;
+        if(itensSelecionados.size === 0) return alert('Selecione funcionários!');
+        document.getElementById('reciboMesRef').value = mesRefForcado || getHojeSTR().substring(0, 7);
+        gerarPreviaReciboMensal();
+        document.getElementById('modalReciboMensal').style.display = 'flex';
+    }
+
+    function gerarPreviaReciboMensal() {
+        const box = document.getElementById('areaReciboMensal');
+        if(!box) return;
+        const mesRef = document.getElementById('reciboMesRef').value || getHojeSTR().substring(0, 7);
+        const funcs = obterFuncionariosSelecionados()
+            .filter(funcionarioRecebeReciboMensal)
+            .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        if(funcs.length === 0) {
+            box.innerHTML = '<div style="padding:15px; color:#999; text-align:center;">Nenhum funcionário mensal sem carteira selecionado.</div>';
+            return;
+        }
+        let total = 0;
+        box.innerHTML = funcs.map((f) => {
+            const d = calcularDadosReciboMensalFuncionario(f, mesRef);
+            total += d.liquido;
+            const pago = obterReciboMensalPago(f.id, mesRef);
+            return `<div class="recibo-card">
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;"><strong>${escapeHTML(f.nome || 'Sem nome')}</strong><span style="color:${pago ? '#2E7D32' : '#795548'}; font-weight:900;">${pago ? 'Gerado' : 'Pendente'}</span></div>
+                <div style="font-size:11px; color:#777; margin-top:3px;">Mês ${escapeHTML(getExtensoMes(d.mes))} de ${d.ano} • VT ${escapeHTML(getExtensoMes(Number(d.vtMesRef.split('-')[1])))} de ${d.vtMesRef.split('-')[0]}</div>
+                <div class="recibo-grid">
+                    ${linhaReciboMensal('Salário', d.salario)}
+                    ${linhaReciboMensal('Gratificação', d.gratificacao)}
+                    ${linhaReciboMensal('VT', d.vales.total)}
+                    ${linhaReciboMensal('FGTS 8%', d.fgts)}
+                    ${linhaReciboMensal('FGTS 40%', d.multaFgts)}
+                    ${linhaReciboMensal('Férias', d.ferias)}
+                    ${linhaReciboMensal('1/3 férias', d.tercoFerias)}
+                    ${linhaReciboMensal('13º', d.decimoTerceiro)}
+                    ${linhaReciboMensal('Passagem', d.descontoPassagem)}
+                    ${linhaReciboMensal(`Falta (${d.faltas.diasFalta})`, d.faltas.valorFaltas)}
+                    ${linhaReciboMensal(`DSR (${d.faltas.dsr})`, d.faltas.valorDSR)}
+                    ${linhaReciboMensal('INSS 7,5%', d.inss)}
+                    ${linhaReciboMensal('Total líquido', d.liquido, { total: true })}
+                </div>
+            </div>`;
+        }).join('') + `<div class="recibo-card" style="border-left-color:#00695C;"><div class="recibo-grid">${linhaReciboMensal(`${funcs.length} funcionário(s)`, total, { total: true })}</div></div>`;
+    }
+
+    function registrarReciboMensalPago(funcId, mesRef, dados) {
+        const existente = obterReciboMensalPago(funcId, mesRef);
+        const agora = Date.now();
+        const registro = existente || { id: `rm_${funcId}_${mesRef.replace('-', '')}_${agora}`, type: 'recibo_mensal_pago', funcId, mesRef, criadoEm: agora };
+        Object.assign(registro, { data: getHojeSTR(), valor: dados.liquido, editadoEm: agora, _syncAtualizadoEm: agora });
+        if(!existente) db.registros.push(registro);
+    }
+
+    function imprimirRecibosMensaisSelecionados() {
+        if(!garantirPermissao('gerarContracheque', () => imprimirRecibosMensaisSelecionados(), 'gerar recibo mensal')) return;
+        const mesRef = document.getElementById('reciboMesRef').value || getHojeSTR().substring(0, 7);
+        const funcs = obterFuncionariosSelecionados()
+            .filter(funcionarioRecebeReciboMensal)
+            .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        if(funcs.length === 0) return alert('Nenhum funcionário mensal sem carteira selecionado.');
+        const cidade = db.empresa.cidade || 'Cabedelo';
+        const empresa = typeof getEmpresaPrint === 'function' ? getEmpresaPrint() : (db.empresa.razao || db.empresa.fantasia || 'EMPRESA');
+        const { ano, mes } = typeof getMesAnoExtensoPrint === 'function' ? getMesAnoExtensoPrint(mesRef) : { ano: mesRef.split('-')[0], mes: getExtensoMes(Number(mesRef.split('-')[1])).toLowerCase() };
+        let html = `<html><head><title>Recibo Mensal</title><style>
+            @page{size:A4 portrait;margin:12mm;}
+            body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:15px;}
+            .recibo-folha{height:273mm;border:4px double #000;box-sizing:border-box;padding:10mm 12mm;display:flex;flex-direction:column;page-break-after:always;}
+            .recibo-folha:last-child{page-break-after:auto;}
+            .topo{text-align:center;font-weight:bold;line-height:1.2;}
+            .empresa{font-size:20px;}
+            .cnpj{font-size:16px;margin-top:2px;}
+            .titulo{text-align:center;font-size:18px;font-weight:bold;margin:12mm 0 8mm;text-transform:uppercase;}
+            .texto{font-size:16px;line-height:1.45;text-align:justify;margin-bottom:7mm;}
+            .func{font-size:17px;font-weight:bold;margin-bottom:5mm;}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14mm;}
+            .linha{display:flex;justify-content:space-between;border-bottom:1px solid #000;padding:3px 2px;min-height:7mm;box-sizing:border-box;}
+            .linha.total{font-weight:bold;border-bottom:2px solid #000;border-top:1px solid #000;margin-top:2mm;}
+            .bloco-titulo{font-weight:bold;margin-bottom:2mm;}
+            .rodape{margin-top:auto;text-align:right;font-weight:bold;font-size:16px;}
+            .assinatura{width:82mm;border-top:1px solid #000;text-align:center;margin:18mm auto 0;padding-top:3px;font-weight:normal;}
+        </style></head><body>`;
+        funcs.forEach((f) => {
+            const d = calcularDadosReciboMensalFuncionario(f, mesRef);
+            registrarReciboMensalPago(f.id, mesRef, d);
+            html += `<section class="recibo-folha"><div class="topo"><div class="empresa">${escapeHTML(empresa)}</div><div class="cnpj">CNPJ ${escapeHTML(db.empresa.cnpj || '')}</div></div>
+                <div class="titulo">Recibo de Pagamento Mensal</div>
+                <div class="texto">Declaro que recebi da empresa supracitada os valores referentes ao pagamento do mês de <b>${escapeHTML(mes)} de ${escapeHTML(ano)}</b>, conforme discriminação abaixo.</div>
+                <div class="func">${escapeHTML(f.nome || 'Funcionário')}</div>
+                <div class="grid">
+                    <div><div class="bloco-titulo">Proventos</div>
+                        ${linhaPrintRecibo('Salário', d.salario)}
+                        ${linhaPrintRecibo('Gratificação', d.gratificacao)}
+                        ${linhaPrintRecibo('VT', d.vales.total)}
+                        ${linhaPrintRecibo('FGTS 8%', d.fgts)}
+                        ${linhaPrintRecibo('FGTS 40%', d.multaFgts)}
+                        ${linhaPrintRecibo('Férias', d.ferias)}
+                        ${linhaPrintRecibo('1/3 férias', d.tercoFerias)}
+                        ${linhaPrintRecibo('13º', d.decimoTerceiro)}
+                        ${linhaPrintRecibo('Total', d.proventos, true)}
+                    </div>
+                    <div><div class="bloco-titulo">Descontos</div>
+                        ${linhaPrintRecibo('Passagem', d.descontoPassagem)}
+                        ${linhaPrintRecibo(`Falta (${d.faltas.diasFalta})`, d.faltas.valorFaltas)}
+                        ${linhaPrintRecibo(`DSR (${d.faltas.dsr})`, d.faltas.valorDSR)}
+                        ${linhaPrintRecibo('INSS 7,5%', d.inss)}
+                        ${linhaPrintRecibo('Total', d.descontos, true)}
+                    </div>
+                </div>
+                <div class="linha total" style="margin-top:8mm;"><span>Líquido a receber</span><strong>R$ ${formatMoedaContracheque(d.liquido)}</strong></div>
+                <div class="rodape">${escapeHTML(typeof formatDataExtensoPrint === 'function' ? formatDataExtensoPrint(getHojeSTR(), cidade) : formatDataBR(getHojeSTR()))}</div>
+                <div class="assinatura">Assinatura do Funcionário</div>
+            </section>`;
+        });
+        html += '</body></html>';
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+        registrarAuditoria('Recibo mensal gerado', `${funcs.length} funcionário(s) - ${mesRef}.`, 'recibo_mensal', mesRef);
+        salvarBanco();
+        gerarPreviaReciboMensal();
+        setTimeout(() => { w.print(); }, 500);
+    }
+
+    function linhaPrintRecibo(label, valor, total = false) {
+        if(!total && Math.abs(Number(valor) || 0) < 0.0001) return '';
+        return `<div class="linha ${total ? 'total' : ''}"><span>${label}</span><strong>R$ ${formatMoedaContracheque(valor)}</strong></div>`;
+    }
+
+    function selecionarSomenteFuncionario(funcId) {
+        itensSelecionados.clear();
+        itensSelecionados.add(funcId);
+        renderizarLista();
+        atualizarAcoesMassa();
+    }
+
+    function abrirDocumentoPendente(tipo, funcId, mesRef) {
+        const f = db.funcionarios.find(x => x.id === funcId);
+        if(!f) return alert('Funcionário não encontrado.');
+        selecionarSomenteFuncionario(funcId);
+        fecharModal('modalPagamentosPendentes');
+        if(tipo === 'recibo') return abrirConfigReciboMensal(mesRef);
+        if(tipo === 'semanal') {
+            document.getElementById('acoesFuncId').value = f.id;
+            document.getElementById('tituloAcoesFunc').innerText = getNomeUsoFuncionario(f);
+            return abrirModalPresencaSemana();
+        }
+        abrirConfigContracheque();
+        document.getElementById('contraMesRef').value = mesRef;
+        document.getElementById('contraVTMesRef').value = somarMesReferencia(mesRef, 1);
+        gerarPreviaContracheque();
+    }
+
+    function abrirPagamentosPendentes() {
+        if(!garantirAlgumaPermissao(['gerarContracheque', 'registrarPresencaSemanal'], () => abrirPagamentosPendentes(), 'ver pagamentos pendentes')) return;
+        document.getElementById('pendentesMesRef').value = getHojeSTR().substring(0, 7);
+        renderPagamentosPendentes();
+        document.getElementById('modalPagamentosPendentes').style.display = 'flex';
+    }
+
+    function renderPagamentosPendentes() {
+        const box = document.getElementById('listaPagamentosPendentes');
+        if(!box) return;
+        const mesRef = document.getElementById('pendentesMesRef').value || getHojeSTR().substring(0, 7);
+        const itens = [];
+        const mesEncerrado = mesRefEncerrado(mesRef);
+        if(mesEncerrado && temPermissaoAtual('gerarContracheque')) {
+            db.funcionarios.filter(funcionarioRecebeContracheque).forEach((f) => {
+                if(!obterFechamentoContracheque(f.id, mesRef)) itens.push({ tipo: 'contra', func: f, titulo: 'Contracheque pendente', detalhe: `${getExtensoMes(Number(mesRef.split('-')[1]))} de ${mesRef.split('-')[0]}`, valor: '' });
+            });
+            db.funcionarios.filter(funcionarioRecebeReciboMensal).forEach((f) => {
+                if(!obterReciboMensalPago(f.id, mesRef)) {
+                    const d = calcularDadosReciboMensalFuncionario(f, mesRef);
+                    itens.push({ tipo: 'recibo', func: f, titulo: 'Recibo mensal pendente', detalhe: `${getExtensoMes(Number(mesRef.split('-')[1]))} de ${mesRef.split('-')[0]}`, valor: `R$ ${formatMoedaContracheque(d.liquido)}` });
+                }
+            });
+        }
+        if(temPermissaoAtual('registrarPresencaSemanal')) {
+            const porFunc = new Map();
+            db.registros.filter(r => r.type === 'presenca' && r.status === 'pendente').forEach((r) => {
+                const f = db.funcionarios.find(x => x.id === r.funcId);
+                if(!f || f.arquivado) return;
+                if(!porFunc.has(f.id)) porFunc.set(f.id, { func: f, dias: 0, valor: 0 });
+                const item = porFunc.get(f.id);
+                item.dias++;
+                item.valor += Number(r.valor || 0);
+            });
+            porFunc.forEach((item) => {
+                itens.push({ tipo: 'semanal', func: item.func, titulo: 'Pagamento semanal pendente', detalhe: `${item.dias} dia(s) lançado(s)`, valor: `R$ ${formatMoedaContracheque(item.valor)}` });
+            });
+        }
+        itens.sort((a, b) => String(getNomeUsoFuncionario(a.func)).localeCompare(String(getNomeUsoFuncionario(b.func))) || a.tipo.localeCompare(b.tipo));
+        if(itens.length === 0) {
+            box.innerHTML = `<div style="color:#999; text-align:center; padding:16px;">Nenhum pagamento pendente${mesEncerrado ? '.' : '. Os pagamentos mensais aparecem depois do último dia do mês.'}</div>`;
+            return;
+        }
+        box.innerHTML = itens.map((item) => `<div class="pendente-card ${item.tipo}">
+            <div class="pendente-head"><strong>${escapeHTML(getNomeUsoFuncionario(item.func))}</strong><span>${escapeHTML(item.valor || '')}</span></div>
+            <div style="color:#555;"><b>${escapeHTML(item.titulo)}</b><br><small>${escapeHTML(item.detalhe)}</small></div>
+            <div class="pendente-actions"><button class="btn-action" onclick="abrirDocumentoPendente(${jsArg(item.tipo === 'contra' ? 'contracheque' : item.tipo)}, ${jsArg(item.func.id)}, ${jsArg(mesRef)})">${item.tipo === 'semanal' ? 'Abrir pagamento' : 'Gerar documento'}</button></div>
+        </div>`).join('');
     }
 
     function contarDiasEmpresaNoMes(ano, mes) {

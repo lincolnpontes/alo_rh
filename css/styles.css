@@ -59,6 +59,7 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
         .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
         .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 2px solid #00695C; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        .modal-x { border:0; background:#ECEFF1; color:#455A64; border-radius:50%; width:30px; height:30px; font-size:14px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; margin-left:8px; }
         
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; margin-bottom: 4px; color: #555; font-weight: bold; font-size: 12px; }
@@ -111,6 +112,21 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .switch-select-input { width:150px !important; max-width:48vw; padding:7px !important; border-radius:7px !important; font-size:12px !important; font-weight:700; }
         .switch-extra-input { width:74px !important; padding:7px !important; text-align:center; border-radius:7px !important; font-weight:800; }
         .add-menu-opcao { width:100%; border:1px solid #F57F17; background:#fff8e1; color:#E65100; border-radius:8px; padding:12px; font-weight:800; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px; }
+        .add-menu-opcao + .add-menu-opcao { margin-top:8px; }
+        .pendentes-lista { display:flex; flex-direction:column; gap:8px; max-height:58vh; overflow:auto; }
+        .pendente-card { border:1px solid #e0e0e0; border-left:4px solid #F57F17; border-radius:8px; padding:10px; background:#fff; font-size:12px; }
+        .pendente-card.semanal { border-left-color:#E65100; }
+        .pendente-card.recibo { border-left-color:#795548; }
+        .pendente-card.contra { border-left-color:#6A1B9A; }
+        .pendente-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:6px; }
+        .pendente-head strong { font-size:14px; color:#263238; }
+        .pendente-head span { white-space:nowrap; color:#00695C; font-weight:900; }
+        .pendente-actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+        .pendente-actions button { flex:0 1 auto; padding:8px 10px; font-size:12px; border-radius:6px; text-align:center; }
+        .recibo-card { border:1px solid #e0e0e0; border-left:4px solid #795548; border-radius:8px; padding:10px; margin-bottom:8px; background:#fff; font-size:12px; }
+        .recibo-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px 10px; margin-top:6px; }
+        .recibo-grid div { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid #eee; padding:3px 0; }
+        .recibo-grid strong { font-variant-numeric:tabular-nums; }
         
         .list-item-config { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #ddd; padding: 8px 10px; border-radius: 5px; margin-bottom: 5px; font-size: 13px; }
         .list-item-config button { background: #ffcdd2; color: #d32f2f; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: bold; flex-shrink: 0; }

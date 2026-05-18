@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.39';
+    const APP_VERSION = 'v1.0.40';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -29,7 +29,7 @@
     let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
     let isSyncingFundo = false; let syncPendente = false; let timerSincronizacao = null; let timerSyncRegistros = null; let isPuxandoNuvem = false;
     let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null; let overridesContracheque = {}; let resumoContrachequeVisivel = false; let contrachequesAbertos = new Set(); let adminSessaoId = sessionStorage.getItem('alorh_admin_sessao') || '';
-    let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar';
+    let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar'; let origemModalFerias = 'acoes';
     let assinaturasRegistros = new Map(); let idsRegistrosConhecidos = new Set(); registrarEstadoRegistros();
 
     function criarBancoBase() {
@@ -108,12 +108,13 @@
         const camposFuncionarioPadrao = { pedirVT: true, pedirGratificacao: true, pedirSalFamilia: true, pedirUnidentis: true, pedirDescontoPassagem: true, pedirINSS: true, temControlePonto: true };
         normalizado.categorias = normalizado.categorias.map((categoria) => ({
             ...categoria,
+            tipoPagamento: (categoria && categoria.tipoPagamento) || ((categoria && categoria.semanal) ? 'semanal' : ((categoria && categoria.recebeContracheque === false) ? 'mensal_sem_carteira' : 'contracheque')),
             temQuinquenio: categoria && categoria.temQuinquenio === true,
             temFerias: !(categoria && categoria.semanal) && !(categoria && categoria.temFerias === false),
             recebeQuinzena: !(categoria && categoria.recebeQuinzena === false),
             recebeContracheque: !(categoria && categoria.recebeContracheque === false),
             camposFuncionario: { ...camposFuncionarioPadrao, ...((categoria && categoria.camposFuncionario) || {}) }
-        }));
+        })).map((categoria) => ({ ...categoria, semanal: categoria.tipoPagamento === 'semanal', recebeContracheque: categoria.tipoPagamento === 'contracheque', temFerias: categoria.tipoPagamento !== 'semanal' && categoria.temFerias !== false }));
         normalizado.funcoes = normalizado.funcoes.map((funcao) => ({ numero: "", ...funcao }));
         normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => {
             const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, recebeContracheque: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, temControlePonto: true, temFerias: true, ...funcionario };
