@@ -77,6 +77,11 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .btn-outline { background: transparent; border: 1px solid #00695C; color: #00695C; width: 100%; margin-bottom: 8px; text-align: left; }
         
         .section-title { background: #e0f2f1; padding: 8px; font-size: 13px; font-weight: bold; color: #004d40; border-radius: 4px; margin: 15px 0 10px 0; border-left: 4px solid #00695C;}
+        .perfil-admin-box { background:#F7FAFA; border:1px solid #DCE8E5; border-radius:8px; padding:8px; margin:-8px 0 12px; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:#455A64; }
+        .perfil-admin-box strong { color:#004D40; }
+        .perfil-admin-acoes { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+        .perfil-admin-acoes button { border:1px solid #00695C; background:#fff; color:#00695C; border-radius:6px; padding:6px 8px; font-size:11px; font-weight:800; cursor:pointer; }
+        .perfil-admin-acoes .sair { border-color:#B0BEC5; color:#607D8B; }
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; margin-right: 8px; vertical-align: middle; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px; }

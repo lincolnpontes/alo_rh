@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.37';
+    const APP_VERSION = 'v1.0.38';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -40,7 +40,7 @@
             funcoes: [],
             funcionarios: [],
             administradores: [],
-            configGerais: { salarioMinimo: "1621,00", adiantamentoQuinzena: "500,00", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [], inssFaixas: criarTabelaINSSPadrao(), folgasGerais: [] },
+            configGerais: { salarioMinimo: "1621,00", adiantamentoQuinzena: "500,00", diasAquisitivoFerias: 360, diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [], inssFaixas: criarTabelaINSSPadrao(), folgasGerais: [] },
             registros: [],
             configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, ultimaSincronizacao: 0, registrosExcluidos: {}, senhaAdminHash: "", senhaAdminSalt: "", segurancaVersao: 2 }
         };
@@ -98,6 +98,7 @@
         normalizado.configGerais.motivosAdiantamento = Array.isArray(normalizado.configGerais.motivosAdiantamento) ? normalizado.configGerais.motivosAdiantamento : [];
         normalizado.configGerais.inssFaixas = Array.isArray(normalizado.configGerais.inssFaixas) && normalizado.configGerais.inssFaixas.length ? normalizado.configGerais.inssFaixas : criarTabelaINSSPadrao();
         normalizado.configGerais.folgasGerais = Array.isArray(normalizado.configGerais.folgasGerais) ? normalizado.configGerais.folgasGerais : [];
+        normalizado.configGerais.diasAquisitivoFerias = Math.max(1, Math.min(370, Number(normalizado.configGerais.diasAquisitivoFerias || 360)));
         normalizado.configs.ultimaMudancaLocal = Number(normalizado.configs.ultimaMudancaLocal || 0);
         normalizado.configs.ultimaSincronizacao = Number(normalizado.configs.ultimaSincronizacao || 0);
         normalizado.configs.registrosExcluidos = normalizarExclusoesRegistros(normalizado.configs.registrosExcluidos);
@@ -105,13 +106,14 @@
         normalizado.categorias = normalizado.categorias.map((categoria) => ({
             ...categoria,
             temQuinquenio: categoria && categoria.temQuinquenio === true,
+            temFerias: !(categoria && categoria.temFerias === false),
             recebeQuinzena: !(categoria && categoria.recebeQuinzena === false),
             recebeContracheque: !(categoria && categoria.recebeContracheque === false),
             camposFuncionario: { ...camposFuncionarioPadrao, ...((categoria && categoria.camposFuncionario) || {}) }
         }));
         normalizado.funcoes = normalizado.funcoes.map((funcao) => ({ numero: "", ...funcao }));
         normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => {
-            const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, recebeContracheque: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, temControlePonto: true, ...funcionario };
+            const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, recebeContracheque: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, temControlePonto: true, temFerias: true, ...funcionario };
             f.qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
             return f;
         });

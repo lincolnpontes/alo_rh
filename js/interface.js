@@ -11,6 +11,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return f ? db.categorias.find(c => c.id === f.categoria) : null;
     }
 
+    function funcionarioTemDireitoFerias(f) {
+        if(!f) return false;
+        const cat = getCategoriaFuncionario(f);
+        if(cat && cat.temFerias === false) return false;
+        return f.temFerias !== false;
+    }
+
     function isFuncionarioSemanal(f) {
         const cat = getCategoriaFuncionario(f);
         return !!(cat && cat.semanal);
@@ -135,7 +142,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function cliqueItem(id) {
         let f = db.funcionarios.find(x => x.id === id); let catObj = db.categorias.find(c => c.id === f.categoria); document.getElementById('tituloAcoesFunc').innerText = getNomeUsoFuncionario(f); document.getElementById('acoesFuncId').value = f.id; document.getElementById('btnPagarExtra').style.display = (catObj && catObj.semanal) ? 'block' : 'none'; 
         document.getElementById('btnAcaoAtraso').style.display = (f.habAtrasos !== false) ? 'block' : 'none';
-        if(catObj && catObj.semanal) { document.getElementById('btnAcaoFalta').style.display = (f.habFaltas) ? 'block' : 'none'; document.getElementById('btnAcaoFerias').style.display = (f.habFerias) ? 'block' : 'none'; } else { document.getElementById('btnAcaoFalta').style.display = 'block'; document.getElementById('btnAcaoFerias').style.display = 'block'; }
+        if(catObj && catObj.semanal) { document.getElementById('btnAcaoFalta').style.display = (f.habFaltas) ? 'block' : 'none'; document.getElementById('btnAcaoFerias').style.display = (f.habFerias && funcionarioTemDireitoFerias(f)) ? 'block' : 'none'; } else { document.getElementById('btnAcaoFalta').style.display = 'block'; document.getElementById('btnAcaoFerias').style.display = funcionarioTemDireitoFerias(f) ? 'block' : 'none'; }
         document.getElementById('modalAcoesFunc').style.display = 'flex';
     }
 
@@ -331,12 +338,46 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return true;
     }
 
+    function atualizarBoxPerfilAdmin() {
+        const box = document.getElementById('perfilAdminBox');
+        if(!box) return;
+        if(db.administradores.length === 0) {
+            box.innerHTML = `<span><strong>Perfil:</strong> sem administradores cadastrados</span>`;
+            return;
+        }
+        const admin = getAdminAtual();
+        const nome = admin ? admin.nome : 'nenhum perfil ativo';
+        box.innerHTML = `<span><strong>Perfil:</strong> ${escapeHTML(nome)}</span><div class="perfil-admin-acoes"><button onclick="trocarPerfilAdmin()">Trocar perfil</button>${admin ? '<button class="sair" onclick="sairPerfilAdmin()">Sair</button>' : ''}</div>`;
+    }
+
+    function abrirMenuPrincipal() {
+        atualizarBoxPerfilAdmin();
+        document.getElementById('modalPainelUnificado').style.display = 'flex';
+    }
+
+    function trocarPerfilAdmin() {
+        if(db.administradores.length === 0) return alert('Cadastre um administrador primeiro.');
+        const senha = prompt('Digite a senha do perfil:');
+        if(senha === null) return;
+        const admin = getAdminPorSenha(senha);
+        if(!admin) return alert('Senha de administrador não encontrada.');
+        adminSessaoId = admin.id;
+        sessionStorage.setItem('alorh_admin_sessao', adminSessaoId);
+        atualizarBoxPerfilAdmin();
+    }
+
+    function sairPerfilAdmin() {
+        adminSessaoId = '';
+        sessionStorage.removeItem('alorh_admin_sessao');
+        atualizarBoxPerfilAdmin();
+    }
+
     // 3. GERENCIAMENTO CRUD
     function abrirGerenciar(tipo) {
         const permissoesGerenciar = { empresa: 'dadosEmpresa', configGerais: 'configGerais', administradores: 'gerenciarAdministradores' };
         if(permissoesGerenciar[tipo] && !garantirPermissao(permissoesGerenciar[tipo], () => abrirGerenciar(tipo), 'abrir esta área')) return;
         fecharModal('modalPainelUnificado');
-        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
+        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; document.getElementById('confDiasAquisitivoFerias').value = db.configGerais.diasAquisitivoFerias || 360; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
         if(tipo === 'empresa') { document.getElementById('empLogoBase64').value = db.empresa.logo || ''; document.getElementById('previewLogo').innerHTML = db.empresa.logo ? `<img src="${db.empresa.logo}" style="max-height:50px;">` : ''; document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
         
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
@@ -453,6 +494,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function getBeneficiosVinculo(c = {}) {
         return {
             temQuinquenio: c && c.temQuinquenio === true,
+            temFerias: !(c && c.temFerias === false),
             recebeQuinzena: !(c && c.recebeQuinzena === false),
             recebeContracheque: !(c && c.recebeContracheque === false)
         };
@@ -469,6 +511,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('classeTemControlePonto').checked = campos.temControlePonto;
         const beneficios = getBeneficiosVinculo(c);
         document.getElementById('classeTemQuinquenio').checked = beneficios.temQuinquenio;
+        document.getElementById('classeTemFerias').checked = beneficios.temFerias;
         document.getElementById('classeRecebeQuinzena').checked = beneficios.recebeQuinzena;
         document.getElementById('classeRecebeContracheque').checked = beneficios.recebeContracheque;
     }
@@ -512,6 +555,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             corTexto: document.getElementById('classeCorTexto').value,
             semanal: document.getElementById('classeSemanal').checked,
             temQuinquenio: document.getElementById('classeTemQuinquenio').checked,
+            temFerias: document.getElementById('classeTemFerias').checked,
             recebeQuinzena: document.getElementById('classeRecebeQuinzena').checked,
             recebeContracheque: document.getElementById('classeRecebeContracheque').checked,
             camposFuncionario: {
@@ -597,6 +641,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             { linha: 'linhaFuncQuinzena', input: 'funcRecebeQuinzena', visivel: beneficios.recebeQuinzena, checked: funcionario ? funcionario.recebeQuinzena !== false : true },
             { linha: 'linhaFuncContracheque', input: 'funcRecebeContracheque', visivel: beneficios.recebeContracheque, checked: funcionario ? funcionario.recebeContracheque !== false : true },
             { linha: 'linhaFuncControlePonto', input: 'funcTemControlePonto', visivel: campos.temControlePonto, checked: funcionario ? funcionario.temControlePonto !== false : true },
+            { linha: 'linhaFuncFerias', input: 'funcTemFerias', visivel: beneficios.temFerias, checked: funcionario ? funcionario.temFerias !== false : true },
             { linha: 'linhaFuncQuinquenio', input: 'funcRecebeQuinquenio', visivel: beneficios.temQuinquenio, checked: funcionario ? funcionario.recebeQuinquenio === true : true }
         ];
         let temAlgum = false;
@@ -719,7 +764,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             Object.assign(novo, { funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } });
         }
         if(temPermissaoAtual('financeiro')) {
-            Object.assign(novo, { vtRota: linhaVisivel('linhaFuncVT') && document.getElementById('funcTemVT').checked ? document.getElementById('funcVTRota').value : '', pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, temGratificacao: linhaVisivel('linhaFuncGratificacao') && document.getElementById('funcTemGratificacao').checked, temSalFamilia: linhaVisivel('linhaFuncSalFamilia') && document.getElementById('funcTemSalFamilia').checked, temUnidentis: linhaVisivel('linhaFuncUnidentis') && document.getElementById('funcTemUnidentis').checked, descontaPassagem: linhaVisivel('linhaFuncPassagem') && document.getElementById('funcDescontaPassagem').checked, descontaINSS: linhaVisivel('linhaFuncINSS') && document.getElementById('funcDescontaINSS').checked, recebeQuinquenio: linhaVisivel('linhaFuncQuinquenio') && document.getElementById('funcRecebeQuinquenio').checked, qtdQuinquenios: qtdQuinquenios, recebeQuinzena: linhaVisivel('linhaFuncQuinzena') && document.getElementById('funcRecebeQuinzena').checked, recebeContracheque: linhaVisivel('linhaFuncContracheque') && document.getElementById('funcRecebeContracheque').checked, temControlePonto: linhaVisivel('linhaFuncControlePonto') && document.getElementById('funcTemControlePonto').checked });
+            Object.assign(novo, { vtRota: linhaVisivel('linhaFuncVT') && document.getElementById('funcTemVT').checked ? document.getElementById('funcVTRota').value : '', pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, temGratificacao: linhaVisivel('linhaFuncGratificacao') && document.getElementById('funcTemGratificacao').checked, temSalFamilia: linhaVisivel('linhaFuncSalFamilia') && document.getElementById('funcTemSalFamilia').checked, temUnidentis: linhaVisivel('linhaFuncUnidentis') && document.getElementById('funcTemUnidentis').checked, descontaPassagem: linhaVisivel('linhaFuncPassagem') && document.getElementById('funcDescontaPassagem').checked, descontaINSS: linhaVisivel('linhaFuncINSS') && document.getElementById('funcDescontaINSS').checked, recebeQuinquenio: linhaVisivel('linhaFuncQuinquenio') && document.getElementById('funcRecebeQuinquenio').checked, qtdQuinquenios: qtdQuinquenios, recebeQuinzena: linhaVisivel('linhaFuncQuinzena') && document.getElementById('funcRecebeQuinzena').checked, recebeContracheque: linhaVisivel('linhaFuncContracheque') && document.getElementById('funcRecebeContracheque').checked, temControlePonto: linhaVisivel('linhaFuncControlePonto') && document.getElementById('funcTemControlePonto').checked, temFerias: linhaVisivel('linhaFuncFerias') && document.getElementById('funcTemFerias').checked });
         }
         const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); 
     }
@@ -773,7 +818,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function moverMotivo(idx, dir) { if(dir === -1 && idx > 0) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx-1]; tempMotivos[idx-1] = t; } if(dir === 1 && idx < tempMotivos.length-1) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx+1]; tempMotivos[idx+1] = t; } renderListasConfig(); }
     function confirmarRemoverMotivo(idx) { motivoToDelete = idx; document.getElementById('modalConfirmExclusaoMotivo').style.display = 'flex'; }
     function executarRemocaoMotivo() { if(motivoToDelete !== null) { tempMotivos.splice(motivoToDelete, 1); renderListasConfig(); } fecharModal('modalConfirmExclusaoMotivo'); }
-    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; db.configGerais.inssFaixas = ordenarINSS(tempINSS).length ? ordenarINSS(tempINSS) : criarTabelaINSSPadrao(); salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
+    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasAquisitivoFerias = Math.max(1, Math.min(370, Number(document.getElementById('confDiasAquisitivoFerias').value || 360))); db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; db.configGerais.inssFaixas = ordenarINSS(tempINSS).length ? ordenarINSS(tempINSS) : criarTabelaINSSPadrao(); salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
 
     // POPULAR ADMIN SELECT
     function getAdminOptions(selectedId = '') { let html = optionHTML('', '-- Selecione --'); db.administradores.forEach(a => { html += optionHTML(a.id, a.nome, selectedId === a.id); }); return html; }
@@ -1179,17 +1224,42 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         box.innerHTML = html;
     }
 
+    function getDiasAquisitivoFerias() {
+        return Math.max(1, Math.min(370, Number((db.configGerais && db.configGerais.diasAquisitivoFerias) || 360)));
+    }
+
+    function getUltimaFeriasComPeriodo(funcId) {
+        return getRegistrosFeriasFuncionario(funcId)[0] || null;
+    }
+
+    function sugerirPeriodoAquisitivoFuncionario(funcId) {
+        const f = db.funcionarios.find(x => x.id === funcId) || {};
+        const ultima = getUltimaFeriasComPeriodo(funcId);
+        let inicio = f.admissao || getHojeSTR();
+        if(ultima && ultima.periodoAquisitivoFim) inicio = somarDiasISO(ultima.periodoAquisitivoFim, 1);
+        const fim = somarDiasISO(inicio, getDiasAquisitivoFerias() - 1);
+        return { inicio, fim };
+    }
+
+    function sugerirFimPeriodoAquisitivo() {
+        const inicio = document.getElementById('feriasAquisitivoInicio').value;
+        if(!inicio) return;
+        document.getElementById('feriasAquisitivoFim').value = somarDiasISO(inicio, getDiasAquisitivoFerias() - 1);
+    }
+
     function abrirModalFerias(editId = null) {
         if(!garantirPermissao('lancarFerias', () => abrirModalFerias(editId), 'lançar férias')) return;
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; document.getElementById('feriasAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
+        const funcionario = db.funcionarios.find(x => x.id === funcId);
+        if(!editId && funcionario && !funcionarioTemDireitoFerias(funcionario)) return alert('Este funcionário está marcado como sem direito a férias.');
         configurarSelectAdminPorPermissao('feriasAdmin', 'lancarFerias');
         let areaEdit = document.getElementById('areaEditFerias');
-        if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('feriasEditId').value = editId; document.getElementById('feriasData').value = r.data; document.getElementById('feriasDataFim').value = r.dataFim; document.getElementById('feriasRetorno').value = r.retorno; document.getElementById('feriasAdmin').value = r.adminId; document.getElementById('btnSalvarFerias').innerText = "Salvar Edição"; document.getElementById('btnCancelEditFerias').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
-        else { document.getElementById('feriasEditId').value = ''; document.getElementById('feriasData').value = getHojeSTR(); document.getElementById('feriasDataFim').value = ''; document.getElementById('feriasRetorno').value = ''; document.getElementById('btnSalvarFerias').innerText = "Gravar Férias"; document.getElementById('btnCancelEditFerias').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
+        if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('feriasEditId').value = editId; document.getElementById('feriasData').value = r.data; document.getElementById('feriasDataFim').value = r.dataFim; document.getElementById('feriasAquisitivoInicio').value = r.periodoAquisitivoInicio || ''; document.getElementById('feriasAquisitivoFim').value = r.periodoAquisitivoFim || ''; document.getElementById('feriasRetorno').value = r.retorno; document.getElementById('feriasAdmin').value = r.adminId; document.getElementById('btnSalvarFerias').innerText = "Salvar Edição"; document.getElementById('btnCancelEditFerias').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
+        else { const periodo = sugerirPeriodoAquisitivoFuncionario(funcId); document.getElementById('feriasEditId').value = ''; document.getElementById('feriasData').value = getHojeSTR(); document.getElementById('feriasDataFim').value = ''; document.getElementById('feriasAquisitivoInicio').value = periodo.inicio; document.getElementById('feriasAquisitivoFim').value = periodo.fim; document.getElementById('feriasRetorno').value = ''; document.getElementById('btnSalvarFerias').innerText = "Gravar Férias"; document.getElementById('btnCancelEditFerias').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistFerias(funcId); document.getElementById('modalFormFerias').style.display = 'flex';
     }
-    function salvarFerias() { if(!adminSelecionadoTemPermissao('feriasAdmin', 'lancarFerias')) return; const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); }
-    function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
+    function salvarFerias() { if(!adminSelecionadoTemPermissao('feriasAdmin', 'lancarFerias')) return; const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const aqInicio = document.getElementById('feriasAquisitivoInicio').value; const aqFim = document.getElementById('feriasAquisitivoFim').value; if(aqInicio && aqFim && aqInicio > aqFim) return alert('O período aquisitivo está invertido.'); const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, periodoAquisitivoInicio: aqInicio, periodoAquisitivoFim: aqFim, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); if(document.getElementById('modalCalendarioFerias').style.display === 'flex') renderCalendarioFerias(); }
+    function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = getRegistrosFeriasFuncionario(funcId); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; const periodo = r.periodoAquisitivoInicio || r.periodoAquisitivoFim ? `<br><span style="color:#795548; font-size:11px; font-weight:bold;">Aquisitivo: ${formatDataBR(r.periodoAquisitivoInicio)} a ${formatDataBR(r.periodoAquisitivoFim)}</span>` : ''; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b>${periodo}<br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
     function somarMesesISO(dataStr, meses) {
         if(!dataStr) return '';
@@ -1216,25 +1286,41 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function getRegistrosFeriasFuncionario(funcId) {
         return db.registros
             .filter(r => r.type === 'ferias' && r.funcId === funcId && r.data)
-            .sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')));
+            .sort((a, b) => {
+                const dataB = String(b.periodoAquisitivoFim || b.dataFim || b.data || '');
+                const dataA = String(a.periodoAquisitivoFim || a.dataFim || a.data || '');
+                return dataB.localeCompare(dataA);
+            });
+    }
+
+    function getProximoPeriodoAquisitivo(f) {
+        if(!f || !f.admissao) return { inicio: '', fim: '', ultima: null };
+        const ultima = getRegistrosFeriasFuncionario(f.id)[0] || null;
+        let inicio = f.admissao;
+        if(ultima && ultima.periodoAquisitivoFim) inicio = somarDiasISO(ultima.periodoAquisitivoFim, 1);
+        else if(ultima && ultima.dataFim) inicio = somarDiasISO(ultima.dataFim, 1);
+        const fim = somarDiasISO(inicio, getDiasAquisitivoFerias() - 1);
+        return { inicio, fim, ultima };
     }
 
     function calcularSituacaoFerias(f) {
         const hoje = getHojeSTR();
-        if(!f.admissao) {
-            return { status: 'sem_admissao', classe: '', rotulo: 'Sem admissão', dias: null, aquisitivo: '', limite: '', ultima: null, base: '' };
+        if(!funcionarioTemDireitoFerias(f)) {
+            return { status: 'sem_direito', classe: '', rotulo: 'Sem direito', dias: null, aquisitivo: '', limite: '', ultima: null, periodoInicio: '', periodoFim: '' };
         }
-        const ferias = getRegistrosFeriasFuncionario(f.id);
-        const ultima = ferias[0] || null;
-        const base = ultima ? ultima.data : f.admissao;
-        const aquisitivo = subtrairDiasISO(somarMesesISO(base, 12), 1);
-        const limite = subtrairDiasISO(somarMesesISO(base, 24), 1);
+        if(!f.admissao) {
+            return { status: 'sem_admissao', classe: '', rotulo: 'Sem admissão', dias: null, aquisitivo: '', limite: '', ultima: null, periodoInicio: '', periodoFim: '' };
+        }
+        const periodo = getProximoPeriodoAquisitivo(f);
+        const aquisitivo = periodo.fim;
+        const limite = subtrairDiasISO(somarMesesISO(aquisitivo, 12), 1);
         const dias = diasEntreISO(hoje, limite);
-        if(hoje < aquisitivo) return { status: 'formacao', classe: 'formacao', rotulo: 'Em formação', dias, aquisitivo, limite, ultima, base };
-        if(dias < 0) return { status: 'vencido', classe: 'vencido', rotulo: 'Vencido', dias, aquisitivo, limite, ultima, base };
-        if(dias <= 30) return { status: 'urgente', classe: 'urgente', rotulo: 'Até 30 dias', dias, aquisitivo, limite, ultima, base };
-        if(dias <= 90) return { status: 'atencao', classe: 'atencao', rotulo: 'Até 90 dias', dias, aquisitivo, limite, ultima, base };
-        return { status: 'ok', classe: 'ok', rotulo: 'Em dia', dias, aquisitivo, limite, ultima, base };
+        const comum = { dias, aquisitivo, limite, ultima: periodo.ultima, periodoInicio: periodo.inicio, periodoFim: periodo.fim };
+        if(hoje < aquisitivo) return { ...comum, status: 'formacao', classe: 'formacao', rotulo: 'Em formação' };
+        if(dias < 0) return { ...comum, status: 'vencido', classe: 'vencido', rotulo: 'Vencido' };
+        if(dias <= 30) return { ...comum, status: 'urgente', classe: 'urgente', rotulo: 'Até 30 dias' };
+        if(dias <= 90) return { ...comum, status: 'atencao', classe: 'atencao', rotulo: 'Até 90 dias' };
+        return { ...comum, status: 'ok', classe: 'ok', rotulo: 'Em dia' };
     }
 
     function abrirCalendarioFerias() {
@@ -1258,7 +1344,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(!lista || !resumoBox) return;
         const filtro = document.getElementById('filtroCalendarioFerias').value || 'todos';
         let itens = db.funcionarios
-            .filter(f => !f.arquivado)
+            .filter(f => !f.arquivado && funcionarioTemDireitoFerias(f))
             .map(f => ({ f, s: calcularSituacaoFerias(f) }))
             .sort((a, b) => {
                 const la = a.s.limite || '9999-12-31';
@@ -1285,8 +1371,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
         lista.innerHTML = itens.map(({ f, s }) => {
             const ultima = s.ultima ? `${formatDataBR(s.ultima.data)}${s.ultima.dataFim ? ` a ${formatDataBR(s.ultima.dataFim)}` : ''}` : 'Sem férias registradas';
+            const ultimoPeriodo = s.ultima && (s.ultima.periodoAquisitivoInicio || s.ultima.periodoAquisitivoFim) ? `${formatDataBR(s.ultima.periodoAquisitivoInicio)} a ${formatDataBR(s.ultima.periodoAquisitivoFim)}` : 'Sem período anterior';
             const prazo = s.dias === null ? 'Informe a admissão' : (s.dias < 0 ? `${Math.abs(s.dias)} dia(s) vencido` : `${s.dias} dia(s) restantes`);
             const admissao = f.admissao ? formatDataBR(f.admissao) : 'Não informada';
+            const periodoAquisitivo = s.periodoInicio || s.periodoFim ? `${formatDataBR(s.periodoInicio)} a ${formatDataBR(s.periodoFim)}` : '-';
             const aquisitivo = s.aquisitivo ? formatDataBR(s.aquisitivo) : '-';
             const limite = s.limite ? formatDataBR(s.limite) : '-';
             return `<div class="ferias-card ${s.classe}">
@@ -1294,10 +1382,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 <div class="ferias-meta">
                     <div>Admissão: <b>${admissao}</b></div>
                     <div>Últimas férias: <b>${escapeHTML(ultima)}</b></div>
+                    <div>Último aquisitivo: <b>${escapeHTML(ultimoPeriodo)}</b></div>
+                    <div>Próximo aquisitivo: <b>${escapeHTML(periodoAquisitivo)}</b></div>
                     <div>Direito formado em: <b>${aquisitivo}</b></div>
                     <div>Prazo limite: <b>${limite}</b></div>
                     <div>Prazo: <b>${escapeHTML(prazo)}</b></div>
-                    <div>Base de cálculo: <b>${s.ultima ? 'últimas férias' : 'admissão'}</b></div>
+                    <div>Dias aquisitivos: <b>${getDiasAquisitivoFerias()}</b></div>
                 </div>
                 <div class="ferias-actions"><button class="btn-outline" style="border-color:#F57F17; color:#E65100; margin:0; text-align:center;" onclick="abrirFeriasPeloCalendario(${jsArg(f.id)})">Registrar férias</button></div>
             </div>`;

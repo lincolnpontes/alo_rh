@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.37</title>
+    <title>Alô RH v1.0.38</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.37">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.38">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.37</div>
+    <div class="splash-versao">v1.0.38</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -35,7 +35,7 @@
             <button onclick="abrirModalAniversarios()">🎂</button>
             <button onclick="abrirCalendarioFerias()" title="Férias" aria-label="Férias">🏖️</button>
             <button class="btn-resumo-header" onclick="abrirModalResumo()" title="Resumo" aria-label="Resumo">📝</button>
-            <button onclick="document.getElementById('modalPainelUnificado').style.display='flex'">⚙️</button>
+            <button onclick="abrirMenuPrincipal()">⚙️</button>
         </div>
     </div>
     
@@ -63,8 +63,9 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.37</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.38</small>
         </h2>
+        <div id="perfilAdminBox" class="perfil-admin-box"></div>
         <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
         <button class="btn-outline" onclick="abrirGerenciar('configGerais')">⚙️ Configurações Gerais</button>
@@ -210,6 +211,7 @@
                 <label class="switch-row"><span class="switch-row-text">Recebe quinzena</span><span class="switch"><input type="checkbox" id="classeRecebeQuinzena" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Recebe Contracheque</span><span class="switch"><input type="checkbox" id="classeRecebeContracheque" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Controle de ponto</span><span class="switch"><input type="checkbox" id="classeTemControlePonto" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">Direito a férias</span><span class="switch"><input type="checkbox" id="classeTemFerias" checked><span class="slider"></span></span></label>
             </div>
         </div>
 
@@ -347,6 +349,7 @@
                 <label id="linhaFuncQuinzena" class="switch-row"><span class="switch-row-text">Recebe quinzena</span><span class="switch"><input type="checkbox" id="funcRecebeQuinzena" checked><span class="slider"></span></span></label>
                 <label id="linhaFuncContracheque" class="switch-row"><span class="switch-row-text">Recebe Contracheque</span><span class="switch"><input type="checkbox" id="funcRecebeContracheque" checked><span class="slider"></span></span></label>
                 <label id="linhaFuncControlePonto" class="switch-row"><span class="switch-row-text">Controle de ponto</span><span class="switch"><input type="checkbox" id="funcTemControlePonto" checked><span class="slider"></span></span></label>
+                <label id="linhaFuncFerias" class="switch-row"><span class="switch-row-text">Direito a férias</span><span class="switch"><input type="checkbox" id="funcTemFerias" checked><span class="slider"></span></span></label>
                 <div id="linhaFuncQuinquenio" class="switch-row">
                     <span class="switch-row-text">Quinquênio<small>5% por quinquênio</small></span>
                     <div style="display:flex; align-items:center; gap:6px;">
@@ -372,6 +375,9 @@
         <div style="display: flex; gap: 10px;">
             <div class="form-group" style="flex:1;"><label>Salário Mínimo:</label><input type="text" id="confSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
             <div class="form-group" style="flex:1;"><label>Adiant. Quinzena:</label><input type="text" id="confAdiantamento" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;"><label>Dias para adquirir férias:</label><input type="number" id="confDiasAquisitivoFerias" inputmode="numeric" min="1" max="370" placeholder="360"></div>
         </div>
         
         <div class="section-title">Dias de Funcionamento da Empresa</div>
@@ -625,6 +631,11 @@
                 <div class="form-group" style="flex:1;"><label>Data Início:</label><input type="date" id="feriasData"></div>
                 <div class="form-group" style="flex:1;"><label>Data Fim:</label><input type="date" id="feriasDataFim"></div>
             </div>
+            <div class="section-title" style="margin-top:5px;">Período Aquisitivo</div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex:1;"><label>Início:</label><input type="date" id="feriasAquisitivoInicio" onchange="sugerirFimPeriodoAquisitivo()"></div>
+                <div class="form-group" style="flex:1;"><label>Fim:</label><input type="date" id="feriasAquisitivoFim"></div>
+            </div>
             <div class="form-group"><label>Data de Retorno ao Trabalho:</label><input type="date" id="feriasRetorno"></div>
             <div class="form-group"><label>Registrado por:</label><select id="feriasAdmin"></select></div>
 
@@ -781,11 +792,11 @@
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalCalendarioFerias')" style="width: 100%;">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.37"></script>
-<script src="js/calculos.js?v=1.0.37"></script>
-<script src="js/interface.js?v=1.0.37"></script>
-<script src="js/impressao.js?v=1.0.37"></script>
-<script src="js/sincronizacao.js?v=1.0.37"></script>
+<script src="js/dados.js?v=1.0.38"></script>
+<script src="js/calculos.js?v=1.0.38"></script>
+<script src="js/interface.js?v=1.0.38"></script>
+<script src="js/impressao.js?v=1.0.38"></script>
+<script src="js/sincronizacao.js?v=1.0.38"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
