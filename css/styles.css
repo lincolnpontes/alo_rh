@@ -124,6 +124,13 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .resumo-linha { display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid #eee; padding:5px 0; }
         .resumo-linha:last-child { border-bottom:0; }
         .resumo-linha strong { white-space:nowrap; font-variant-numeric:tabular-nums; }
+        .resumo-vinculo { border:1px solid #e8eeee; border-radius:7px; padding:9px; margin-bottom:8px; background:#fbfdfd; }
+        .resumo-vinculo-head { display:flex; justify-content:space-between; gap:10px; align-items:center; font-weight:900; color:#004D40; margin-bottom:6px; }
+        .resumo-vinculo-head small { color:#607D8B; font-weight:800; white-space:nowrap; }
+        .resumo-vinculo-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px 10px; color:#455A64; }
+        .resumo-vinculo-grid div { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(0,0,0,.05); padding-bottom:3px; }
+        .resumo-vinculo-grid strong { font-variant-numeric:tabular-nums; text-align:right; }
+        .resumo-total-final { background:#E0F2F1; border-color:#B2DFDB; }
         .resumo-texto-preview { white-space:pre-wrap; background:#f9f9f9; border:1px solid #eee; border-radius:6px; padding:8px; max-height:170px; overflow:auto; font-size:11px; color:#444; }
         .resumo-acoes { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
         .resumo-periodo-label { color: #555; font-size: 12px; font-weight: 700; margin-bottom: 10px; text-align: center; }
@@ -162,11 +169,15 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .btn-contra-check { border:1px solid #D32F2F; background:#fff; color:#D32F2F; border-radius:6px; padding:3px 7px; font-size:11px; font-weight:800; cursor:pointer; }
         .btn-contra-check.ativo { background:#D32F2F; color:#fff; }
         .btn-contra-check:disabled { opacity:.5; cursor:not-allowed; }
+        .btn-contra-check.ativo:disabled { opacity:1; }
         .btn-cancelar-quinzena { border:none; background:#FFEBEE; color:#D32F2F; border-radius:6px; width:26px; height:26px; font-size:14px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
         .contra-actions { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
         .contra-actions-left { display:flex; gap:6px; flex-wrap:wrap; }
-        .btn-contra-util { border:1px solid #0277BD; background:#fff; color:#0277BD; border-radius:6px; padding:7px 9px; font-size:12px; font-weight:800; cursor:pointer; }
+        .btn-contra-util { border:1px solid #0277BD; background:#fff; color:#0277BD; border-radius:6px; padding:9px 12px; min-height:34px; font-size:13px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; }
+        .btn-contra-util.pix { min-width:74px; }
         .btn-contra-util.whats { border-color:#2E7D32; color:#2E7D32; }
+        .emoji-pix { display:inline-block; filter:grayscale(1); opacity:.72; margin-right:4px; }
+        .btn-pix-app { display:inline-flex; align-items:center; justify-content:center; gap:4px; }
         .btn-fechar-contra { border:none; background:#2E7D32; color:#fff; border-radius:6px; padding:8px 10px; font-size:12px; font-weight:800; cursor:pointer; }
         .pix-list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
         .pix-list-row .pix-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

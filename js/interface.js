@@ -667,7 +667,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const box = document.getElementById('listaEscolhaPix');
         box.innerHTML = lista.map((pix, i) => {
             const tipo = pix.tipo || 'PIX';
-            return `<button class="btn-outline" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left;" onclick="copiarChavePixFuncionario(${i}, ${jsArg(funcId)})"><strong>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></button>`;
+            return `<button class="btn-outline btn-pix-app" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left; justify-content:flex-start;" onclick="copiarChavePixFuncionario(${i}, ${jsArg(funcId)})"><span><strong><span class="emoji-pix">🔑</span>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></span></button>`;
         }).join('');
         document.getElementById('modalEscolhaPix').style.display = 'flex';
     }
@@ -1220,6 +1220,176 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         <div class="resumo-bloco"><div class="resumo-bloco-titulo">Resumo para contador</div><div class="resumo-texto-preview">${escapeHTML(textoContador)}</div><div class="resumo-acoes"><button class="btn-action" onclick="enviarResumoWhatsapp('contador')" style="background:#0277BD;">Enviar ao contador</button></div></div>`;
     }
 
+    function getTipoAusenciaResumo(registro) {
+        if(registro.tipo === 'Falta' && registro.descontarDia === false) return 'Falta justificada';
+        if(registro.tipo === 'Falta') return 'Falta injustificada';
+        if(registro.tipo === 'Atestado') return 'Atestado médico';
+        return registro.tipo || 'Ausência';
+    }
+
+    function getTipoAusenciaContador(registro) {
+        if(registro.tipo === 'Falta' && registro.descontarDia === false) return 'Falta Justificada.';
+        if(registro.tipo === 'Falta') return 'Falta Injustificada.';
+        if(registro.tipo === 'Atestado') return 'Atestado Médico';
+        return registro.tipo || 'Ocorrência';
+    }
+
+    function criarResumoVinculo(nome) {
+        return { nome, funcionarios: 0, pagoMes: 0, extrasPagos: 0, quinzena: 0, adiantamentos: 0, adiantamentosBaixados: 0, saldoAdiantamentos: 0 };
+    }
+
+    function calcularResumoPeriodo(intervalo) {
+        const ativos = db.funcionarios.filter(f => !f.arquivado);
+        const faltas = db.registros.filter(r => r.type === 'falta' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const faltaram = new Set(faltas.map(r => r.funcId));
+        const atrasos = db.registros.filter(r => r.type === 'atraso' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const minutosAtraso = atrasos.reduce((acc, r) => acc + Number(r.minutos || minutosEntreHorarios(r.horaPrevista, r.horaChegada) || 0), 0);
+        const extras = db.registros.filter(r => r.type === 'presenca' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const totalExtrasLancados = extras.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const pagamentosExtras = db.registros.filter(r => r.type === 'pagamento_semana' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const totalPagoExtras = pagamentosExtras.reduce((acc, r) => acc + Number(r.valorTotal || 0), 0);
+        const adiantamentos = db.registros.filter(r => r.type === 'adiantamento' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const totalAdiantamentos = adiantamentos.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const totalAdiantamentosBaixados = adiantamentos.filter(r => r.descontado).reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const quinzena = db.registros.filter(r => r.type === 'desconto_quinzena' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const totalQuinzena = quinzena.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const totalPagoMes = totalPagoExtras + totalAdiantamentos + totalQuinzena;
+        const saldoAdiantamentos = Math.max(0, totalAdiantamentos - totalAdiantamentosBaixados);
+        const porVinculo = new Map();
+        const nomeVinculo = (f) => {
+            const cat = db.categorias.find(c => c.id === f.categoria);
+            return cat ? cat.nome : 'Sem vínculo';
+        };
+        const garantirVinculo = (nome) => {
+            if(!porVinculo.has(nome)) porVinculo.set(nome, criarResumoVinculo(nome));
+            return porVinculo.get(nome);
+        };
+        const somarPagamento = (funcId, campo, valor) => {
+            const f = db.funcionarios.find(x => x.id === funcId);
+            if(!f) return;
+            const item = garantirVinculo(nomeVinculo(f));
+            item[campo] += Number(valor || 0);
+        };
+        ativos.forEach((f) => garantirVinculo(nomeVinculo(f)).funcionarios++);
+        pagamentosExtras.forEach(r => {
+            const valor = Number(r.valorTotal || 0);
+            somarPagamento(r.funcId, 'extrasPagos', valor);
+            somarPagamento(r.funcId, 'pagoMes', valor);
+        });
+        quinzena.forEach(r => {
+            const valor = Number(r.valor || 0);
+            somarPagamento(r.funcId, 'quinzena', valor);
+            somarPagamento(r.funcId, 'pagoMes', valor);
+        });
+        adiantamentos.forEach(r => {
+            const valor = Number(r.valor || 0);
+            somarPagamento(r.funcId, 'adiantamentos', valor);
+            somarPagamento(r.funcId, 'pagoMes', valor);
+            if(r.descontado) somarPagamento(r.funcId, 'adiantamentosBaixados', valor);
+        });
+        porVinculo.forEach(v => { v.saldoAdiantamentos = Math.max(0, v.adiantamentos - v.adiantamentosBaixados); });
+        return { ativos, faltas, faltaram, atrasos, minutosAtraso, extras, totalExtrasLancados, pagamentosExtras, totalPagoExtras, adiantamentos, totalAdiantamentos, totalAdiantamentosBaixados, saldoAdiantamentos, quinzena, totalQuinzena, totalPagoMes, porVinculo: [...porVinculo.values()].sort((a, b) => a.nome.localeCompare(b.nome)) };
+    }
+
+    function montarResumoGeralWhatsapp(intervalo) {
+        const r = calcularResumoPeriodo(intervalo);
+        const linhas = [
+            `*Resumo Alô RH*`,
+            `*Período:* ${intervalo.label}`,
+            '',
+            `*Funcionários ativos por vínculo*`
+        ];
+        if(r.porVinculo.length === 0) linhas.push('- Nenhum vínculo cadastrado.');
+        r.porVinculo.forEach(v => linhas.push(`- ${v.nome}: ${v.funcionarios} funcionário(s)`));
+        linhas.push(
+            '',
+            `*Financeiro do período*`,
+            `Pago/lançado: R$ ${formatMoeda(r.totalPagoMes)}`,
+            `- Quinzena: R$ ${formatMoeda(r.totalQuinzena)}`,
+            `- Pagamento de extras: R$ ${formatMoeda(r.totalPagoExtras)}`,
+            `- Adiantamentos: R$ ${formatMoeda(r.totalAdiantamentos)}`,
+            `Adiantamentos baixados: R$ ${formatMoeda(r.totalAdiantamentosBaixados)}`,
+            `Saldo de adiantamentos: R$ ${formatMoeda(r.saldoAdiantamentos)}`,
+            '',
+            `*Ocorrências*`,
+            `Funcionários com ausência: ${r.faltaram.size} (${r.faltas.length} registro(s))`,
+            `Atrasos: ${r.atrasos.length}${r.minutosAtraso ? ` (${r.minutosAtraso} min)` : ''}`,
+            '',
+            `*Financeiro por vínculo*`
+        );
+        r.porVinculo.forEach(v => {
+            linhas.push(`- ${v.nome}: pago R$ ${formatMoeda(v.pagoMes)} | quinzena R$ ${formatMoeda(v.quinzena)} | adiant. R$ ${formatMoeda(v.adiantamentos)} | baixado R$ ${formatMoeda(v.adiantamentosBaixados)} | saldo R$ ${formatMoeda(v.saldoAdiantamentos)}`);
+        });
+        return linhas.join('\n');
+    }
+
+    function montarResumoContadorWhatsapp(intervalo) {
+        const faltas = db.registros
+            .filter(r => r.type === 'falta' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim))
+            .map(r => ({ registro: r, funcionario: db.funcionarios.find(f => f.id === r.funcId) }))
+            .sort((a, b) => String((a.funcionario && a.funcionario.nome) || '').localeCompare(String((b.funcionario && b.funcionario.nome) || '')) || String(a.registro.data || '').localeCompare(String(b.registro.data || '')));
+        const linhas = [`*Ocorrências - Contracheque*`, `*Período:* ${intervalo.label}`, ''];
+        if(faltas.length === 0) {
+            linhas.push('Sem ocorrências registradas no período.');
+            return linhas.join('\n');
+        }
+        let atualFunc = '';
+        faltas.forEach((item) => {
+            const r = item.registro;
+            const nome = item.funcionario ? item.funcionario.nome : 'Funcionário não encontrado';
+            if(nome !== atualFunc) {
+                if(atualFunc) linhas.push('');
+                linhas.push(nome);
+                atualFunc = nome;
+            }
+            const dias = listarDiasUteisRegistroIntervalo(r, intervalo.inicio, intervalo.fim);
+            const qtdDias = dias.length || contarDiasUteisRegistroIntervalo(r, intervalo.inicio, intervalo.fim);
+            const dsr = r.descontarDia ? new Set(dias.map(d => chaveSemanaAno(new Date(d + "T00:00:00")))).size : 0;
+            const periodo = (r.dataFim && r.dataFim !== r.data) ? `${formatDataBR(r.data)} a ${formatDataBR(r.dataFim)}` : formatDataBR(r.data);
+            const tipo = getTipoAusenciaContador(r);
+            const complemento = r.descontarDia ? ` Descontar: ${qtdDias} dia(s)${dsr ? ` + ${dsr} DSR` : ''}` : `${tipo.endsWith('.') ? ' ' : '. '}${qtdDias} dia(s)`;
+            linhas.push(`- ${periodo}: *${tipo}*${complemento}`);
+        });
+        return linhas.join('\n');
+    }
+
+    function gerarResumo() {
+        const box = document.getElementById('resultadoResumo'); if(!box) return;
+        const intervalo = obterIntervaloResumo();
+        const resumo = calcularResumoPeriodo(intervalo);
+        const textoGeral = montarResumoGeralWhatsapp(intervalo);
+        const textoContador = montarResumoContadorWhatsapp(intervalo);
+        const linhasAtivos = resumo.porVinculo.map(v => `<div class="resumo-linha"><span>${escapeHTML(v.nome)}</span><strong>${v.funcionarios}</strong></div>`).join('');
+        const linhasVinculos = resumo.porVinculo.map(v => `<div class="resumo-vinculo">
+            <div class="resumo-vinculo-head"><span>${escapeHTML(v.nome)}</span><small>${v.funcionarios} funcionário(s)</small></div>
+            <div class="resumo-vinculo-grid">
+                <div><span>Pago mês</span><strong>R$ ${formatMoeda(v.pagoMes)}</strong></div>
+                <div><span>Quinzena</span><strong>R$ ${formatMoeda(v.quinzena)}</strong></div>
+                <div><span>Extras</span><strong>R$ ${formatMoeda(v.extrasPagos)}</strong></div>
+                <div><span>Adiant.</span><strong>R$ ${formatMoeda(v.adiantamentos)}</strong></div>
+                <div><span>Baixado</span><strong>R$ ${formatMoeda(v.adiantamentosBaixados)}</strong></div>
+                <div><span>Saldo</span><strong>R$ ${formatMoeda(v.saldoAdiantamentos)}</strong></div>
+            </div>
+        </div>`).join('');
+        box.innerHTML = `<div class="resumo-periodo-label">${escapeHTML(intervalo.label)}</div><div class="resumo-grid">
+            <div class="resumo-card"><strong>${resumo.ativos.length}</strong><span>funcionários ativos</span></div>
+            <div class="resumo-card"><strong>${resumo.faltaram.size}</strong><span>funcionários com ausência (${resumo.faltas.length} registros)</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalPagoMes)}</strong><span>pago/lançado no período</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.saldoAdiantamentos)}</strong><span>saldo de adiantamentos</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalQuinzena)}</strong><span>quinzena gerada</span></div>
+            <div class="resumo-card"><strong>${resumo.atrasos.length}</strong><span>atrasos${resumo.minutosAtraso ? ` (${resumo.minutosAtraso} min)` : ''}</span></div>
+        </div>
+        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Funcionários ativos por vínculo</div>${linhasAtivos || '<div style="color:#999;">Nenhum vínculo cadastrado.</div>'}</div>
+        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Financeiro por vínculo</div>${linhasVinculos || '<div style="color:#999;">Nenhum lançamento no período.</div>'}</div>
+        <div class="resumo-bloco resumo-total-final"><div class="resumo-bloco-titulo">Totais financeiros</div>
+            <div class="resumo-linha"><span>Pago/lançado</span><strong>R$ ${formatMoeda(resumo.totalPagoMes)}</strong></div>
+            <div class="resumo-linha"><span>Adiantamentos baixados</span><strong>R$ ${formatMoeda(resumo.totalAdiantamentosBaixados)}</strong></div>
+            <div class="resumo-linha"><span>Saldo de adiantamentos</span><strong>R$ ${formatMoeda(resumo.saldoAdiantamentos)}</strong></div>
+        </div>
+        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Resumo geral para WhatsApp</div><div class="resumo-texto-preview">${escapeHTML(textoGeral)}</div><div class="resumo-acoes"><button class="btn-action" onclick="enviarResumoWhatsapp('geral')" style="background:#2E7D32;">Enviar por WhatsApp</button></div></div>
+        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Resumo para contador</div><div class="resumo-texto-preview">${escapeHTML(textoContador)}</div><div class="resumo-acoes"><button class="btn-action" onclick="enviarResumoWhatsapp('contador')" style="background:#0277BD;">Enviar ao contador</button></div></div>`;
+    }
+
     function somarMesReferencia(mesRef, delta) {
         const [ano, mes] = String(mesRef || getHojeSTR().substring(0, 7)).split('-').map(Number);
         const data = new Date(ano, (mes || 1) - 1 + delta, 1);
@@ -1478,7 +1648,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const bruto = registro ? registro.valor : 0;
         const valorOriginal = typeof bruto === 'number' ? bruto : parseMoeda(bruto);
         if(!registro || valorOriginal <= 0) return 0;
-        if(padraoAutomatico && registro.type === 'desconto_quinzena' && registro.mesRef === mesRef && registro.mesDescontoContracheque === undefined) return valorOriginal;
+        if(registro.type === 'desconto_quinzena' && registro.mesRef === mesRef) return valorOriginal;
         if(registro.mesDescontoContracheque !== mesRef) return 0;
         const informado = Number(registro.valorDescontoContracheque);
         const valor = Number.isFinite(informado) ? informado : valorOriginal;
@@ -1489,6 +1659,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(event) event.stopPropagation();
         const registro = db.registros.find(r => r.id === id);
         if(!registro) return;
+        if(registro.type === 'desconto_quinzena') return;
         const atual = getValorDescontoContracheque(registro, mesRef, registro.type === 'desconto_quinzena');
         document.getElementById('descontoContraRegId').value = id;
         document.getElementById('descontoContraMesRef').value = mesRef;
@@ -1551,6 +1722,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const valorOriginal = typeof registro.valor === 'number' ? registro.valor : parseMoeda(registro.valor);
         const valorDesconto = getValorDescontoContracheque(registro, mesRef, padraoAutomatico);
         const ativo = valorDesconto > 0;
+        if(registro.type === 'desconto_quinzena') {
+            return `<div class="linha-adiant"><button class="btn-contra-check ativo" disabled>R$ ${formatMoedaContracheque(valorDesconto)}</button><span>${label} <small style="color:#777;">obrigatório</small></span><span class="valor">R$ ${formatMoedaContracheque(valorOriginal)}</span></div>`;
+        }
         const textoBotao = ativo ? `R$ ${formatMoedaContracheque(valorDesconto)}` : 'Descontar';
         const disabled = editavel ? '' : 'disabled';
         return `<div class="linha-adiant"><button class="btn-contra-check ${ativo ? 'ativo' : ''}" ${disabled} onclick="definirDescontoAdiantamentoContracheque(${jsArg(registro.id)}, ${jsArg(mesRef)}, ${valorOriginal}, event)">${textoBotao}</button><span>${label}</span><span class="valor">R$ ${formatMoedaContracheque(valorOriginal)}</span></div>`;
@@ -1692,7 +1866,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     </div>
                     ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel)}
                 </div>
-                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)">Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">WhatsApp</button></div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">📝 WhatsApp</button></div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
             </div>` : '';
             const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(liquido)} - R$ ${formatMoedaContracheque(adiantamentosContra.total)} = R$ ${formatMoedaContracheque(liquidoAPagar)}</strong>` : '';
             html += `<div class="contra-card ${fechado ? 'fechado' : ''}" onclick="toggleDetalhesContracheque(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;

@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.34</title>
+    <title>Alô RH v1.0.35</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.34">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.35">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.34</div>
+    <div class="splash-versao">v1.0.35</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -62,7 +62,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.34</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.35</small>
         </h2>
         <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
@@ -433,7 +433,7 @@
         <button class="btn-outline" id="btnAcaoAtraso" style="border-color:#795548; color:#795548;" onclick="abrirModalAtraso()">⏱️ Registrar Atraso</button>
         <button class="btn-outline" id="btnAcaoFerias" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Lançar Férias</button>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
-            <button class="btn-outline" style="border-color:#0277BD; color:#0277BD; margin-bottom:0; text-align:center;" onclick="abrirEscolhaPixFuncionario()">🔗 Pix</button>
+            <button class="btn-outline btn-pix-app" style="border-color:#0277BD; color:#0277BD; margin-bottom:0; text-align:center;" onclick="abrirEscolhaPixFuncionario()"><span class="emoji-pix">🔑</span> Pix</button>
             <button class="btn-outline" style="border-color:#2E7D32; color:#2E7D32; margin-bottom:0; text-align:center;" onclick="abrirWhatsappFuncionario()">💬 WhatsApp</button>
         </div>
         
@@ -471,7 +471,7 @@
             <span id="totalPresencasPendentes" style="color:#E65100;">R$ 0,00</span>
         </div>
 
-        <button class="btn-outline" style="width: 100%; margin-bottom: 10px; border-color:#0277BD; color:#0277BD; font-size:14px;" onclick="copiarPixFuncionario()"><span style="font-size:18px; vertical-align:middle;">🔗</span> Copiar Chave PIX</button>
+        <button class="btn-outline btn-pix-app" style="width: 100%; margin-bottom: 10px; border-color:#0277BD; color:#0277BD; font-size:14px;" onclick="copiarPixFuncionario()"><span class="emoji-pix">🔑</span> Copiar Chave PIX</button>
         <button class="btn-action" style="width: 100%; margin-bottom: 15px; background-color:#E65100; font-size:16px;" onclick="confirmarPagamentoSemana()">💰 Confirmar Pagamento</button>
         
         <button class="btn-outline" style="border:none; color:#777; padding:0; font-size:12px; text-decoration:underline;" onclick="toggleDiv('areaHistPagosSemana')">Ver Histórico de Pagamentos</button>
@@ -755,11 +755,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.34"></script>
-<script src="js/calculos.js?v=1.0.34"></script>
-<script src="js/interface.js?v=1.0.34"></script>
-<script src="js/impressao.js?v=1.0.34"></script>
-<script src="js/sincronizacao.js?v=1.0.34"></script>
+<script src="js/dados.js?v=1.0.35"></script>
+<script src="js/calculos.js?v=1.0.35"></script>
+<script src="js/interface.js?v=1.0.35"></script>
+<script src="js/impressao.js?v=1.0.35"></script>
+<script src="js/sincronizacao.js?v=1.0.35"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
