@@ -1,6 +1,5 @@
 html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
-        @media (min-width: 700px) and (pointer: fine) { body { zoom: 1.25; } }
         input, select, textarea, .modal { user-select: text; -webkit-user-select: text; font-family: inherit; }
         .app-container { width: 100%; max-width: 100%; height: 100%; background-color: #ffffff; display: flex; flex-direction: column; position: absolute; top: 0; left: 0; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         
@@ -138,6 +137,31 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .resumo-texto-preview { white-space:pre-wrap; background:#f9f9f9; border:1px solid #eee; border-radius:6px; padding:8px; max-height:170px; overflow:auto; font-size:11px; color:#444; }
         .resumo-acoes { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
         .resumo-periodo-label { color: #555; font-size: 12px; font-weight: 700; margin-bottom: 10px; text-align: center; }
+        .ferias-legenda { background:#FFF8E1; border:1px solid #FFE0B2; color:#6D4C41; border-radius:8px; padding:9px; font-size:12px; line-height:1.35; margin-bottom:10px; }
+        .ferias-resumo-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:7px; margin-bottom:10px; }
+        .ferias-resumo-card { background:#fff; border:1px solid #eee; border-left:4px solid #F57F17; border-radius:8px; padding:8px; min-height:48px; box-sizing:border-box; }
+        .ferias-resumo-card strong { display:block; font-size:17px; color:#4E342E; }
+        .ferias-resumo-card span { display:block; color:#666; font-size:10px; line-height:1.2; margin-top:2px; }
+        .ferias-lista { display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow:auto; padding-right:2px; }
+        .ferias-card { border:1px solid #e0e0e0; border-left:5px solid #9E9E9E; border-radius:8px; padding:10px; background:#fff; font-size:12px; }
+        .ferias-card.vencido { border-left-color:#D32F2F; background:#FFF7F7; }
+        .ferias-card.urgente { border-left-color:#F57C00; background:#FFF8E1; }
+        .ferias-card.atencao { border-left-color:#FBC02D; }
+        .ferias-card.ok { border-left-color:#2E7D32; }
+        .ferias-card.formacao { border-left-color:#0277BD; }
+        .ferias-card-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:6px; }
+        .ferias-card-head strong { font-size:14px; color:#263238; }
+        .ferias-status { border-radius:999px; padding:3px 8px; background:#eee; color:#555; font-weight:900; white-space:nowrap; font-size:10px; }
+        .ferias-card.vencido .ferias-status { background:#FFCDD2; color:#B71C1C; }
+        .ferias-card.urgente .ferias-status { background:#FFE0B2; color:#E65100; }
+        .ferias-card.atencao .ferias-status { background:#FFF9C4; color:#795548; }
+        .ferias-card.ok .ferias-status { background:#C8E6C9; color:#1B5E20; }
+        .ferias-card.formacao .ferias-status { background:#BBDEFB; color:#0D47A1; }
+        .ferias-meta { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; color:#555; }
+        .ferias-meta b { color:#263238; }
+        .ferias-actions { margin-top:8px; display:flex; justify-content:flex-end; }
+        .ferias-actions button { flex:0 0 auto; padding:7px 10px; border-radius:6px; font-size:12px; }
+        @media (max-width: 430px) { .ferias-resumo-grid { grid-template-columns:1fr 1fr; } .ferias-meta { grid-template-columns:1fr; } }
         .contra-linha { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,0,0,.06); padding: 4px 0; }
         .contra-linha span:first-child { min-width: 0; }
         .contra-linha .valor { margin-left: auto; text-align: right; min-width: 82px; font-variant-numeric: tabular-nums; }

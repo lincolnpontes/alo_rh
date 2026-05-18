@@ -1191,6 +1191,119 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function salvarFerias() { if(!adminSelecionadoTemPermissao('feriasAdmin', 'lancarFerias')) return; const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); }
     function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
+    function somarMesesISO(dataStr, meses) {
+        if(!dataStr) return '';
+        const data = new Date(dataStr + "T00:00:00");
+        const dia = data.getDate();
+        data.setMonth(data.getMonth() + meses);
+        if(data.getDate() < dia) data.setDate(0);
+        return dataISO(data);
+    }
+
+    function subtrairDiasISO(dataStr, dias) {
+        if(!dataStr) return '';
+        const data = new Date(dataStr + "T00:00:00");
+        data.setDate(data.getDate() - dias);
+        return dataISO(data);
+    }
+
+    function diasEntreISO(inicio, fim) {
+        const d1 = new Date(inicio + "T00:00:00");
+        const d2 = new Date(fim + "T00:00:00");
+        return Math.ceil((d2 - d1) / 86400000);
+    }
+
+    function getRegistrosFeriasFuncionario(funcId) {
+        return db.registros
+            .filter(r => r.type === 'ferias' && r.funcId === funcId && r.data)
+            .sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')));
+    }
+
+    function calcularSituacaoFerias(f) {
+        const hoje = getHojeSTR();
+        if(!f.admissao) {
+            return { status: 'sem_admissao', classe: '', rotulo: 'Sem admissão', dias: null, aquisitivo: '', limite: '', ultima: null, base: '' };
+        }
+        const ferias = getRegistrosFeriasFuncionario(f.id);
+        const ultima = ferias[0] || null;
+        const base = ultima ? ultima.data : f.admissao;
+        const aquisitivo = subtrairDiasISO(somarMesesISO(base, 12), 1);
+        const limite = subtrairDiasISO(somarMesesISO(base, 24), 1);
+        const dias = diasEntreISO(hoje, limite);
+        if(hoje < aquisitivo) return { status: 'formacao', classe: 'formacao', rotulo: 'Em formação', dias, aquisitivo, limite, ultima, base };
+        if(dias < 0) return { status: 'vencido', classe: 'vencido', rotulo: 'Vencido', dias, aquisitivo, limite, ultima, base };
+        if(dias <= 30) return { status: 'urgente', classe: 'urgente', rotulo: 'Até 30 dias', dias, aquisitivo, limite, ultima, base };
+        if(dias <= 90) return { status: 'atencao', classe: 'atencao', rotulo: 'Até 90 dias', dias, aquisitivo, limite, ultima, base };
+        return { status: 'ok', classe: 'ok', rotulo: 'Em dia', dias, aquisitivo, limite, ultima, base };
+    }
+
+    function abrirCalendarioFerias() {
+        document.getElementById('filtroCalendarioFerias').value = 'todos';
+        renderCalendarioFerias();
+        document.getElementById('modalCalendarioFerias').style.display = 'flex';
+    }
+
+    function abrirFeriasPeloCalendario(funcId) {
+        const f = db.funcionarios.find(x => x.id === funcId);
+        if(!f) return alert('Funcionário não encontrado.');
+        document.getElementById('acoesFuncId').value = f.id;
+        document.getElementById('tituloAcoesFunc').innerText = getNomeUsoFuncionario(f);
+        fecharModal('modalCalendarioFerias');
+        abrirModalFerias(null);
+    }
+
+    function renderCalendarioFerias() {
+        const lista = document.getElementById('listaCalendarioFerias');
+        const resumoBox = document.getElementById('resumoCalendarioFerias');
+        if(!lista || !resumoBox) return;
+        const filtro = document.getElementById('filtroCalendarioFerias').value || 'todos';
+        let itens = db.funcionarios
+            .filter(f => !f.arquivado)
+            .map(f => ({ f, s: calcularSituacaoFerias(f) }))
+            .sort((a, b) => {
+                const la = a.s.limite || '9999-12-31';
+                const lb = b.s.limite || '9999-12-31';
+                return la.localeCompare(lb) || String(getNomeUsoFuncionario(a.f)).localeCompare(String(getNomeUsoFuncionario(b.f)));
+            });
+        const contagem = { vencido: 0, urgente: 0, atencao: 0, ok: 0, formacao: 0, sem_admissao: 0 };
+        itens.forEach(item => { contagem[item.s.status] = (contagem[item.s.status] || 0) + 1; });
+        resumoBox.innerHTML = `
+            <div class="ferias-resumo-card"><strong>${contagem.vencido}</strong><span>vencido(s)</span></div>
+            <div class="ferias-resumo-card"><strong>${contagem.urgente}</strong><span>até 30 dias</span></div>
+            <div class="ferias-resumo-card"><strong>${contagem.atencao}</strong><span>até 90 dias</span></div>
+            <div class="ferias-resumo-card"><strong>${contagem.ok + contagem.formacao}</strong><span>em dia/formação</span></div>`;
+        if(filtro !== 'todos') {
+            itens = itens.filter(item => {
+                if(filtro === 'urgente') return item.s.status === 'urgente';
+                if(filtro === 'atencao') return item.s.status === 'atencao';
+                return item.s.status === filtro;
+            });
+        }
+        if(itens.length === 0) {
+            lista.innerHTML = '<div style="text-align:center; color:#999; padding:16px;">Nenhum funcionário neste filtro.</div>';
+            return;
+        }
+        lista.innerHTML = itens.map(({ f, s }) => {
+            const ultima = s.ultima ? `${formatDataBR(s.ultima.data)}${s.ultima.dataFim ? ` a ${formatDataBR(s.ultima.dataFim)}` : ''}` : 'Sem férias registradas';
+            const prazo = s.dias === null ? 'Informe a admissão' : (s.dias < 0 ? `${Math.abs(s.dias)} dia(s) vencido` : `${s.dias} dia(s) restantes`);
+            const admissao = f.admissao ? formatDataBR(f.admissao) : 'Não informada';
+            const aquisitivo = s.aquisitivo ? formatDataBR(s.aquisitivo) : '-';
+            const limite = s.limite ? formatDataBR(s.limite) : '-';
+            return `<div class="ferias-card ${s.classe}">
+                <div class="ferias-card-head"><strong>${escapeHTML(f.nome || 'Sem nome')}</strong><span class="ferias-status">${escapeHTML(s.rotulo)}</span></div>
+                <div class="ferias-meta">
+                    <div>Admissão: <b>${admissao}</b></div>
+                    <div>Últimas férias: <b>${escapeHTML(ultima)}</b></div>
+                    <div>Direito formado em: <b>${aquisitivo}</b></div>
+                    <div>Prazo limite: <b>${limite}</b></div>
+                    <div>Prazo: <b>${escapeHTML(prazo)}</b></div>
+                    <div>Base de cálculo: <b>${s.ultima ? 'últimas férias' : 'admissão'}</b></div>
+                </div>
+                <div class="ferias-actions"><button class="btn-outline" style="border-color:#F57F17; color:#E65100; margin:0; text-align:center;" onclick="abrirFeriasPeloCalendario(${jsArg(f.id)})">Registrar férias</button></div>
+            </div>`;
+        }).join('');
+    }
+
     function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'atraso') renderizarHistAtrasos(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); else if(tela === 'presenca') renderizarPresencasPendentes(funcId); renderizarLista(); } }
 
     function dataISO(data) {

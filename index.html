@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.36</title>
+    <title>Alô RH v1.0.37</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.36">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.37">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.36</div>
+    <div class="splash-versao">v1.0.37</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -33,6 +33,7 @@
         <div class="header-title">Alô RH</div>
         <div class="header-actions">
             <button onclick="abrirModalAniversarios()">🎂</button>
+            <button onclick="abrirCalendarioFerias()" title="Férias" aria-label="Férias">🏖️</button>
             <button class="btn-resumo-header" onclick="abrirModalResumo()" title="Resumo" aria-label="Resumo">📝</button>
             <button onclick="document.getElementById('modalPainelUnificado').style.display='flex'">⚙️</button>
         </div>
@@ -62,7 +63,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.36</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.37</small>
         </h2>
         <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
@@ -764,11 +765,27 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.36"></script>
-<script src="js/calculos.js?v=1.0.36"></script>
-<script src="js/interface.js?v=1.0.36"></script>
-<script src="js/impressao.js?v=1.0.36"></script>
-<script src="js/sincronizacao.js?v=1.0.36"></script>
+
+<div class="modal-overlay" id="modalCalendarioFerias">
+    <div class="modal" style="width:95%; max-width:720px;">
+        <div class="modal-title" style="color:#F57F17; border-color:#F57F17;">Calendário de Férias</div>
+        <div class="ferias-legenda">
+            <strong>Regra usada:</strong> 12 meses de período aquisitivo + 12 meses de período concessivo. Depois do prazo, há risco de férias em dobro.
+        </div>
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+            <div class="form-group" style="flex:1;"><label>Filtro:</label><select id="filtroCalendarioFerias" onchange="renderCalendarioFerias()"><option value="todos">Todos</option><option value="vencido">Vencidos</option><option value="urgente">Até 30 dias</option><option value="atencao">Até 90 dias</option><option value="sem_admissao">Sem admissão</option></select></div>
+            <button class="btn-action" style="flex:0 0 auto; background:#F57F17; margin-bottom:12px;" onclick="renderCalendarioFerias()">Atualizar</button>
+        </div>
+        <div id="resumoCalendarioFerias" class="ferias-resumo-grid"></div>
+        <div id="listaCalendarioFerias" class="ferias-lista"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalCalendarioFerias')" style="width: 100%;">Fechar</button></div>
+    </div>
+</div>
+<script src="js/dados.js?v=1.0.37"></script>
+<script src="js/calculos.js?v=1.0.37"></script>
+<script src="js/interface.js?v=1.0.37"></script>
+<script src="js/impressao.js?v=1.0.37"></script>
+<script src="js/sincronizacao.js?v=1.0.37"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
