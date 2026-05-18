@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.35';
+    const APP_VERSION = 'v1.0.36';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -28,7 +28,7 @@
     let db = carregarBanco();
     let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
     let isSyncingFundo = false; let syncPendente = false; let timerSincronizacao = null; let timerSyncRegistros = null; let isPuxandoNuvem = false;
-    let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null; let overridesContracheque = {}; let resumoContrachequeVisivel = false; let contrachequesAbertos = new Set();
+    let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null; let overridesContracheque = {}; let resumoContrachequeVisivel = false; let contrachequesAbertos = new Set(); let adminSessaoId = sessionStorage.getItem('alorh_admin_sessao') || '';
     let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar';
     let assinaturasRegistros = new Map(); let idsRegistrosConhecidos = new Set(); registrarEstadoRegistros();
 
@@ -55,6 +55,27 @@
         ];
     }
 
+    function criarPermissoesAdminPadrao() {
+        return {
+            dadosPessoais: true,
+            vinculoHorarios: true,
+            financeiro: true,
+            gerarContracheque: true,
+            gerarQuinzena: true,
+            gerarPonto: true,
+            gerarVT: true,
+            registrarAdiantamentos: true,
+            lancarFerias: true,
+            registrarAusencia: true,
+            registrarAtraso: true,
+            registrarPresencaSemanal: true,
+            acessoResumo: true,
+            dadosEmpresa: true,
+            configGerais: true,
+            gerenciarAdministradores: true
+        };
+    }
+
     function normalizarBanco(dados) {
         let base = criarBancoBase();
         let origem = (dados && typeof dados === 'object') ? dados : {};
@@ -70,6 +91,7 @@
         normalizado.funcoes = Array.isArray(normalizado.funcoes) ? normalizado.funcoes : [];
         normalizado.funcionarios = Array.isArray(normalizado.funcionarios) ? normalizado.funcionarios : [];
         normalizado.administradores = Array.isArray(normalizado.administradores) ? normalizado.administradores : [];
+        normalizado.administradores = normalizado.administradores.map((admin) => ({ ...admin, permissoes: { ...criarPermissoesAdminPadrao(), ...((admin && admin.permissoes) || {}) } }));
         normalizado.registros = Array.isArray(normalizado.registros) ? normalizado.registros : [];
         normalizado.configGerais.diasFuncionamento = Array.isArray(normalizado.configGerais.diasFuncionamento) ? normalizado.configGerais.diasFuncionamento : ['1','2','3','4','5','6'];
         normalizado.configGerais.valesTransporte = Array.isArray(normalizado.configGerais.valesTransporte) ? normalizado.configGerais.valesTransporte : [];

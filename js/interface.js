@@ -172,10 +172,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirMenuAdicionar() {
+        if(!garantirPermissao('gerarVT', () => abrirMenuAdicionar(), 'abrir opções adicionais')) return;
         document.getElementById('modalMenuAdicionar').style.display = 'flex';
     }
 
     function abrirModalFolgaGeral() {
+        if(!garantirPermissao('gerarVT', () => abrirModalFolgaGeral(), 'cadastrar folga geral')) return;
         const hoje = getHojeSTR();
         document.getElementById('folgaGeralData').value = hoje;
         document.getElementById('folgaGeralMes').value = hoje.substring(0, 7);
@@ -219,8 +221,120 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return numero ? `${numero.padStart(3, '0')} - ${funcao.nome || ''}` : (funcao.nome || '');
     }
 
+    const ADMIN_PERMISSOES = [
+        { chave: 'dadosPessoais', label: 'Alterar Dados Pessoais' },
+        { chave: 'vinculoHorarios', label: 'Alterar Vínculo e Horários' },
+        { chave: 'financeiro', label: 'Alterar Financeiro' },
+        { chave: 'gerarContracheque', label: 'Gerar Contracheque' },
+        { chave: 'gerarQuinzena', label: 'Gerar Quinzena' },
+        { chave: 'gerarPonto', label: 'Gerar Ponto' },
+        { chave: 'gerarVT', label: 'Gerar VT' },
+        { chave: 'registrarAdiantamentos', label: 'Registrar Adiantamentos' },
+        { chave: 'lancarFerias', label: 'Lançar Férias' },
+        { chave: 'registrarAusencia', label: 'Registrar Ausência' },
+        { chave: 'registrarAtraso', label: 'Registrar Atraso' },
+        { chave: 'registrarPresencaSemanal', label: 'Registrar Presença Semanal' },
+        { chave: 'acessoResumo', label: 'Acesso ao Resumo' },
+        { chave: 'dadosEmpresa', label: 'Acesso aos Dados da Empresa' },
+        { chave: 'configGerais', label: 'Acesso às Configurações Gerais' },
+        { chave: 'gerenciarAdministradores', label: 'Gerenciar Administradores' }
+    ];
+
+    function getAdminAtual() {
+        return db.administradores.find(a => a.id === adminSessaoId) || null;
+    }
+
+    function adminTemPermissao(admin, chave) {
+        if(db.administradores.length === 0) return true;
+        if(!admin) return false;
+        const permissoes = admin.permissoes || criarPermissoesAdminPadrao();
+        return permissoes[chave] !== false;
+    }
+
+    function adminRestrito(admin) {
+        if(!admin || !admin.permissoes) return false;
+        const primeiroAdmin = db.administradores[0];
+        if(primeiroAdmin && primeiroAdmin.id !== admin.id) return true;
+        return ADMIN_PERMISSOES.some(p => admin.permissoes[p.chave] === false);
+    }
+
+    function temPermissaoAtual(chave) {
+        if(db.administradores.length === 0) return true;
+        return adminTemPermissao(getAdminAtual(), chave);
+    }
+
+    function garantirAlgumaPermissao(chaves, aoAutorizar, texto = 'continuar') {
+        if(db.administradores.length === 0) return true;
+        const listaChaves = Array.isArray(chaves) ? chaves : [chaves];
+        const atual = getAdminAtual();
+        if(atual && listaChaves.some(chave => adminTemPermissao(atual, chave))) return true;
+        const senha = prompt(`Digite a senha do administrador para ${texto}:`);
+        if(senha === null) return false;
+        const admin = db.administradores.find(a => String(a.senha || '') === String(senha || ''));
+        if(!admin) { alert('Senha de administrador não encontrada.'); return false; }
+        if(!listaChaves.some(chave => adminTemPermissao(admin, chave))) { alert('Este administrador não tem permissão para esta ação.'); return false; }
+        adminSessaoId = admin.id;
+        sessionStorage.setItem('alorh_admin_sessao', adminSessaoId);
+        if(typeof aoAutorizar === 'function') aoAutorizar();
+        return false;
+    }
+
+    function garantirPermissao(chave, aoAutorizar, texto = 'continuar') {
+        return garantirAlgumaPermissao([chave], aoAutorizar, texto);
+    }
+
+    function renderizarPermissoesAdmin(permissoes = {}) {
+        const box = document.getElementById('adminPermissoesBox');
+        if(!box) return;
+        const base = { ...criarPermissoesAdminPadrao(), ...(permissoes || {}) };
+        box.innerHTML = ADMIN_PERMISSOES.map(p => `<label class="switch-row"><span class="switch-row-text">${escapeHTML(p.label)}</span><span class="switch"><input type="checkbox" class="chk-admin-permissao" value="${escapeHTML(p.chave)}" ${base[p.chave] !== false ? 'checked' : ''}><span class="slider"></span></span></label>`).join('');
+    }
+
+    function coletarPermissoesAdmin() {
+        const permissoes = criarPermissoesAdminPadrao();
+        document.querySelectorAll('.chk-admin-permissao').forEach(chk => {
+            permissoes[chk.value] = chk.checked;
+        });
+        return permissoes;
+    }
+
+    function aplicarPermissoesFormularioFuncionario() {
+        const mapa = [
+            { id: 'secFuncDadosPessoais', chave: 'dadosPessoais' },
+            { id: 'secFuncVinculoHorarios', chave: 'vinculoHorarios' },
+            { id: 'secFuncFinanceiro', chave: 'financeiro' }
+        ];
+        mapa.forEach(item => {
+            const el = document.getElementById(item.id);
+            if(el) el.classList.toggle('bloqueada', !temPermissaoAtual(item.chave));
+        });
+    }
+
+    function configurarSelectAdminPorPermissao(selectId, permissao) {
+        const sel = document.getElementById(selectId);
+        if(!sel) return;
+        const atual = getAdminAtual();
+        sel.disabled = false;
+        if(atual && adminTemPermissao(atual, permissao)) {
+            sel.value = atual.id;
+            if(adminRestrito(atual)) sel.disabled = true;
+        }
+    }
+
+    function adminSelecionadoTemPermissao(selectId, permissao) {
+        const sel = document.getElementById(selectId);
+        const admin = sel ? db.administradores.find(a => a.id === sel.value) : getAdminAtual();
+        if(!adminTemPermissao(admin, permissao)) {
+            alert('O administrador selecionado não tem permissão para esta ação.');
+            return false;
+        }
+        return true;
+    }
+
     // 3. GERENCIAMENTO CRUD
     function abrirGerenciar(tipo) {
+        const permissoesGerenciar = { empresa: 'dadosEmpresa', configGerais: 'configGerais', administradores: 'gerenciarAdministradores' };
+        if(permissoesGerenciar[tipo] && !garantirPermissao(permissoesGerenciar[tipo], () => abrirGerenciar(tipo), 'abrir esta área')) return;
         fecharModal('modalPainelUnificado');
         if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
         if(tipo === 'empresa') { document.getElementById('empLogoBase64').value = db.empresa.logo || ''; document.getElementById('previewLogo').innerHTML = db.empresa.logo ? `<img src="${db.empresa.logo}" style="max-height:50px;">` : ''; document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
@@ -293,8 +407,34 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         db.empresa.logo = document.getElementById('empLogoBase64').value; db.empresa.razao = document.getElementById('empRazao').value; db.empresa.fantasia = document.getElementById('empFantasia').value; db.empresa.cnpj = cnpj; db.empresa.rua = document.getElementById('empRua').value; db.empresa.numero = document.getElementById('empNum').value; db.empresa.bairro = document.getElementById('empBairro').value; db.empresa.cidade = document.getElementById('empCidade').value; db.empresa.uf = document.getElementById('empUF').value; salvarBanco(); fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display = 'flex'; 
     }
     
-    function abrirFormAdmin(id) { fecharModal('modalListagem'); if(id) { let a = db.administradores.find(x => x.id === id); document.getElementById('adminId').value = a.id; document.getElementById('adminNome').value = a.nome; document.getElementById('adminSenha').value = a.senha; } else { document.getElementById('adminId').value = ''; document.getElementById('adminNome').value = ''; document.getElementById('adminSenha').value = ''; } document.getElementById('modalFormAdmin').style.display = 'flex'; }
-    function salvarAdmin() { let id = document.getElementById('adminId').value || 'adm_' + Date.now(); let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value }; const idx = db.administradores.findIndex(x => x.id === id); if(idx >= 0) db.administradores[idx] = novo; else db.administradores.push(novo); salvarBanco(); fecharModal('modalFormAdmin'); abrirGerenciar('administradores'); }
+    function abrirFormAdmin(id) {
+        if(!garantirPermissao('gerenciarAdministradores', () => abrirFormAdmin(id), 'gerenciar administradores')) return;
+        fecharModal('modalListagem');
+        if(id) {
+            let a = db.administradores.find(x => x.id === id);
+            document.getElementById('adminId').value = a.id;
+            document.getElementById('adminNome').value = a.nome;
+            document.getElementById('adminSenha').value = a.senha;
+            renderizarPermissoesAdmin(a.permissoes);
+        } else {
+            document.getElementById('adminId').value = '';
+            document.getElementById('adminNome').value = '';
+            document.getElementById('adminSenha').value = '';
+            renderizarPermissoesAdmin(criarPermissoesAdminPadrao());
+        }
+        document.getElementById('modalFormAdmin').style.display = 'flex';
+    }
+    function salvarAdmin() {
+        if(!garantirPermissao('gerenciarAdministradores', () => salvarAdmin(), 'salvar administrador')) return;
+        let id = document.getElementById('adminId').value || 'adm_' + Date.now();
+        let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value, permissoes: coletarPermissoesAdmin() };
+        const idx = db.administradores.findIndex(x => x.id === id);
+        if(idx >= 0) db.administradores[idx] = novo;
+        else db.administradores.push(novo);
+        salvarBanco();
+        fecharModal('modalFormAdmin');
+        abrirGerenciar('administradores');
+    }
 
     // VINCULOS E SALARIOS
     function getCamposFuncionarioClasse(c = {}) {
@@ -525,6 +665,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirFormFunc(id, origem = 'gerenciar') {
+        if(!garantirAlgumaPermissao(['dadosPessoais', 'vinculoHorarios', 'financeiro'], () => abrirFormFunc(id, origem), 'abrir cadastro de funcionário')) return;
         origemFormFuncionario = origem;
         fecharModal('modalListagem'); tempPix = [];
         if(id) {
@@ -548,6 +689,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
         atualizarCamposValoresBeneficios();
         toggleQtdQuinqueniosFuncionario();
+        aplicarPermissoesFormularioFuncionario();
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
     function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config pix-list-row"><div class="pix-text"><b style="color:#0277BD;">${escapeHTML(p.tipo || 'PIX')}</b> - ${escapeHTML(p.chave || '')}</div><button onclick="removerPix(${i})">X</button></div>`).join(''); }
@@ -562,13 +704,23 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function salvarFuncionario() { 
         const id = document.getElementById('funcId').value || 'f_'+Date.now(); 
         const existente = db.funcionarios.find(x => x.id === id);
+        const novo = existente ? JSON.parse(JSON.stringify(existente)) : { id, arquivado: false, arquivadoEm: null };
+        novo.id = id;
         let folgas = Array.from(document.querySelectorAll('.chk-folga-func:checked')).map(el => el.value);
         const linhaVisivel = (idLinha) => {
             const linha = document.getElementById(idLinha);
             return linha && linha.style.display !== 'none';
         };
         const qtdQuinquenios = Math.max(1, Math.min(9, parseInt(document.getElementById('funcQtdQuinquenios').value, 10) || 1));
-        const novo = { id: id, codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, nomeSocial: document.getElementById('funcNomeSocial').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value, funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, vtRota: linhaVisivel('linhaFuncVT') && document.getElementById('funcTemVT').checked ? document.getElementById('funcVTRota').value : '', pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, temGratificacao: linhaVisivel('linhaFuncGratificacao') && document.getElementById('funcTemGratificacao').checked, temSalFamilia: linhaVisivel('linhaFuncSalFamilia') && document.getElementById('funcTemSalFamilia').checked, temUnidentis: linhaVisivel('linhaFuncUnidentis') && document.getElementById('funcTemUnidentis').checked, descontaPassagem: linhaVisivel('linhaFuncPassagem') && document.getElementById('funcDescontaPassagem').checked, descontaINSS: linhaVisivel('linhaFuncINSS') && document.getElementById('funcDescontaINSS').checked, recebeQuinquenio: linhaVisivel('linhaFuncQuinquenio') && document.getElementById('funcRecebeQuinquenio').checked, qtdQuinquenios: qtdQuinquenios, recebeQuinzena: linhaVisivel('linhaFuncQuinzena') && document.getElementById('funcRecebeQuinzena').checked, recebeContracheque: linhaVisivel('linhaFuncContracheque') && document.getElementById('funcRecebeContracheque').checked, temControlePonto: linhaVisivel('linhaFuncControlePonto') && document.getElementById('funcTemControlePonto').checked, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, arquivado: existente ? !!existente.arquivado : false, arquivadoEm: existente ? existente.arquivadoEm : null, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } }; 
+        if(temPermissaoAtual('dadosPessoais')) {
+            Object.assign(novo, { codigo: document.getElementById('funcCodigo').value, nome: document.getElementById('funcNome').value, nomeSocial: document.getElementById('funcNomeSocial').value, dataNasc: document.getElementById('funcDataNasc').value, admissao: document.getElementById('funcAdmissao').value, cpf: document.getElementById('funcCPF').value, rg: document.getElementById('funcRG').value, rgUF: document.getElementById('funcRGUF').value, ctps: document.getElementById('funcCTPS').value, telefone: document.getElementById('funcTel').value });
+        }
+        if(temPermissaoAtual('vinculoHorarios')) {
+            Object.assign(novo, { funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } });
+        }
+        if(temPermissaoAtual('financeiro')) {
+            Object.assign(novo, { vtRota: linhaVisivel('linhaFuncVT') && document.getElementById('funcTemVT').checked ? document.getElementById('funcVTRota').value : '', pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, temGratificacao: linhaVisivel('linhaFuncGratificacao') && document.getElementById('funcTemGratificacao').checked, temSalFamilia: linhaVisivel('linhaFuncSalFamilia') && document.getElementById('funcTemSalFamilia').checked, temUnidentis: linhaVisivel('linhaFuncUnidentis') && document.getElementById('funcTemUnidentis').checked, descontaPassagem: linhaVisivel('linhaFuncPassagem') && document.getElementById('funcDescontaPassagem').checked, descontaINSS: linhaVisivel('linhaFuncINSS') && document.getElementById('funcDescontaINSS').checked, recebeQuinquenio: linhaVisivel('linhaFuncQuinquenio') && document.getElementById('funcRecebeQuinquenio').checked, qtdQuinquenios: qtdQuinquenios, recebeQuinzena: linhaVisivel('linhaFuncQuinzena') && document.getElementById('funcRecebeQuinzena').checked, recebeContracheque: linhaVisivel('linhaFuncContracheque') && document.getElementById('funcRecebeContracheque').checked, temControlePonto: linhaVisivel('linhaFuncControlePonto') && document.getElementById('funcTemControlePonto').checked });
+        }
         const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); salvarBanco(); fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); 
     }
 
@@ -701,6 +853,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
     
     function abrirModalPresencaSemana() {
+        if(!garantirPermissao('registrarPresencaSemanal', () => abrirModalPresencaSemana(), 'registrar presença semanal')) return;
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId); if(!f) return;
         document.getElementById('dataPresencaManual').value = getHojeSTR();
         
@@ -714,6 +867,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
     
     function addPresencaManual(dtForced = null) {
+        if(!garantirPermissao('registrarPresencaSemanal', () => addPresencaManual(dtForced), 'registrar presença semanal')) return;
         const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId);
         let dt = dtForced || document.getElementById('dataPresencaManual').value; if(!dt) return; dataTempPresenca = dt;
         
@@ -729,7 +883,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
     }
     function confirmarSalarioPresenca(val) { fecharModal('modalEscolhaSalario'); registrarPresenca(val); }
-    function registrarPresenca(val) { const funcId = document.getElementById('acoesFuncId').value; db.registros.push({ id: 'reg_'+Date.now(), type: 'presenca', funcId: funcId, data: dataTempPresenca, valor: val, status: 'pendente' }); salvarBanco(); renderizarPresencasPendentes(funcId); }
+    function registrarPresenca(val) { const funcId = document.getElementById('acoesFuncId').value; db.registros.push({ id: 'reg_'+Date.now(), type: 'presenca', funcId: funcId, data: dataTempPresenca, valor: val, status: 'pendente', adminId: (getAdminAtual() || {}).id || '' }); salvarBanco(); renderizarPresencasPendentes(funcId); }
     
     function renderizarPresencasPendentes(funcId) {
         let box = document.getElementById('listaPresencasPendentes'); let hPagos = document.getElementById('listaHistoricoPagosSemana');
@@ -745,12 +899,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function confirmarPagamentoSemana() {
+        if(!garantirPermissao('registrarPresencaSemanal', () => confirmarPagamentoSemana(), 'confirmar pagamento semanal')) return;
         const funcId = document.getElementById('acoesFuncId').value;
         let pendentes = db.registros.filter(r => r.type === 'presenca' && r.funcId === funcId && r.status === 'pendente');
         if(pendentes.length === 0) return alert("Não há dias trabalhados na lista.");
         if(!confirm("Confirmar pagamento dos dias pendentes? Isso vai zerar o acumulado.")) return;
         let total = 0; let diasIds = []; pendentes.forEach(r => { total += r.valor; r.status = 'pago'; diasIds.push(r.data); });
-        db.registros.push({ id: 'reg_'+Date.now(), type: 'pagamento_semana', funcId: funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds });
+        db.registros.push({ id: 'reg_'+Date.now(), type: 'pagamento_semana', funcId: funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds, adminId: (getAdminAtual() || {}).id || '' });
         salvarBanco(); renderizarPresencasPendentes(funcId); alert("Pagamento Confirmado!");
     }
 
@@ -759,6 +914,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirModalPresencaMassaSemana() {
+        if(!garantirPermissao('registrarPresencaSemanal', () => abrirModalPresencaMassaSemana(), 'registrar presença semanal')) return;
         const funcs = obterSelecionadosSemanais();
         if(funcs.length === 0 || funcs.length !== obterFuncionariosSelecionados().length) return alert('Selecione apenas funcionários com pagamento por semana.');
         document.getElementById('massaPresencaData').value = diaFiltroAptos || getHojeSTR();
@@ -783,6 +939,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function registrarPresencaMassaSemana() {
+        if(!garantirPermissao('registrarPresencaSemanal', () => registrarPresencaMassaSemana(), 'registrar presença semanal')) return;
         const data = document.getElementById('massaPresencaData').value;
         const valor = parseMoeda(document.getElementById('massaPresencaValor').value);
         if(!data) return alert('Informe a data da presença.');
@@ -794,7 +951,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         funcs.forEach((f, idx) => {
             const jaExiste = db.registros.some(r => r.type === 'presenca' && r.funcId === f.id && r.status === 'pendente' && r.data === data);
             if(jaExiste) { pulados++; return; }
-            db.registros.push({ id: `reg_${agora}_${idx}`, type: 'presenca', funcId: f.id, data, valor, status: 'pendente', criadoEm: agora, editadoEm: agora, _syncAtualizadoEm: agora });
+            db.registros.push({ id: `reg_${agora}_${idx}`, type: 'presenca', funcId: f.id, data, valor, status: 'pendente', adminId: (getAdminAtual() || {}).id || '', criadoEm: agora, editadoEm: agora, _syncAtualizadoEm: agora });
             criados++;
         });
         salvarBanco();
@@ -805,9 +962,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     // ADIANTAMENTOS
     function abrirModalAdiantamento(editId = null) {
+        if(!garantirPermissao('registrarAdiantamentos', () => abrirModalAdiantamento(editId), 'registrar adiantamentos')) return;
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value;
         let selMotivo = document.getElementById('adiantMotivo'); selMotivo.innerHTML = ''; db.configGerais.motivosAdiantamento.forEach(m => selMotivo.innerHTML += optionHTML(m, m)); if(db.configGerais.motivosAdiantamento.length === 0) selMotivo.innerHTML = optionHTML('Vale', 'Vale');
         document.getElementById('adiantAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
+        configurarSelectAdminPorPermissao('adiantAdmin', 'registrarAdiantamentos');
         let areaEdit = document.getElementById('areaEditAdiant');
         if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('adiantEditId').value = editId; document.getElementById('adiantData').value = r.data; document.getElementById('adiantValor').value = formatMoeda(r.valor); document.getElementById('adiantMotivo').value = r.motivo; document.getElementById('adiantObs').value = r.observacao || ''; document.getElementById('adiantForma').value = r.forma === 'PIX' ? 'Pix' : (r.forma || 'Pix'); document.getElementById('adiantAdmin').value = r.adminId; document.getElementById('btnSalvarAdiantamento').innerText = "Salvar Edição"; document.getElementById('btnCancelEditAdiant').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
         else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; document.getElementById('adiantObs').value = ''; document.getElementById('adiantForma').value = 'Pix'; document.getElementById('btnSalvarAdiantamento').innerText = "Gravar Lançamento"; document.getElementById('btnCancelEditAdiant').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
@@ -815,6 +974,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
     function cancelarEdicaoRegistro(tipo) { if(tipo === 'adiantamento') abrirModalAdiantamento(null); else if(tipo === 'falta') abrirModalFalta(null); else if(tipo === 'atraso') abrirModalAtraso(null); else if(tipo === 'ferias') abrirModalFerias(null); }
     function salvarAdiantamento() {
+        if(!adminSelecionadoTemPermissao('adiantAdmin', 'registrarAdiantamentos')) return;
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('adiantEditId').value; const valorStr = document.getElementById('adiantValor').value; if(!valorStr) return alert("Digite um valor.");
         const novo = { type: 'adiantamento', funcId: funcId, data: document.getElementById('adiantData').value, valor: parseMoeda(valorStr), motivo: document.getElementById('adiantMotivo').value, observacao: document.getElementById('adiantObs').value.trim(), forma: document.getElementById('adiantForma').value, adminId: document.getElementById('adiantAdmin').value, descontado: false };
         if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); }
@@ -832,7 +992,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let hAtual = ''; let hAnt = ''; let hDesc = '';
         let totalAtual = 0; let totalAnt = 0;
         const mesAtual = getHojeSTR().substring(0, 7);
-        let regs = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
+        const adminAtual = getAdminAtual();
+        let regs = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === funcId);
+        if(adminRestrito(adminAtual)) regs = regs.filter(r => r.adminId === adminAtual.id);
+        regs = regs.sort((a,b) => new Date(b.data) - new Date(a.data));
         const htmlPendente = (r) => {
             let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
             let obs = r.observacao ? `<br><span style="color:#777; font-size:10px;">Obs: ${escapeHTML(r.observacao)}</span>` : '';
@@ -898,14 +1061,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function changeTipoFalta() { let t = document.getElementById('faltaTipo').value; if(t === 'Atestado' || t === 'Folga') document.getElementById('faltaDescontarDia').checked = false; else document.getElementById('faltaDescontarDia').checked = true; }
     
     function abrirModalFalta(editId = null) {
+        if(!garantirPermissao('registrarAusencia', () => abrirModalFalta(editId), 'registrar ausência')) return;
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value;
         document.getElementById('faltaAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
+        configurarSelectAdminPorPermissao('faltaAdmin', 'registrarAusencia');
         let areaEdit = document.getElementById('areaEditFalta');
         if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('faltaEditId').value = editId; document.getElementById('faltaData').value = r.data; document.getElementById('faltaDataFim').value = r.dataFim || ''; document.getElementById('faltaTipo').value = r.tipo; document.getElementById('faltaDescontarDia').checked = r.descontarDia; document.getElementById('faltaDescontarPassagem').checked = r.descontarPassagem; document.getElementById('faltaAdmin').value = r.adminId; document.getElementById('btnSalvarFalta').innerText = "Salvar Edição"; document.getElementById('btnCancelEditFalta').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
         else { document.getElementById('faltaEditId').value = ''; document.getElementById('faltaData').value = getHojeSTR(); document.getElementById('faltaDataFim').value = ''; document.getElementById('faltaTipo').value = 'Falta'; document.getElementById('faltaDescontarDia').checked = true; document.getElementById('faltaDescontarPassagem').checked = true; document.getElementById('btnSalvarFalta').innerText = "Gravar Registro"; document.getElementById('btnCancelEditFalta').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistFaltas(funcId); document.getElementById('modalFormFalta').style.display = 'flex';
     }
     function salvarFalta() {
+        if(!adminSelecionadoTemPermissao('faltaAdmin', 'registrarAusencia')) return;
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('faltaEditId').value;
         let dataIni = document.getElementById('faltaData').value; let dataFim = document.getElementById('faltaDataFim').value || dataIni;
         
@@ -957,8 +1123,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirModalAtraso(editId = null) {
+        if(!garantirPermissao('registrarAtraso', () => abrirModalAtraso(editId), 'registrar atraso')) return;
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value;
         document.getElementById('atrasoAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
+        configurarSelectAdminPorPermissao('atrasoAdmin', 'registrarAtraso');
         let areaEdit = document.getElementById('areaEditAtraso');
         if(editId) {
             let r = db.registros.find(x => x.id === editId); if(!r) return;
@@ -987,6 +1155,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function salvarAtraso() {
+        if(!adminSelecionadoTemPermissao('atrasoAdmin', 'registrarAtraso')) return;
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('atrasoEditId').value;
         const data = document.getElementById('atrasoData').value; if(!data) return alert("Informe a data do atraso.");
         const horaPrevista = document.getElementById('atrasoPrevisto').value;
@@ -1011,13 +1180,15 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirModalFerias(editId = null) {
+        if(!garantirPermissao('lancarFerias', () => abrirModalFerias(editId), 'lançar férias')) return;
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; document.getElementById('feriasAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
+        configurarSelectAdminPorPermissao('feriasAdmin', 'lancarFerias');
         let areaEdit = document.getElementById('areaEditFerias');
         if(editId) { let r = db.registros.find(x => x.id === editId); document.getElementById('feriasEditId').value = editId; document.getElementById('feriasData').value = r.data; document.getElementById('feriasDataFim').value = r.dataFim; document.getElementById('feriasRetorno').value = r.retorno; document.getElementById('feriasAdmin').value = r.adminId; document.getElementById('btnSalvarFerias').innerText = "Salvar Edição"; document.getElementById('btnCancelEditFerias').style.display = 'block'; areaEdit.classList.add('edit-highlight'); } 
         else { document.getElementById('feriasEditId').value = ''; document.getElementById('feriasData').value = getHojeSTR(); document.getElementById('feriasDataFim').value = ''; document.getElementById('feriasRetorno').value = ''; document.getElementById('btnSalvarFerias').innerText = "Gravar Férias"; document.getElementById('btnCancelEditFerias').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistFerias(funcId); document.getElementById('modalFormFerias').style.display = 'flex';
     }
-    function salvarFerias() { const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); }
+    function salvarFerias() { if(!adminSelecionadoTemPermissao('feriasAdmin', 'lancarFerias')) return; const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const novo = { type: 'ferias', funcId: funcId, data: document.getElementById('feriasData').value, dataFim: document.getElementById('feriasDataFim').value, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); } salvarBanco(); abrirModalFerias(null); renderizarLista(); }
     function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = db.registros.filter(r => r.type === 'ferias' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data)); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b><br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
 
     function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { db.registros = db.registros.filter(r => r.id !== id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'atraso') renderizarHistAtrasos(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); else if(tela === 'presenca') renderizarPresencasPendentes(funcId); renderizarLista(); } }
@@ -1036,6 +1207,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return dataIni <= fim && dataFim >= inicio;
     }
     function abrirModalResumo() {
+        if(!garantirPermissao('acessoResumo', () => abrirModalResumo(), 'abrir o resumo')) return;
         const hoje = getHojeSTR();
         document.getElementById('resumoTipo').value = 'mes';
         document.getElementById('resumoMes').value = hoje.substring(0, 7);
@@ -1475,6 +1647,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirConfigContracheque() {
+        if(!garantirPermissao('gerarContracheque', () => abrirConfigContracheque(), 'gerar contracheque')) return;
         if(itensSelecionados.size === 0) return alert("Selecione funcionários!");
         overridesContracheque = {};
         resumoContrachequeVisivel = false;
@@ -1589,6 +1762,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return db.administradores.some(a => String(a.senha || '') === texto);
     }
 
+    function getAdminPorSenha(senha) {
+        const texto = String(senha || '');
+        return db.administradores.find(a => String(a.senha || '') === texto) || null;
+    }
+
     function toggleDetalhesContracheque(funcId, event) {
         if(event && event.target && event.target.closest('button,input,select,label')) return;
         const mesRef = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
@@ -1615,10 +1793,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function validarSenhaContracheque() {
         const funcId = document.getElementById('contraSenhaFuncId').value;
         const senha = document.getElementById('contraSenhaAdmin').value;
-        if(!validarSenhaAdminSimples(senha)) {
+        const admin = getAdminPorSenha(senha);
+        if(!admin || !adminTemPermissao(admin, 'gerarContracheque')) {
             document.getElementById('contraSenhaErro').style.display = 'block';
             return;
         }
+        adminSessaoId = admin.id;
+        sessionStorage.setItem('alorh_admin_sessao', adminSessaoId);
         const mesRef = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
         db.registros = db.registros.filter(r => !(r.type === 'contracheque_fechado' && r.funcId === funcId && r.mesRef === mesRef));
         contrachequesAbertos.add(chaveContracheque(funcId, mesRef));
@@ -1629,6 +1810,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function fecharContrachequeFuncionario(funcId, event) {
         if(event) event.stopPropagation();
+        if(!garantirPermissao('gerarContracheque', () => fecharContrachequeFuncionario(funcId, event), 'fechar contracheque')) return;
         const mesRef = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
         if(!confirm('Fechar este contracheque? Para visualizar depois, será exigida senha de administrador.')) return;
         const existente = obterFechamentoContracheque(funcId, mesRef);

@@ -1,5 +1,6 @@
 html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; }
+        @media (min-width: 700px) and (pointer: fine) { body { zoom: 1.25; } }
         input, select, textarea, .modal { user-select: text; -webkit-user-select: text; font-family: inherit; }
         .app-container { width: 100%; max-width: 100%; height: 100%; background-color: #ffffff; display: flex; flex-direction: column; position: absolute; top: 0; left: 0; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         
@@ -85,6 +86,9 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         input:checked + .slider:before { transform: translateX(20px); }
         .switch-panel { background:#f7fbfa; padding:10px; border-radius:8px; margin-bottom:12px; border:1px solid #dce8e5; }
         .switch-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .permissoes-admin-grid { display:grid; grid-template-columns:1fr; gap:7px; max-height:360px; overflow:auto; }
+        .permissoes-admin-grid .switch-row { min-height:38px; }
+        .cadastro-func-section.bloqueada { display:none; }
         #boxBeneficiosVinculo .switch-grid { grid-template-columns: 1fr; }
         .switch-row { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:34px; padding:7px 8px; border:1px solid #e5e5e5; border-radius:8px; background:#fff; box-sizing:border-box; color:#333; font-size:12px; font-weight:700; }
         .switch-row .switch { margin:0; }

@@ -1,7 +1,7 @@
 // IMPRESSÕES E VT
     let arrVTParaImprimir = [];
 
-    function abrirAjusteVT() { if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); document.getElementById('vtDataPagto').value = getHojeSTR(); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
+    function abrirAjusteVT() { if(typeof garantirPermissao === 'function' && !garantirPermissao('gerarVT', () => abrirAjusteVT(), 'gerar VT')) return; if(itensSelecionados.size === 0) return alert("Selecione os funcionários!"); document.getElementById('vtMesRef').value = getHojeSTR().substring(0,7); document.getElementById('vtDataPagto').value = getHojeSTR(); gerarListaAjusteVT(); document.getElementById('modalPrintVT').style.display = 'flex'; }
 
     function gerarListaAjusteVT() {
         let box = document.getElementById('areaListaAjusteVT'); let html = ''; arrVTParaImprimir = [];
@@ -92,6 +92,7 @@
         return { nomeMm, fontPx };
     }
     function executarPrintVT() {
+        if(typeof garantirPermissao === 'function' && !garantirPermissao('gerarVT', () => executarPrintVT(), 'gerar VT')) return;
         if(arrVTParaImprimir.length === 0) return alert("Nada para imprimir.");
         let mesRefVT = document.getElementById('vtMesRef').value;
         let { ano, mes } = getMesAnoExtensoPrint(mesRefVT);
@@ -225,8 +226,9 @@
         renderListaQuinzenaRecebem();
     }
 
-    function abrirConfigQuinzena() { if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('quinzenaMesRef').value = getHojeSTR().substring(0,7); document.getElementById('quinzenaDataPagto').value = getHojeSTR(); renderListaQuinzenaRecebem(); document.getElementById('modalPrintQuinzena').style.display = 'flex'; }
+    function abrirConfigQuinzena() { if(typeof garantirPermissao === 'function' && !garantirPermissao('gerarQuinzena', () => abrirConfigQuinzena(), 'gerar quinzena')) return; if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('quinzenaMesRef').value = getHojeSTR().substring(0,7); document.getElementById('quinzenaDataPagto').value = getHojeSTR(); renderListaQuinzenaRecebem(); document.getElementById('modalPrintQuinzena').style.display = 'flex'; }
     function executarPrintQuinzena() {
+        if(typeof garantirPermissao === 'function' && !garantirPermissao('gerarQuinzena', () => executarPrintQuinzena(), 'gerar quinzena')) return;
         let mesRef = document.getElementById('quinzenaMesRef').value; if(!mesRef) return; let ano = mesRef.split('-')[0]; let mesNum = mesRef.split('-')[1]; let dataPgto = document.getElementById('quinzenaDataPagto').value || getHojeSTR(); let cidade = db.empresa.cidade || 'Cidade';
         let itensQuinzena = obterItensQuinzenaSelecionados();
         if(itensQuinzena.length === 0) return alert("Nenhum funcionário ativo selecionado para imprimir.");
@@ -269,8 +271,9 @@
         w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintQuinzena');
     }
 
-    function abrirConfigPonto() { if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('pontoMesRef').value = getHojeSTR().substring(0,7); document.getElementById('modalPrintPonto').style.display = 'flex'; }
+    function abrirConfigPonto() { if(typeof garantirPermissao === 'function' && !garantirPermissao('gerarPonto', () => abrirConfigPonto(), 'gerar ponto')) return; if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('pontoMesRef').value = getHojeSTR().substring(0,7); document.getElementById('modalPrintPonto').style.display = 'flex'; }
     function executarPrintPonto() {
+        if(typeof garantirPermissao === 'function' && !garantirPermissao('gerarPonto', () => executarPrintPonto(), 'gerar ponto')) return;
         let mesRef = document.getElementById('pontoMesRef').value; if(!mesRef) return; let ano = parseInt(mesRef.split('-')[0]); let mes = parseInt(mesRef.split('-')[1]); let diasNoMes = new Date(ano, mes, 0).getDate();
         let w = window.open('','_blank'); let html = `<html><head><title>Folha de Ponto</title><style>
             @page{size:A4 portrait;margin:10mm 8mm 8mm 8mm;}
