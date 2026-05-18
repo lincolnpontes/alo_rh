@@ -1,7 +1,7 @@
 function toggleDiv(id) { let el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
     function converterLogo(input) { if (input.files && input.files[0]) { let reader = new FileReader(); reader.onload = function(e) { document.getElementById('empLogoBase64').value = e.target.result; document.getElementById('previewLogo').innerHTML = `<img src="${e.target.result}" style="max-height:50px;">`; }; reader.readAsDataURL(input.files[0]); } }
     
-    window.onload = async () => { await migrarSenhaAvancadaLegada(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'grid'; initDiasFiltro(); atualizarAcoesMassa(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
+    window.onload = async () => { await migrarSenhaAvancadaLegada(); prepararModaisNoTopo(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'grid'; initDiasFiltro(); atualizarAcoesMassa(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
 
     function toggleModoSelecao() { 
         atualizarAcoesMassa();
@@ -1297,20 +1297,45 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const registro = db.registros.find(r => r.id === id);
         if(!registro) return;
         const atual = getValorDescontoContracheque(registro, mesRef, registro.type === 'desconto_quinzena');
-        const resposta = prompt(`Quanto deseja descontar? Use 0 para não descontar. Máximo: R$ ${formatMoedaContracheque(valorMaximo)}`, atual ? formatMoedaContracheque(atual) : formatMoedaContracheque(valorMaximo));
-        if(resposta === null) return;
-        const valor = Math.min(Number(valorMaximo) || 0, Math.max(0, parseMoeda(resposta)));
+        document.getElementById('descontoContraRegId').value = id;
+        document.getElementById('descontoContraMesRef').value = mesRef;
+        document.getElementById('descontoContraMax').value = String(valorMaximo || 0);
+        document.getElementById('descontoContraDescricao').innerText = registro.type === 'desconto_quinzena' ? 'Quinzena gerada para este mês.' : `${formatDataBR(registro.data)} - ${registro.motivo || 'Adiantamento'}`;
+        document.getElementById('descontoContraLimite').innerText = `Máximo: R$ ${formatMoedaContracheque(valorMaximo)}`;
+        const input = document.getElementById('descontoContraValor');
+        input.value = formatMoedaContracheque(atual > 0 ? atual : valorMaximo);
+        document.getElementById('modalDescontoContracheque').style.display = 'flex';
+        setTimeout(() => { input.focus(); input.select(); }, 120);
+    }
+
+    function aplicarValorDescontoContracheque(valor) {
+        const id = document.getElementById('descontoContraRegId').value;
+        const mesRef = document.getElementById('descontoContraMesRef').value;
+        const valorMaximo = Number(document.getElementById('descontoContraMax').value || 0);
+        const registro = db.registros.find(r => r.id === id);
+        if(!registro) return;
         if(valor <= 0) {
             registro.mesDescontoContracheque = '';
             registro.valorDescontoContracheque = 0;
         } else {
             registro.mesDescontoContracheque = mesRef;
-            registro.valorDescontoContracheque = valor;
+            registro.valorDescontoContracheque = Math.min(valorMaximo, valor);
         }
         registro.editadoEm = Date.now();
         registro._syncAtualizadoEm = registro.editadoEm;
         salvarBanco();
+        fecharModal('modalDescontoContracheque');
         gerarPreviaContracheque();
+    }
+
+    function confirmarDescontoContracheque() {
+        const valorMaximo = Number(document.getElementById('descontoContraMax').value || 0);
+        const valor = Math.min(valorMaximo, Math.max(0, parseMoeda(document.getElementById('descontoContraValor').value)));
+        aplicarValorDescontoContracheque(valor);
+    }
+
+    function zerarDescontoContracheque() {
+        aplicarValorDescontoContracheque(0);
     }
 
     function obterAdiantamentosContracheque(f, mesRef) {

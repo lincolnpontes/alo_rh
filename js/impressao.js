@@ -161,8 +161,10 @@
             return;
         }
         box.innerHTML = itens.map(item => {
-            const gerado = descontosExistentes.some(r => r.funcId === item.funcId) ? ' <small style="color:#2E7D32; font-weight:bold;">já gerado</small>' : '';
-            return `<div class="linha-previa-folha"><span>${escapeHTML(item.nome || 'Sem nome')}${gerado}</span><strong>R$ ${formatMoeda(item.valor)}</strong></div>`;
+            const desconto = descontosExistentes.find(r => r.funcId === item.funcId);
+            const gerado = desconto ? ' <small style="color:#2E7D32; font-weight:bold;">já gerado</small>' : '';
+            const botaoCancelar = desconto ? `<button class="btn-cancelar-quinzena" onclick="cancelarDescontoQuinzenaFuncionario(${jsArg(item.funcId)})" title="Cancelar desconto desta quinzena">X</button>` : '';
+            return `<div class="linha-previa-folha"><span>${escapeHTML(item.nome || 'Sem nome')}${gerado}</span><div style="display:flex; align-items:center; gap:7px; margin-left:auto;"><strong>R$ ${formatMoeda(item.valor)}</strong>${botaoCancelar}</div></div>`;
         }).join('');
     }
 
@@ -198,6 +200,16 @@
             if(!existente) db.registros.push(registro);
         });
         salvarBanco();
+    }
+
+    function cancelarDescontoQuinzenaFuncionario(funcId) {
+        const mesRef = document.getElementById('quinzenaMesRef').value;
+        if(!mesRef) return;
+        const antes = db.registros.length;
+        db.registros = db.registros.filter(r => !(r.type === 'desconto_quinzena' && r.mesRef === mesRef && r.funcId === funcId));
+        if(db.registros.length === antes) return alert('Este funcionário não tem desconto de quinzena gerado neste mês.');
+        salvarBanco();
+        renderListaQuinzenaRecebem();
     }
 
     function cancelarDescontosQuinzenaSelecionados() {

@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.32';
+    const APP_VERSION = 'v1.0.33';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -233,6 +233,23 @@
         };
     }
 
+    function resetarModalTopo(modalOverlay) {
+        if(!modalOverlay) return;
+        requestAnimationFrame(() => {
+            modalOverlay.scrollTop = 0;
+            const modal = modalOverlay.querySelector('.modal');
+            if(modal) modal.scrollTop = 0;
+        });
+    }
+    function prepararModaisNoTopo() {
+        document.querySelectorAll('.modal-overlay').forEach((overlay) => {
+            if(overlay.dataset.topObserver === '1') return;
+            overlay.dataset.topObserver = '1';
+            new MutationObserver(() => {
+                if(overlay.style.display && overlay.style.display !== 'none') resetarModalTopo(overlay);
+            }).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
+        });
+    }
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
     function marcarMudancaEstrutural() { salvarBanco({ sincronizar: true }); }
 

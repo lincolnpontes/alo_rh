@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.32</title>
+    <title>Alô RH v1.0.33</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.32">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.33">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.32</div>
+    <div class="splash-versao">v1.0.33</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -62,7 +62,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.32</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.33</small>
         </h2>
         <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
@@ -706,6 +706,19 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalDescontoContracheque" style="z-index:1500;">
+    <div class="modal">
+        <div class="modal-title" style="color:#D32F2F; border-color:#D32F2F;">Descontar Adiantamento</div>
+        <input type="hidden" id="descontoContraRegId">
+        <input type="hidden" id="descontoContraMesRef">
+        <input type="hidden" id="descontoContraMax">
+        <p id="descontoContraDescricao" style="font-size:12px; color:#666; margin-top:0;"></p>
+        <div class="form-group"><label>Valor a descontar:</label><input type="text" id="descontoContraValor" inputmode="numeric" oninput="maskMoeda(this)" onfocus="this.select()" placeholder="0,00"></div>
+        <div id="descontoContraLimite" style="font-size:11px; color:#777; font-weight:bold; margin-bottom:12px;"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="zerarDescontoContracheque()">Não descontar</button><button class="btn-action" style="background:#D32F2F;" onclick="confirmarDescontoContracheque()">Aplicar</button></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalEditINSSContracheque" style="z-index:1500;">
     <div class="modal">
         <div class="modal-title" style="color:#6A1B9A; border-color:#6A1B9A;">Ajustar INSS</div>
@@ -742,11 +755,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.32"></script>
-<script src="js/calculos.js?v=1.0.32"></script>
-<script src="js/interface.js?v=1.0.32"></script>
-<script src="js/impressao.js?v=1.0.32"></script>
-<script src="js/sincronizacao.js?v=1.0.32"></script>
+<script src="js/dados.js?v=1.0.33"></script>
+<script src="js/calculos.js?v=1.0.33"></script>
+<script src="js/interface.js?v=1.0.33"></script>
+<script src="js/impressao.js?v=1.0.33"></script>
+<script src="js/sincronizacao.js?v=1.0.33"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
