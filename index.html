@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.31</title>
+    <title>Alô RH v1.0.32</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.31">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.32">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.31</div>
+    <div class="splash-versao">v1.0.32</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -50,6 +50,7 @@
                 <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinzena</button>
                 <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
                 <button class="btn-action-bar" id="btnAcaoMassa4" style="display:none; background:#6A1B9A;" onclick="abrirConfigContracheque()">🧾 Contracheque</button>
+                <button class="btn-action-bar" id="btnAcaoMassaSemana" style="display:none; background:#E65100;" onclick="abrirModalPresencaMassaSemana()">✅ Registrar Presença</button>
             </div>
         </div>
         
@@ -61,7 +62,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.31</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.32</small>
         </h2>
         <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
@@ -191,12 +192,12 @@
         <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:15px;"><input type="checkbox" id="classeSemIntervalo" onchange="toggleIntervaloClasse()"> Vínculo sem intervalo de descanso</label>
 
         <div class="form-group" style="display:flex; align-items:center; background:#FFF3E0; padding:10px; border-radius:8px; margin-bottom: 15px; border: 1px solid #FFE0B2;">
-            <label class="switch"><input type="checkbox" id="classeSemanal"><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="classeSemanal" onchange="toggleRegrasVinculoSemanal()"><span class="slider"></span></label>
             <span style="font-weight:bold; font-size:14px; color:#E65100;">Pagamento por semana</span>
         </div>
 
-        <div class="section-title">Regras do Vínculo</div>
-        <div class="switch-panel">
+        <div class="section-title" id="tituloRegrasVinculo">Regras do Vínculo</div>
+        <div class="switch-panel" id="boxRegrasVinculo">
             <div class="switch-grid">
                 <label class="switch-row"><span class="switch-row-text">Vale-Transporte</span><span class="switch"><input type="checkbox" id="classePedirVT" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Gratificação</span><span class="switch"><input type="checkbox" id="classePedirGratificacao" checked><span class="slider"></span></span></label>
@@ -492,6 +493,17 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalPresencaMassaSemana">
+    <div class="modal">
+        <div class="modal-title" style="color:#E65100; border-color:#E65100;">Registrar Presença</div>
+        <p id="textoPresencaMassaSemana" style="font-size:12px; color:#666; margin-top:0;"></p>
+        <div class="form-group"><label>Data da presença:</label><input type="date" id="massaPresencaData"></div>
+        <div class="form-group"><label>Valor para cada funcionário:</label><input type="text" id="massaPresencaValor" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
+        <div id="botoesValoresPresencaMassa" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPresencaMassaSemana')">Cancelar</button><button class="btn-action" style="background:#E65100;" onclick="registrarPresencaMassaSemana()">Registrar</button></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalFormAdiantamento">
     <div class="modal">
         <div class="modal-title" style="color:#1565C0; border-color:#1565C0;">Adiantamentos</div>
@@ -655,6 +667,7 @@
         <div class="form-group"><label>Data de Pagamento (No rodapé):</label><input type="date" id="quinzenaDataPagto"></div>
         <div class="section-title" style="margin-top:5px;">Funcionários que receberão</div>
         <div id="listaQuinzenaRecebem" class="lista-previa-folha"></div>
+        <button class="btn-outline" id="btnCancelarDescontosQuinzena" onclick="cancelarDescontosQuinzenaSelecionados()" style="display:none; border-color:#D32F2F; color:#D32F2F; text-align:center;">Cancelar desconto já gerado</button>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPrintQuinzena')">Cancelar</button><button class="btn-action" style="background:#2E7D32;" onclick="executarPrintQuinzena()">Gerar Folha e Desconto</button></div>
     </div>
 </div>
@@ -684,12 +697,12 @@
 
 <div class="modal-overlay" id="modalSenhaAdminContracheque" style="z-index:1500;">
     <div class="modal">
-        <div class="modal-title" style="color:#2E7D32; border-color:#2E7D32;">Abrir Contracheque Fechado</div>
+        <div class="modal-title" style="color:#2E7D32; border-color:#2E7D32;">Reabrir Contracheque</div>
         <input type="hidden" id="contraSenhaFuncId">
-        <p style="font-size:12px; color:#666; margin-top:0;">Digite a senha de um administrador para visualizar este contracheque fechado.</p>
+        <p style="font-size:12px; color:#666; margin-top:0;">Digite a senha de um administrador para reabrir e permitir ajustes neste contracheque.</p>
         <div class="form-group"><label>Senha do ADM:</label><input type="password" id="contraSenhaAdmin" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
         <div id="contraSenhaErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;">Senha incorreta.</div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalSenhaAdminContracheque')">Cancelar</button><button class="btn-action" style="background:#2E7D32;" onclick="validarSenhaContracheque()">Abrir</button></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalSenhaAdminContracheque')">Cancelar</button><button class="btn-action" style="background:#2E7D32;" onclick="validarSenhaContracheque()">Reabrir</button></div>
     </div>
 </div>
 
@@ -729,11 +742,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.31"></script>
-<script src="js/calculos.js?v=1.0.31"></script>
-<script src="js/interface.js?v=1.0.31"></script>
-<script src="js/impressao.js?v=1.0.31"></script>
-<script src="js/sincronizacao.js?v=1.0.31"></script>
+<script src="js/dados.js?v=1.0.32"></script>
+<script src="js/calculos.js?v=1.0.32"></script>
+<script src="js/interface.js?v=1.0.32"></script>
+<script src="js/impressao.js?v=1.0.32"></script>
+<script src="js/sincronizacao.js?v=1.0.32"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

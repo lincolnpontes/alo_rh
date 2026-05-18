@@ -7,15 +7,32 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         atualizarAcoesMassa();
     }
 
+    function getCategoriaFuncionario(f) {
+        return f ? db.categorias.find(c => c.id === f.categoria) : null;
+    }
+
+    function isFuncionarioSemanal(f) {
+        const cat = getCategoriaFuncionario(f);
+        return !!(cat && cat.semanal);
+    }
+
+    function obterFuncionariosSelecionados() {
+        return Array.from(itensSelecionados).map(id => db.funcionarios.find(f => f.id === id)).filter(f => f && !f.arquivado);
+    }
+
     function atualizarAcoesMassa() {
         const temSelecionados = itensSelecionados.size > 0;
-        const visivel = temSelecionados ? 'flex' : 'none';
+        const selecionados = obterFuncionariosSelecionados();
+        const somenteSemanais = selecionados.length > 0 && selecionados.every(isFuncionarioSemanal);
+        const visivel = temSelecionados && !somenteSemanais ? 'flex' : 'none';
         const actionBar = document.getElementById('actionBar');
         if(actionBar) actionBar.classList.toggle('com-selecao', temSelecionados);
         document.getElementById('btnAcaoMassa1').style.display = visivel;
         document.getElementById('btnAcaoMassa2').style.display = visivel;
         document.getElementById('btnAcaoMassa3').style.display = visivel;
         document.getElementById('btnAcaoMassa4').style.display = visivel;
+        const btnSemana = document.getElementById('btnAcaoMassaSemana');
+        if(btnSemana) btnSemana.style.display = temSelecionados && somenteSemanais ? 'flex' : 'none';
         document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
         const btnFolgaGeral = document.getElementById('btnFolgaGeral');
         if(btnFolgaGeral) btnFolgaGeral.style.display = temSelecionados ? 'none' : 'flex';
@@ -43,29 +60,36 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function setFiltroApto(diaKey) {
-        if(diaFiltroAptos === diaKey) { diaFiltroAptos = null; } else { diaFiltroAptos = diaKey; categoriaAtual = null; }
+        if(diaFiltroAptos === diaKey) { diaFiltroAptos = null; } else { diaFiltroAptos = diaKey; }
         document.querySelectorAll('#boxFiltrosDias .btn-action-bar').forEach(b => b.classList.remove('ativo'));
         if(diaFiltroAptos) document.getElementById(`btnFiltro_${diaKey}`).classList.add('ativo');
         renderizarFiltros(); renderizarLista();
     }
 
     function renderizarFiltros() { 
-        let classTodos = diaFiltroAptos ? "aptos" : (categoriaAtual === null ? "active" : "");
+        let classTodos = categoriaAtual === null ? "active" : "";
         let html = `<div class="chip ${classTodos}" onclick="filtrarCat(null)">TODOS</div>`; 
         db.categorias.forEach(cat => { html += `<div class="chip ${categoriaAtual === cat.id ? 'active' : ''}" style="background-color: ${safeColor(cat.cor)}; color: ${safeColor(cat.corTexto, '#ffffff')};" onclick="filtrarCat(${jsArg(cat.id)})">${escapeHTML(cat.nome)}</div>`; }); 
         document.getElementById('containerFiltros').innerHTML = html; 
     }
     
     function filtrarCat(id) { 
-        if(id === null) { categoriaAtual = null; diaFiltroAptos = null; document.querySelectorAll('#boxFiltrosDias .btn-action-bar').forEach(b => b.classList.remove('ativo')); } else { categoriaAtual = id; diaFiltroAptos = null; document.querySelectorAll('#boxFiltrosDias .btn-action-bar').forEach(b => b.classList.remove('ativo')); }
+        categoriaAtual = id;
         renderizarFiltros(); renderizarLista(); 
+    }
+
+    function limparFiltrosTelaInicial() {
+        categoriaAtual = null;
+        diaFiltroAptos = null;
+        document.querySelectorAll('#boxFiltrosDias .btn-action-bar').forEach(b => b.classList.remove('ativo'));
+        renderizarFiltros(); renderizarLista();
     }
 
     function obterFuncionariosListados() {
         let funcs = db.funcionarios.filter(f => !f.arquivado);
         if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual);
         if(diaFiltroAptos) funcs = funcs.filter(f => isAptoNoDia(f, diaFiltroAptos));
-        funcs.sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+        funcs.sort((a,b) => String(getNomeUsoFuncionario(a) || '').localeCompare(String(getNomeUsoFuncionario(b) || '')));
         return funcs;
     }
 
@@ -100,7 +124,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function renderizarEstadoVazio() {
         const ativos = db.funcionarios.filter(f => !f.arquivado);
         if(ativos.length > 0) {
-            return `<li class="empty-state"><div class="empty-state-title">Nenhum funcionário neste filtro</div><div class="empty-state-text">Limpe os filtros ou escolha outro vínculo para voltar à lista.</div><div class="empty-actions"><button class="btn-action" onclick="filtrarCat(null)">Limpar filtros</button></div></li>`;
+            return `<li class="empty-state"><div class="empty-state-title">Nenhum funcionário neste filtro</div><div class="empty-state-text">Limpe os filtros ou escolha outro vínculo para voltar à lista.</div><div class="empty-actions"><button class="btn-action" onclick="limparFiltrosTelaInicial()">Limpar filtros</button></div></li>`;
         }
         if(db.funcionarios.length > 0) {
             return `<li class="empty-state"><div class="empty-state-title">Nenhum funcionário ativo</div><div class="empty-state-text">Há funcionários arquivados. Você pode restaurar alguém em Gerenciar Funcionários ou cadastrar uma nova pessoa.</div><div class="empty-actions"><button class="btn-action" onclick="abrirGerenciar('funcionarios')">Gerenciar Funcionários</button><button class="btn-outline" onclick="abrirFormFunc(null, 'inicio')">Novo Funcionário</button></div></li>`;
@@ -309,6 +333,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('classeRecebeContracheque').checked = beneficios.recebeContracheque;
     }
 
+    function toggleRegrasVinculoSemanal() {
+        const semanal = document.getElementById('classeSemanal').checked;
+        const titulo = document.getElementById('tituloRegrasVinculo');
+        const box = document.getElementById('boxRegrasVinculo');
+        if(titulo) titulo.style.display = semanal ? 'none' : '';
+        if(box) box.style.display = semanal ? 'none' : '';
+    }
+
     function abrirFormClasse(id, origem = 'gerenciar') { 
         origemFormClasse = origem;
         fecharModal('modalListagem'); tempSalariosClasse = [];
@@ -322,7 +354,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             document.getElementById('classeHoraEntrada').value = ''; document.getElementById('classeHoraSaida').value = ''; document.getElementById('classeHoraIntEnt').value = ''; document.getElementById('classeHoraIntSai').value = ''; document.getElementById('classeSemIntervalo').checked = false;
             preencherCamposFuncionarioClasse();
         } 
-        toggleIntervaloClasse(); renderListaSalariosClasse(); document.getElementById('modalFormClasse').style.display = 'flex'; 
+        toggleIntervaloClasse(); toggleRegrasVinculoSemanal(); renderListaSalariosClasse(); document.getElementById('modalFormClasse').style.display = 'flex'; 
     }
     function toggleIntervaloClasse() { let isSem = document.getElementById('classeSemIntervalo').checked; document.getElementById('classeHoraIntEnt').disabled = isSem; document.getElementById('classeHoraIntSai').disabled = isSem; if(isSem) { document.getElementById('classeHoraIntEnt').value = ''; document.getElementById('classeHoraIntSai').value = ''; } }
     function renderListaSalariosClasse() { const box = document.getElementById('listaSalariosClasse'); if(tempSalariosClasse.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhum salário base.</div>'; return; } box.innerHTML = tempSalariosClasse.map((s, i) => `<div class="list-item-config"><span>R$ ${formatMoeda(s)}</span><button onclick="removerSalarioClasse(${i})">X</button></div>`).join(''); }
@@ -398,8 +430,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const beneficios = getBeneficiosVinculo(c || {});
         const box = document.getElementById('boxBeneficiosVinculo');
         if(!box) return;
+        const linhasBeneficios = ['linhaFuncVT','linhaFuncGratificacao','linhaFuncSalFamilia','linhaFuncUnidentis','linhaFuncPassagem','linhaFuncINSS','linhaFuncQuinzena','linhaFuncContracheque','linhaFuncControlePonto','linhaFuncQuinquenio'];
         if(!c) {
-            ['linhaFuncVT','linhaFuncGratificacao','linhaFuncSalFamilia','linhaFuncUnidentis','linhaFuncPassagem','linhaFuncINSS','linhaFuncQuinzena','linhaFuncContracheque','linhaFuncControlePonto','linhaFuncQuinquenio'].forEach((id) => {
+            linhasBeneficios.forEach((id) => {
+                const linha = document.getElementById(id);
+                if(linha) linha.style.display = 'none';
+            });
+            box.style.display = 'none';
+            return;
+        }
+        if(c.semanal) {
+            linhasBeneficios.forEach((id) => {
                 const linha = document.getElementById(id);
                 if(linha) linha.style.display = 'none';
             });
@@ -509,14 +550,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         toggleQtdQuinqueniosFuncionario();
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
-    function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config pix-list-row"><div class="pix-text"><b style="color:#0277BD;">${escapeHTML(p.tipo || 'PIX')}</b> - ${escapeHTML(p.chave || '')}</div><label class="radio-custom" style="flex-shrink:0;"><input type="radio" name="pixPrinc" onchange="setPixPrincipal(${i})" ${p.principal ? 'checked' : ''}> Principal</label><button onclick="removerPix(${i})">X</button></div>`).join(''); }
+    function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config pix-list-row"><div class="pix-text"><b style="color:#0277BD;">${escapeHTML(p.tipo || 'PIX')}</b> - ${escapeHTML(p.chave || '')}</div><button onclick="removerPix(${i})">X</button></div>`).join(''); }
     function addPix() { 
         let tipo = document.getElementById('novoPixTipo').value; let chv = document.getElementById('novoPixInput').value.trim(); 
         if(tipo === 'E-mail') { chv = chv.toLowerCase(); if(!chv.includes('@') || !chv.includes('.')) return alert('Digite um e-mail válido com @ e domínio.'); }
-        if(chv) { tempPix.push({ tipo: tipo, chave: chv, principal: tempPix.length === 0 }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } 
+        if(chv) { tempPix.push({ tipo: tipo, chave: chv }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } 
     }
-    function removerPix(idx) { tempPix.splice(idx, 1); if(tempPix.length > 0 && !tempPix.some(p => p.principal)) tempPix[0].principal = true; renderListaPix(); }
-    function setPixPrincipal(idx) { tempPix.forEach((p, i) => p.principal = (i === idx)); }
+    function removerPix(idx) { tempPix.splice(idx, 1); renderListaPix(); }
     function voltarDepoisFormFuncionario() { if(origemFormFuncionario === 'inicio') { origemFormFuncionario = 'gerenciar'; renderizarLista(); return; } abrirGerenciar('funcionarios'); }
     function cancelarFormFuncionario() { fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); }
     function salvarFuncionario() { 
@@ -619,9 +659,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(lista.length === 1) return copiarChavePixFuncionario(0);
         const box = document.getElementById('listaEscolhaPix');
         box.innerHTML = lista.map((pix, i) => {
-            const principal = pix.principal ? 'Principal' : `PIX ${i + 1}`;
-            const tipo = pix.tipo ? ` • ${escapeHTML(pix.tipo)}` : '';
-            return `<button class="btn-outline" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left;" onclick="copiarChavePixFuncionario(${i})"><strong>${principal}${tipo}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></button>`;
+            const tipo = pix.tipo || 'PIX';
+            return `<button class="btn-outline" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left;" onclick="copiarChavePixFuncionario(${i})"><strong>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></button>`;
         }).join('');
         document.getElementById('modalEscolhaPix').style.display = 'flex';
     }
@@ -702,6 +741,55 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let total = 0; let diasIds = []; pendentes.forEach(r => { total += r.valor; r.status = 'pago'; diasIds.push(r.data); });
         db.registros.push({ id: 'reg_'+Date.now(), type: 'pagamento_semana', funcId: funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds });
         salvarBanco(); renderizarPresencasPendentes(funcId); alert("Pagamento Confirmado!");
+    }
+
+    function obterSelecionadosSemanais() {
+        return obterFuncionariosSelecionados().filter(isFuncionarioSemanal);
+    }
+
+    function abrirModalPresencaMassaSemana() {
+        const funcs = obterSelecionadosSemanais();
+        if(funcs.length === 0 || funcs.length !== obterFuncionariosSelecionados().length) return alert('Selecione apenas funcionários com pagamento por semana.');
+        document.getElementById('massaPresencaData').value = diaFiltroAptos || getHojeSTR();
+        document.getElementById('massaPresencaValor').value = '';
+        document.getElementById('textoPresencaMassaSemana').innerText = `${funcs.length} funcionário(s) selecionado(s). O valor escolhido será lançado para todos nesse dia.`;
+        const valores = [];
+        funcs.forEach((f) => {
+            const cat = getCategoriaFuncionario(f);
+            if(cat && Array.isArray(cat.salarios)) cat.salarios.forEach(v => { const valor = typeof v === 'number' ? v : parseMoeda(v); if(valor > 0) valores.push(valor); });
+            const salario = parseMoeda(f.salario);
+            if(salario > 0) valores.push(salario);
+        });
+        const unicos = [...new Set(valores.map(v => Math.round(v * 100) / 100))].sort((a, b) => a - b);
+        const box = document.getElementById('botoesValoresPresencaMassa');
+        box.innerHTML = unicos.map(v => `<button class="btn-dia-rapido" style="flex:0 0 auto; min-width:88px;" onclick="definirValorPresencaMassa(${v})">R$ ${formatMoeda(v)}</button>`).join('');
+        if(unicos.length === 1) document.getElementById('massaPresencaValor').value = formatMoeda(unicos[0]);
+        document.getElementById('modalPresencaMassaSemana').style.display = 'flex';
+    }
+
+    function definirValorPresencaMassa(valor) {
+        document.getElementById('massaPresencaValor').value = formatMoeda(valor);
+    }
+
+    function registrarPresencaMassaSemana() {
+        const data = document.getElementById('massaPresencaData').value;
+        const valor = parseMoeda(document.getElementById('massaPresencaValor').value);
+        if(!data) return alert('Informe a data da presença.');
+        if(valor <= 0) return alert('Informe o valor para lançar.');
+        const funcs = obterSelecionadosSemanais();
+        const agora = Date.now();
+        let criados = 0;
+        let pulados = 0;
+        funcs.forEach((f, idx) => {
+            const jaExiste = db.registros.some(r => r.type === 'presenca' && r.funcId === f.id && r.status === 'pendente' && r.data === data);
+            if(jaExiste) { pulados++; return; }
+            db.registros.push({ id: `reg_${agora}_${idx}`, type: 'presenca', funcId: f.id, data, valor, status: 'pendente', criadoEm: agora, editadoEm: agora, _syncAtualizadoEm: agora });
+            criados++;
+        });
+        salvarBanco();
+        fecharModal('modalPresencaMassaSemana');
+        renderizarLista();
+        alert(`Presença registrada para ${criados} funcionário(s).${pulados ? ` ${pulados} já tinham esse dia pendente.` : ''}`);
     }
 
     // ADIANTAMENTOS
@@ -1147,17 +1235,18 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             gerarPreviaContracheque();
             return;
         }
-        if(obterFechamentoContracheque(funcId, mesRef)) {
-            if(db.administradores.length === 0) return alert('Cadastre ao menos um administrador para abrir contracheques fechados.');
-            document.getElementById('contraSenhaFuncId').value = funcId;
-            document.getElementById('contraSenhaAdmin').value = '';
-            document.getElementById('contraSenhaErro').style.display = 'none';
-            document.getElementById('modalSenhaAdminContracheque').style.display = 'flex';
-            setTimeout(() => document.getElementById('contraSenhaAdmin').focus(), 100);
-            return;
-        }
         contrachequesAbertos.add(key);
         gerarPreviaContracheque();
+    }
+
+    function abrirReaberturaContracheque(funcId, event) {
+        if(event) event.stopPropagation();
+        if(db.administradores.length === 0) return alert('Cadastre ao menos um administrador para reabrir contracheques fechados.');
+        document.getElementById('contraSenhaFuncId').value = funcId;
+        document.getElementById('contraSenhaAdmin').value = '';
+        document.getElementById('contraSenhaErro').style.display = 'none';
+        document.getElementById('modalSenhaAdminContracheque').style.display = 'flex';
+        setTimeout(() => document.getElementById('contraSenhaAdmin').focus(), 100);
     }
 
     function validarSenhaContracheque() {
@@ -1168,8 +1257,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             return;
         }
         const mesRef = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
+        db.registros = db.registros.filter(r => !(r.type === 'contracheque_fechado' && r.funcId === funcId && r.mesRef === mesRef));
         contrachequesAbertos.add(chaveContracheque(funcId, mesRef));
         fecharModal('modalSenhaAdminContracheque');
+        salvarBanco();
         gerarPreviaContracheque();
     }
 
@@ -1190,43 +1281,75 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         gerarPreviaContracheque();
     }
 
-    function toggleAdiantamentoContracheque(id, mesRef, event) {
+    function getValorDescontoContracheque(registro, mesRef, padraoAutomatico = false) {
+        const bruto = registro ? registro.valor : 0;
+        const valorOriginal = typeof bruto === 'number' ? bruto : parseMoeda(bruto);
+        if(!registro || valorOriginal <= 0) return 0;
+        if(padraoAutomatico && registro.type === 'desconto_quinzena' && registro.mesRef === mesRef && registro.mesDescontoContracheque === undefined) return valorOriginal;
+        if(registro.mesDescontoContracheque !== mesRef) return 0;
+        const informado = Number(registro.valorDescontoContracheque);
+        const valor = Number.isFinite(informado) ? informado : valorOriginal;
+        return Math.min(valorOriginal, Math.max(0, valor));
+    }
+
+    function definirDescontoAdiantamentoContracheque(id, mesRef, valorMaximo, event) {
         if(event) event.stopPropagation();
         const registro = db.registros.find(r => r.id === id);
         if(!registro) return;
-        registro.mesDescontoContracheque = registro.mesDescontoContracheque === mesRef ? '' : mesRef;
+        const atual = getValorDescontoContracheque(registro, mesRef, registro.type === 'desconto_quinzena');
+        const resposta = prompt(`Quanto deseja descontar? Use 0 para não descontar. Máximo: R$ ${formatMoedaContracheque(valorMaximo)}`, atual ? formatMoedaContracheque(atual) : formatMoedaContracheque(valorMaximo));
+        if(resposta === null) return;
+        const valor = Math.min(Number(valorMaximo) || 0, Math.max(0, parseMoeda(resposta)));
+        if(valor <= 0) {
+            registro.mesDescontoContracheque = '';
+            registro.valorDescontoContracheque = 0;
+        } else {
+            registro.mesDescontoContracheque = mesRef;
+            registro.valorDescontoContracheque = valor;
+        }
         registro.editadoEm = Date.now();
+        registro._syncAtualizadoEm = registro.editadoEm;
         salvarBanco();
         gerarPreviaContracheque();
     }
 
     function obterAdiantamentosContracheque(f, mesRef) {
-        const quinzena = calcularDescontoQuinzenaMes(f, mesRef);
+        const quinzenaRegs = db.registros.filter(r => r.type === 'desconto_quinzena' && r.funcId === f.id && r.mesRef === mesRef);
         const registros = db.registros.filter(r => r.type === 'adiantamento' && r.funcId === f.id && !r.descontado);
         const doMes = registros.filter(r => String(r.data || '').substring(0, 7) === mesRef);
         const anteriores = registros.filter(r => String(r.data || '').substring(0, 7) < mesRef);
-        const anterioresSelecionados = anteriores.filter(r => r.mesDescontoContracheque === mesRef);
-        const totalMes = doMes.reduce((acc, r) => acc + Number(r.valor || 0), 0);
-        const totalAnt = anterioresSelecionados.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const totalQuinzena = quinzenaRegs.reduce((acc, r) => acc + getValorDescontoContracheque(r, mesRef, true), 0);
+        const totalMes = doMes.reduce((acc, r) => acc + getValorDescontoContracheque(r, mesRef), 0);
+        const totalAnt = anteriores.reduce((acc, r) => acc + getValorDescontoContracheque(r, mesRef), 0);
         return {
-            quinzena,
+            quinzenaRegs,
             doMes,
             anteriores,
-            total: quinzena + totalMes + totalAnt
+            total: totalQuinzena + totalMes + totalAnt
         };
     }
 
-    function renderBoxAdiantamentosContracheque(f, mesRef, dados) {
+    function renderLinhaAdiantamentoContracheque(registro, mesRef, label, editavel, padraoAutomatico = false) {
+        const valorOriginal = typeof registro.valor === 'number' ? registro.valor : parseMoeda(registro.valor);
+        const valorDesconto = getValorDescontoContracheque(registro, mesRef, padraoAutomatico);
+        const ativo = valorDesconto > 0;
+        const textoBotao = ativo ? `R$ ${formatMoedaContracheque(valorDesconto)}` : 'Descontar';
+        const disabled = editavel ? '' : 'disabled';
+        return `<div class="linha-adiant"><button class="btn-contra-check ${ativo ? 'ativo' : ''}" ${disabled} onclick="definirDescontoAdiantamentoContracheque(${jsArg(registro.id)}, ${jsArg(mesRef)}, ${valorOriginal}, event)">${textoBotao}</button><span>${label}</span><span class="valor">R$ ${formatMoedaContracheque(valorOriginal)}</span></div>`;
+    }
+
+    function renderBoxAdiantamentosContracheque(f, mesRef, dados, editavel = true) {
         const linhas = [];
-        if(dados.quinzena > 0) linhas.push(`<div class="linha-adiant"><span>Quinzena</span><span class="valor">R$ ${formatMoedaContracheque(dados.quinzena)}</span></div>`);
+        dados.quinzenaRegs.forEach(r => {
+            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, 'Quinzena', editavel, true));
+        });
         dados.doMes.forEach(r => {
             const obs = r.observacao ? ` - ${escapeHTML(r.observacao)}` : '';
-            linhas.push(`<div class="linha-adiant"><span>${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Adiantamento')}${obs}</span><span class="valor">R$ ${formatMoedaContracheque(r.valor)}</span></div>`);
+            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, `${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Adiantamento')}${obs}`, editavel));
         });
         dados.anteriores.forEach(r => {
-            const ativo = r.mesDescontoContracheque === mesRef;
             const obs = r.observacao ? ` - ${escapeHTML(r.observacao)}` : '';
-            linhas.push(`<div class="linha-adiant"><button class="btn-contra-check ${ativo ? 'ativo' : ''}" onclick="toggleAdiantamentoContracheque(${jsArg(r.id)}, ${jsArg(mesRef)}, event)">${ativo ? 'Descontando' : 'Descontar'}</button><span>${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Pendente anterior')}${obs}</span><span class="valor">R$ ${formatMoedaContracheque(r.valor)}</span></div>`);
+            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, `${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Pendente anterior')}${obs}`, editavel));
         });
         if(linhas.length === 0) return '';
         return `<div class="contra-adiantamentos-box"><b style="color:#D32F2F;">Adiantamentos</b>${linhas.join('')}<div class="contra-linha contra-total"><span>Total adiantamentos</span><strong class="valor">R$ ${formatMoedaContracheque(dados.total)}</strong></div></div>`;
@@ -1328,7 +1451,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const fechado = !!obterFechamentoContracheque(f.id, mesRef);
             const aberto = contrachequesAbertos.has(key);
             const nomeSocial = f.nomeSocial ? `<div style="font-size:11px; color:#666;">Nome social: ${escapeHTML(f.nomeSocial)}</div>` : '';
-            const inssLabel = `INSS (${formatPercentual(inssAliquota)}%) <button class="btn-mini-edit" onclick="abrirEdicaoINSSContracheque(${jsArg(f.id)}, ${inssAliquota}, ${inss})" title="Editar INSS">✏️</button>`;
+            const editavel = !fechado;
+            const inssLabel = editavel ? `INSS (${formatPercentual(inssAliquota)}%) <button class="btn-mini-edit" onclick="abrirEdicaoINSSContracheque(${jsArg(f.id)}, ${inssAliquota}, ${inss})" title="Editar INSS">✏️</button>` : `INSS (${formatPercentual(inssAliquota)}%)`;
             const status = fechado ? 'Fechado' : 'Tocar para abrir';
             const detalhes = aberto ? `<div class="contra-detalhes">
                 <div style="font-size:11px; color:#777; margin-bottom:8px;">${nomeSocial}Salário ${escapeHTML(getExtensoMes(mes))} de ${ano} • VT ${escapeHTML(getExtensoMes(mesVT))} de ${anoVT} • ${vales.passagens} passagens${faltas.diasFalta ? ` • ${faltas.diasFalta} falta(s)` : ''}</div>
@@ -1349,16 +1473,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque('Unidentis', unidentis)}
                         ${linhaContracheque('Total', descontos, { total: true })}
                     </div>
-                    ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra)}
+                    ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel)}
                 </div>
-                <div class="contra-actions">${fechado ? '<span class="contra-status">Contracheque fechado</span>' : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
+                <div class="contra-actions">${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
             </div>` : '';
             const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(liquido)} - R$ ${formatMoedaContracheque(adiantamentosContra.total)} = R$ ${formatMoedaContracheque(liquidoAPagar)}</strong>` : `<span class="contra-status">${status}</span>`;
             html += `<div class="contra-card ${fechado ? 'fechado' : ''}" onclick="toggleDetalhesContracheque(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div>${equacao}</div>${detalhes}</div>`;
         });
 
         const classeResumo = resumoContrachequeVisivel ? 'contra-resumo-bar aberto' : 'contra-resumo-bar';
-        box.innerHTML = `<div class="${classeResumo}"><div class="contra-resumo-dados"><span>${funcs.length} funcionário(s) - Total líquido: R$ ${formatMoedaContracheque(totalLiquido)}</span></div><button class="contra-resumo-toggle" onclick="toggleResumoContracheque()" title="Mostrar ou ocultar resumo">👁️‍🗨️</button></div>${html}`;
+        const classeOlho = resumoContrachequeVisivel ? 'contra-resumo-toggle' : 'contra-resumo-toggle cortado';
+        box.innerHTML = `<div class="${classeResumo}"><div class="contra-resumo-dados"><span>${funcs.length} funcionário(s) - Total líquido: R$ ${formatMoedaContracheque(totalLiquido)}</span></div><button class="${classeOlho}" onclick="toggleResumoContracheque()" title="Mostrar ou ocultar resumo"><span>👁️‍🗨️</span></button></div>${html}`;
     }
 
     function abrirModalAniversarios() {

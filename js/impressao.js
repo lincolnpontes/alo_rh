@@ -151,32 +151,66 @@
     function renderListaQuinzenaRecebem() {
         const box = document.getElementById('listaQuinzenaRecebem'); if(!box) return;
         const itens = obterItensQuinzenaSelecionados();
+        const mesRef = document.getElementById('quinzenaMesRef').value;
+        const idsSelecionados = new Set(itens.map(item => item.funcId));
+        const descontosExistentes = db.registros.filter(r => r.type === 'desconto_quinzena' && r.mesRef === mesRef && idsSelecionados.has(r.funcId));
+        const btnCancelar = document.getElementById('btnCancelarDescontosQuinzena');
+        if(btnCancelar) btnCancelar.style.display = descontosExistentes.length ? 'block' : 'none';
         if(itens.length === 0) {
             box.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">Nenhum funcionário selecionado recebe quinzena.</div>';
             return;
         }
-        box.innerHTML = itens.map(item => `<div class="linha-previa-folha"><span>${escapeHTML(item.nome || 'Sem nome')}</span><strong>R$ ${formatMoeda(item.valor)}</strong></div>`).join('');
+        box.innerHTML = itens.map(item => {
+            const gerado = descontosExistentes.some(r => r.funcId === item.funcId) ? ' <small style="color:#2E7D32; font-weight:bold;">já gerado</small>' : '';
+            return `<div class="linha-previa-folha"><span>${escapeHTML(item.nome || 'Sem nome')}${gerado}</span><strong>R$ ${formatMoeda(item.valor)}</strong></div>`;
+        }).join('');
     }
 
     function registrarDescontosQuinzena(itensQuinzena, mesRef, dataPgto) {
         const ids = new Set(itensQuinzena.map(item => item.funcId));
-        db.registros = db.registros.filter(r => !(r.type === 'desconto_quinzena' && r.mesRef === mesRef && ids.has(r.funcId)));
+        const vistos = new Set();
+        db.registros = db.registros.filter((r) => {
+            if(!(r.type === 'desconto_quinzena' && r.mesRef === mesRef && ids.has(r.funcId))) return true;
+            const chave = `${r.funcId}|${r.mesRef}`;
+            if(vistos.has(chave)) return false;
+            vistos.add(chave);
+            return true;
+        });
         const agora = Date.now();
         itensQuinzena.forEach((item, idx) => {
-            db.registros.push({
-                id: `dq_${item.funcId}_${mesRef.replace('-', '')}_${agora}_${idx}`,
+            const existente = db.registros.find(r => r.type === 'desconto_quinzena' && r.funcId === item.funcId && r.mesRef === mesRef);
+            const registro = existente || {
+                id: `dq_${item.funcId}_${mesRef.replace('-', '')}_${agora}_${idx}`
+            };
+            Object.assign(registro, {
                 type: 'desconto_quinzena',
                 funcId: item.funcId,
                 data: dataPgto,
                 mesRef: mesRef,
                 valor: item.valor,
+                mesDescontoContracheque: mesRef,
+                valorDescontoContracheque: item.valor,
                 observacao: 'Gerado pela folha de quinzena',
-                criadoEm: agora,
+                criadoEm: registro.criadoEm || agora,
                 editadoEm: agora,
                 _syncAtualizadoEm: agora
             });
+            if(!existente) db.registros.push(registro);
         });
         salvarBanco();
+    }
+
+    function cancelarDescontosQuinzenaSelecionados() {
+        const mesRef = document.getElementById('quinzenaMesRef').value;
+        if(!mesRef) return;
+        const itens = obterItensQuinzenaSelecionados();
+        const ids = new Set(itens.map(item => item.funcId));
+        const qtd = db.registros.filter(r => r.type === 'desconto_quinzena' && r.mesRef === mesRef && ids.has(r.funcId)).length;
+        if(qtd === 0) return alert('Não há desconto de quinzena gerado para os selecionados neste mês.');
+        if(!confirm(`Cancelar ${qtd} desconto(s) de quinzena gerado(s) para este mês?`)) return;
+        db.registros = db.registros.filter(r => !(r.type === 'desconto_quinzena' && r.mesRef === mesRef && ids.has(r.funcId)));
+        salvarBanco();
+        renderListaQuinzenaRecebem();
     }
 
     function abrirConfigQuinzena() { if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('quinzenaMesRef').value = getHojeSTR().substring(0,7); document.getElementById('quinzenaDataPagto').value = getHojeSTR(); renderListaQuinzenaRecebem(); document.getElementById('modalPrintQuinzena').style.display = 'flex'; }
