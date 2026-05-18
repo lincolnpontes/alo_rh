@@ -654,19 +654,26 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function abrirEscolhaPixFuncionario() {
         const f = getFuncionarioAcoes();
+        if(!f) return alert('Funcionário não encontrado.');
+        abrirEscolhaPixFuncionarioPorId(f.id);
+    }
+
+    function abrirEscolhaPixFuncionarioPorId(funcId, event = null) {
+        if(event) event.stopPropagation();
+        const f = db.funcionarios.find(x => x.id === funcId);
         const lista = (f && Array.isArray(f.pixList)) ? f.pixList.filter(p => p && p.chave) : [];
         if(lista.length === 0) return alert('Nenhuma chave PIX cadastrada para este funcionário.');
-        if(lista.length === 1) return copiarChavePixFuncionario(0);
+        if(lista.length === 1) return copiarChavePixFuncionario(0, funcId);
         const box = document.getElementById('listaEscolhaPix');
         box.innerHTML = lista.map((pix, i) => {
             const tipo = pix.tipo || 'PIX';
-            return `<button class="btn-outline" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left;" onclick="copiarChavePixFuncionario(${i})"><strong>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></button>`;
+            return `<button class="btn-outline" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left;" onclick="copiarChavePixFuncionario(${i}, ${jsArg(funcId)})"><strong>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></button>`;
         }).join('');
         document.getElementById('modalEscolhaPix').style.display = 'flex';
     }
 
-    function copiarChavePixFuncionario(indice) {
-        const f = getFuncionarioAcoes();
+    function copiarChavePixFuncionario(indice, funcId = '') {
+        const f = funcId ? db.funcionarios.find(x => x.id === funcId) : getFuncionarioAcoes();
         const lista = (f && Array.isArray(f.pixList)) ? f.pixList.filter(p => p && p.chave) : [];
         const pix = lista[indice];
         if(!pix) return alert('Chave PIX não encontrada.');
@@ -687,6 +694,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(!telefone) return alert('Cadastre um WhatsApp válido para este funcionário.');
         const texto = mensagem ? `?text=${encodeURIComponent(mensagem)}` : '';
         window.open(`https://wa.me/${telefone}${texto}`, '_blank');
+    }
+
+    function abrirWhatsappTexto(texto) {
+        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
     }
     
     function abrirModalPresencaSemana() {
@@ -1068,9 +1079,41 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const fim = document.getElementById('resumoFim').value || inicio;
         return inicio <= fim ? { inicio, fim, label: `${formatDataBR(inicio)} a ${formatDataBR(fim)}` } : { inicio: fim, fim: inicio, label: `${formatDataBR(fim)} a ${formatDataBR(inicio)}` };
     }
-    function gerarResumo() {
-        const box = document.getElementById('resultadoResumo'); if(!box) return;
-        const intervalo = obterIntervaloResumo();
+
+    function contarDiasUteisRegistroIntervalo(registro, inicio, fim) {
+        const dataInicio = registro.data || '';
+        const dataFim = registro.dataFim || registro.data || '';
+        if(!dataInicio) return 0;
+        if(dataFim < inicio || dataInicio > fim) return 0;
+        let atual = new Date((dataInicio < inicio ? inicio : dataInicio) + "T00:00:00");
+        const fimReal = new Date((dataFim > fim ? fim : dataFim) + "T00:00:00");
+        let total = 0;
+        for(; atual <= fimReal; atual.setDate(atual.getDate() + 1)) {
+            if(db.configGerais.diasFuncionamento.includes(String(atual.getDay()))) total++;
+        }
+        return total;
+    }
+
+    function listarDiasUteisRegistroIntervalo(registro, inicio, fim) {
+        const dataInicio = registro.data || '';
+        const dataFim = registro.dataFim || registro.data || '';
+        if(!dataInicio || dataFim < inicio || dataInicio > fim) return [];
+        let atual = new Date((dataInicio < inicio ? inicio : dataInicio) + "T00:00:00");
+        const fimReal = new Date((dataFim > fim ? fim : dataFim) + "T00:00:00");
+        const dias = [];
+        for(; atual <= fimReal; atual.setDate(atual.getDate() + 1)) {
+            if(db.configGerais.diasFuncionamento.includes(String(atual.getDay()))) dias.push(dataISO(atual));
+        }
+        return dias;
+    }
+
+    function getTipoAusenciaResumo(registro) {
+        if(registro.tipo === 'Falta' && registro.descontarDia === false) return 'Falta justificada';
+        if(registro.tipo === 'Atestado') return 'Atestado';
+        return registro.tipo || 'Ausência';
+    }
+
+    function calcularResumoPeriodo(intervalo) {
         const ativos = db.funcionarios.filter(f => !f.arquivado);
         const faltas = db.registros.filter(r => r.type === 'falta' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
         const faltaram = new Set(faltas.map(r => r.funcId));
@@ -1082,14 +1125,99 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const totalPagoExtras = pagamentosExtras.reduce((acc, r) => acc + Number(r.valorTotal || 0), 0);
         const adiantamentos = db.registros.filter(r => r.type === 'adiantamento' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
         const totalAdiantamentos = adiantamentos.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        const quinzena = db.registros.filter(r => r.type === 'desconto_quinzena' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const porVinculo = new Map();
+        const nomeVinculo = (f) => {
+            const cat = db.categorias.find(c => c.id === f.categoria);
+            return cat ? cat.nome : 'Sem vínculo';
+        };
+        ativos.forEach((f) => {
+            const nome = nomeVinculo(f);
+            if(!porVinculo.has(nome)) porVinculo.set(nome, { nome, funcionarios: 0, pago: 0 });
+            porVinculo.get(nome).funcionarios++;
+        });
+        const somarPagamento = (funcId, valor) => {
+            const f = db.funcionarios.find(x => x.id === funcId);
+            if(!f) return;
+            const nome = nomeVinculo(f);
+            if(!porVinculo.has(nome)) porVinculo.set(nome, { nome, funcionarios: 0, pago: 0 });
+            porVinculo.get(nome).pago += Number(valor || 0);
+        };
+        pagamentosExtras.forEach(r => somarPagamento(r.funcId, r.valorTotal));
+        adiantamentos.forEach(r => somarPagamento(r.funcId, r.valor));
+        quinzena.forEach(r => somarPagamento(r.funcId, r.valor));
+        return { ativos, faltas, faltaram, atrasos, minutosAtraso, extras, totalExtrasLancados, pagamentosExtras, totalPagoExtras, adiantamentos, totalAdiantamentos, quinzena, porVinculo: [...porVinculo.values()].sort((a, b) => a.nome.localeCompare(b.nome)) };
+    }
+
+    function montarResumoGeralWhatsapp(intervalo) {
+        const r = calcularResumoPeriodo(intervalo);
+        const linhas = [
+            `Resumo Alô RH`,
+            `Período: ${intervalo.label}`,
+            '',
+            `Funcionários ativos: ${r.ativos.length}`,
+            `Funcionários com ausência: ${r.faltaram.size} (${r.faltas.length} registros)`,
+            `Atrasos: ${r.atrasos.length}${r.minutosAtraso ? ` (${r.minutosAtraso} min)` : ''}`,
+            `Extras lançados: R$ ${formatMoeda(r.totalExtrasLancados)} (${r.extras.length})`,
+            `Pago para extras: R$ ${formatMoeda(r.totalPagoExtras)} (${r.pagamentosExtras.length})`,
+            `Adiantamentos: R$ ${formatMoeda(r.totalAdiantamentos)} (${r.adiantamentos.length})`,
+            '',
+            `Por vínculo:`
+        ];
+        r.porVinculo.forEach(v => linhas.push(`- ${v.nome}: ${v.funcionarios} funcionário(s) | R$ ${formatMoeda(v.pago)}`));
+        return linhas.join('\n');
+    }
+
+    function montarResumoContadorWhatsapp(intervalo) {
+        const faltas = db.registros
+            .filter(r => r.type === 'falta' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim))
+            .sort((a, b) => String(a.funcId || '').localeCompare(String(b.funcId || '')) || String(a.data || '').localeCompare(String(b.data || '')));
+        const linhas = [`Resumo para contador - Ausências`, `Período: ${intervalo.label}`, ''];
+        if(faltas.length === 0) {
+            linhas.push('Sem ausências registradas no período.');
+            return linhas.join('\n');
+        }
+        let atualFunc = '';
+        faltas.forEach((r) => {
+            const f = db.funcionarios.find(x => x.id === r.funcId);
+            const nome = f ? f.nome : 'Funcionário não encontrado';
+            if(nome !== atualFunc) {
+                if(atualFunc) linhas.push('');
+                linhas.push(nome);
+                atualFunc = nome;
+            }
+            const dias = listarDiasUteisRegistroIntervalo(r, intervalo.inicio, intervalo.fim);
+            const dsr = r.descontarDia ? new Set(dias.map(d => chaveSemanaAno(new Date(d + "T00:00:00")))).size : 0;
+            const periodo = r.dataFim ? `${formatDataBR(r.data)} a ${formatDataBR(r.dataFim)}` : formatDataBR(r.data);
+            linhas.push(`- ${periodo}: ${getTipoAusenciaResumo(r)} | ${dias.length} dia(s) | DSR ${dsr} | desc. dia: ${r.descontarDia ? 'sim' : 'não'}`);
+        });
+        return linhas.join('\n');
+    }
+
+    function enviarResumoWhatsapp(tipo) {
+        const intervalo = obterIntervaloResumo();
+        const texto = tipo === 'contador' ? montarResumoContadorWhatsapp(intervalo) : montarResumoGeralWhatsapp(intervalo);
+        abrirWhatsappTexto(texto);
+    }
+
+    function gerarResumo() {
+        const box = document.getElementById('resultadoResumo'); if(!box) return;
+        const intervalo = obterIntervaloResumo();
+        const resumo = calcularResumoPeriodo(intervalo);
+        const linhasVinculos = resumo.porVinculo.map(v => `<div class="resumo-linha"><span>${escapeHTML(v.nome)}<br><small>${v.funcionarios} funcionário(s)</small></span><strong>R$ ${formatMoeda(v.pago)}</strong></div>`).join('');
+        const textoGeral = montarResumoGeralWhatsapp(intervalo);
+        const textoContador = montarResumoContadorWhatsapp(intervalo);
         box.innerHTML = `<div class="resumo-periodo-label">${escapeHTML(intervalo.label)}</div><div class="resumo-grid">
-            <div class="resumo-card"><strong>${ativos.length}</strong><span>funcionários ativos</span></div>
-            <div class="resumo-card"><strong>${faltaram.size}</strong><span>funcionários com ausência (${faltas.length} registros)</span></div>
-            <div class="resumo-card"><strong>${atrasos.length}</strong><span>atrasos registrados${minutosAtraso ? ` (${minutosAtraso} min)` : ''}</span></div>
-            <div class="resumo-card"><strong>R$ ${formatMoeda(totalExtrasLancados)}</strong><span>${extras.length} extras lançados no período</span></div>
-            <div class="resumo-card"><strong>R$ ${formatMoeda(totalPagoExtras)}</strong><span>pago para extras (${pagamentosExtras.length} pagamentos)</span></div>
-            <div class="resumo-card"><strong>R$ ${formatMoeda(totalAdiantamentos)}</strong><span>adiantamentos (${adiantamentos.length} lançamentos)</span></div>
-        </div>`;
+            <div class="resumo-card"><strong>${resumo.ativos.length}</strong><span>funcionários ativos</span></div>
+            <div class="resumo-card"><strong>${resumo.faltaram.size}</strong><span>funcionários com ausência (${resumo.faltas.length} registros)</span></div>
+            <div class="resumo-card"><strong>${resumo.atrasos.length}</strong><span>atrasos registrados${resumo.minutosAtraso ? ` (${resumo.minutosAtraso} min)` : ''}</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalExtrasLancados)}</strong><span>${resumo.extras.length} extras lançados no período</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalPagoExtras)}</strong><span>pago para extras (${resumo.pagamentosExtras.length} pagamentos)</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalAdiantamentos)}</strong><span>adiantamentos (${resumo.adiantamentos.length} lançamentos)</span></div>
+        </div>
+        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Por vínculo</div>${linhasVinculos || '<div style="color:#999;">Nenhum vínculo cadastrado.</div>'}</div>
+        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Resumo geral para WhatsApp</div><div class="resumo-texto-preview">${escapeHTML(textoGeral)}</div><div class="resumo-acoes"><button class="btn-action" onclick="enviarResumoWhatsapp('geral')" style="background:#2E7D32;">Enviar por WhatsApp</button></div></div>
+        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Resumo para contador</div><div class="resumo-texto-preview">${escapeHTML(textoContador)}</div><div class="resumo-acoes"><button class="btn-action" onclick="enviarResumoWhatsapp('contador')" style="background:#0277BD;">Enviar ao contador</button></div></div>`;
     }
 
     function somarMesReferencia(mesRef, delta) {
@@ -1103,6 +1231,71 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const categoria = db.categorias.find(c => c.id === f.categoria);
         if(categoria && categoria.recebeContracheque === false) return false;
         return f.recebeContracheque !== false;
+    }
+
+    function calcularDadosContrachequeFuncionario(f, mesRef, vtMesRef) {
+        const [ano, mes] = mesRef.split('-').map(Number);
+        const [anoVT, mesVT] = vtMesRef.split('-').map(Number);
+        const categoria = db.categorias.find(c => c.id === f.categoria);
+        const campos = getCamposFuncionarioClasse(categoria || {});
+        const beneficios = getBeneficiosVinculo(categoria || {});
+        const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
+        const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
+        const qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
+        const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 * qtdQuinquenios : 0;
+        const salarioFamilia = campos.pedirSalFamilia && f.temSalFamilia !== false ? parseMoeda(f.salFamilia) : 0;
+        const unidentis = campos.pedirUnidentis && f.temUnidentis !== false ? parseMoeda(f.unidentis) : 0;
+        const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
+        const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
+        const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
+        const podeDescontarINSS = campos.pedirINSS && f.descontaINSS !== false;
+        const baseInss = Math.max(0, salario + gratificacao + quinquenio - faltas.valorFaltas - faltas.valorDSR);
+        const inssCalc = podeDescontarINSS ? calcularINSSPrevia(baseInss) : { valor: 0, aliquotaEfetiva: 0 };
+        const overrideInss = overridesContracheque[f.id];
+        const inss = podeDescontarINSS ? (overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
+        const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
+        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, vales.total) : 0;
+        const proventos = salario + gratificacao + quinquenio + salarioFamilia + vales.total;
+        const descontos = unidentis + descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
+        const liquido = proventos - descontos;
+        const liquidoAPagar = liquido - adiantamentosContra.total;
+        return { ano, mes, anoVT, mesVT, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, liquido, liquidoAPagar };
+    }
+
+    function montarMensagemContrachequeFuncionario(f, mesRef, vtMesRef) {
+        const d = calcularDadosContrachequeFuncionario(f, mesRef, vtMesRef);
+        const linhas = [
+            `Contracheque - ${getExtensoMes(d.mes)} de ${d.ano}`,
+            `${f.nome || 'Funcionário'}`,
+            '',
+            'Proventos:',
+            `Salário: R$ ${formatMoedaContracheque(d.salario)}`
+        ];
+        if(d.gratificacao) linhas.push(`Gratificação: R$ ${formatMoedaContracheque(d.gratificacao)}`);
+        if(d.quinquenio) linhas.push(`Quinquênio (${d.qtdQuinquenios}): R$ ${formatMoedaContracheque(d.quinquenio)}`);
+        if(d.vales.total) linhas.push(`VT: R$ ${formatMoedaContracheque(d.vales.total)}`);
+        if(d.salarioFamilia) linhas.push(`Salário Família: R$ ${formatMoedaContracheque(d.salarioFamilia)}`);
+        linhas.push(`Total proventos: R$ ${formatMoedaContracheque(d.proventos)}`, '', 'Descontos:');
+        if(d.descontoPassagem) linhas.push(`Passagem: R$ ${formatMoedaContracheque(d.descontoPassagem)}`);
+        if(d.faltas.valorFaltas) linhas.push(`Falta (${d.faltas.diasFalta}): R$ ${formatMoedaContracheque(d.faltas.valorFaltas)}`);
+        if(d.faltas.valorDSR) linhas.push(`DSR (${d.faltas.dsr}): R$ ${formatMoedaContracheque(d.faltas.valorDSR)}`);
+        if(d.inss) linhas.push(`INSS (${formatPercentual(d.inssAliquota)}%): R$ ${formatMoedaContracheque(d.inss)}`);
+        if(d.unidentis) linhas.push(`Unidentis: R$ ${formatMoedaContracheque(d.unidentis)}`);
+        linhas.push(`Total descontos: R$ ${formatMoedaContracheque(d.descontos)}`);
+        if(d.adiantamentosContra.total) linhas.push('', `Adiantamentos: R$ ${formatMoedaContracheque(d.adiantamentosContra.total)}`);
+        linhas.push('', `Líquido do mês: R$ ${formatMoedaContracheque(d.liquido)}`);
+        linhas.push(`A pagar após adiantamentos: R$ ${formatMoedaContracheque(d.liquidoAPagar)}`);
+        return linhas.join('\n');
+    }
+
+    function enviarContrachequeWhatsapp(funcId, mesRef, vtMesRef, event = null) {
+        if(event) event.stopPropagation();
+        const f = db.funcionarios.find(x => x.id === funcId);
+        if(!f) return alert('Funcionário não encontrado.');
+        const telefone = normalizarTelefoneWhatsapp(f.telefone);
+        if(!telefone) return alert('Cadastre um WhatsApp válido para este funcionário.');
+        const texto = montarMensagemContrachequeFuncionario(f, mesRef, vtMesRef);
+        window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank');
     }
 
     function aoAlterarMesContracheque() {
@@ -1475,12 +1668,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const key = chaveContracheque(f.id, mesRef);
             const fechado = !!obterFechamentoContracheque(f.id, mesRef);
             const aberto = contrachequesAbertos.has(key);
-            const nomeSocial = f.nomeSocial ? `<div style="font-size:11px; color:#666;">Nome social: ${escapeHTML(f.nomeSocial)}</div>` : '';
             const editavel = !fechado;
             const inssLabel = editavel ? `INSS (${formatPercentual(inssAliquota)}%) <button class="btn-mini-edit" onclick="abrirEdicaoINSSContracheque(${jsArg(f.id)}, ${inssAliquota}, ${inss})" title="Editar INSS">✏️</button>` : `INSS (${formatPercentual(inssAliquota)}%)`;
-            const status = fechado ? 'Fechado' : 'Tocar para abrir';
+            const status = fechado ? 'Fechado' : (aberto ? 'Aberto' : 'Tocar para abrir');
             const detalhes = aberto ? `<div class="contra-detalhes">
-                <div style="font-size:11px; color:#777; margin-bottom:8px;">${nomeSocial}Salário ${escapeHTML(getExtensoMes(mes))} de ${ano} • VT ${escapeHTML(getExtensoMes(mesVT))} de ${anoVT} • ${vales.passagens} passagens${faltas.diasFalta ? ` • ${faltas.diasFalta} falta(s)` : ''}</div>
+                <div style="font-size:11px; color:#777; margin-bottom:8px;">Salário ${escapeHTML(getExtensoMes(mes))} de ${ano} • VT ${escapeHTML(getExtensoMes(mesVT))} de ${anoVT} • ${vales.passagens} passagens${faltas.diasFalta ? ` • ${faltas.diasFalta} falta(s)` : ''}</div>
                 <div class="contra-grid">
                     <div class="contra-box contra-box-proventos"><b style="color:#2E7D32;">Proventos</b>
                         ${linhaContracheque('Salário', salario)}
@@ -1500,10 +1692,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     </div>
                     ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel)}
                 </div>
-                <div class="contra-actions">${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)">Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">WhatsApp</button></div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
             </div>` : '';
-            const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(liquido)} - R$ ${formatMoedaContracheque(adiantamentosContra.total)} = R$ ${formatMoedaContracheque(liquidoAPagar)}</strong>` : `<span class="contra-status">${status}</span>`;
-            html += `<div class="contra-card ${fechado ? 'fechado' : ''}" onclick="toggleDetalhesContracheque(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div>${equacao}</div>${detalhes}</div>`;
+            const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(liquido)} - R$ ${formatMoedaContracheque(adiantamentosContra.total)} = R$ ${formatMoedaContracheque(liquidoAPagar)}</strong>` : '';
+            html += `<div class="contra-card ${fechado ? 'fechado' : ''}" onclick="toggleDetalhesContracheque(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;
         });
 
         const classeResumo = resumoContrachequeVisivel ? 'contra-resumo-bar aberto' : 'contra-resumo-bar';

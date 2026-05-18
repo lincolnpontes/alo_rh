@@ -235,19 +235,19 @@
         let logoHtml = db.empresa.logo ? `<img class="logo-quinzena" src="${db.empresa.logo}">` : `<div class="logo-quinzena-texto">${escapeHTML(db.empresa.fantasia || 'NOME DA EMPRESA')}</div>`;
         let w = window.open('','_blank'); 
         let html = `<html><head><title>Quinzena</title><style>
-            @page{size:A4 portrait;margin:10mm;}
+            @page{size:A4 portrait;margin:10mm 12mm;}
             body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:16px;}
-            .quinzena-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 7mm 6mm;display:flex;flex-direction:column;page-break-after:always;}
+            .quinzena-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 8mm 6mm;display:flex;flex-direction:column;page-break-after:always;}
             .quinzena-folha:last-child{page-break-after:auto;}
             .logo-area{text-align:center;font-weight:bold;}
-            .logo-quinzena{max-height:28mm;max-width:70mm;object-fit:contain;display:block;margin:0 auto 1mm;}
+            .logo-quinzena{max-height:26mm;max-width:68mm;object-fit:contain;display:block;margin:0 auto 1mm;}
             .logo-quinzena-texto{min-height:18mm;font-size:28px;display:flex;align-items:center;justify-content:center;font-weight:normal;}
             .sub-empresa{font-size:18px;line-height:1.15;}
             .cnpj-empresa{font-size:16px;margin-top:2px;}
-            .titulo-doc{font-size:18px;font-weight:bold;margin:8mm 0 5mm;text-align:center;}
-            .texto-declara{font-size:16px;margin-bottom:8mm;text-align:justify;line-height:1.35;}
+            .titulo-doc{font-size:18px;font-weight:bold;margin:6mm 0 4mm;text-align:center;}
+            .texto-declara{font-size:16px;margin-bottom:6mm;text-align:justify;line-height:1.3;}
             .lista-quinzena{margin-top:0;}
-            .linha-quinzena{display:grid;grid-template-columns:var(--nome-col,92mm) 7mm 18mm 1fr;column-gap:0;align-items:end;min-height:8.6mm;font-size:var(--linha-font,15.5px);}
+            .linha-quinzena{display:grid;grid-template-columns:var(--nome-col,92mm) 7mm 18mm 1fr;column-gap:0;align-items:end;min-height:9.2mm;font-size:var(--linha-font,15.5px);}
             .linha-quinzena .nome,.linha-quinzena .moeda,.linha-quinzena .valor{border-bottom:1.5px solid #000;padding:0 3px 2px;}
             .linha-quinzena .nome{white-space:nowrap;overflow:hidden;text-overflow:clip;}
             .linha-quinzena .moeda{text-align:left;padding-left:4px;}

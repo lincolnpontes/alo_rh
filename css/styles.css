@@ -119,6 +119,13 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .resumo-card { border: 1px solid #e0e0e0; border-left: 4px solid #00695C; border-radius: 8px; padding: 10px; background: #fff; min-height: 62px; box-sizing: border-box; }
         .resumo-card strong { display: block; color: #004D40; font-size: 18px; line-height: 1.1; }
         .resumo-card span { display: block; color: #666; font-size: 11px; margin-top: 4px; line-height: 1.25; }
+        .resumo-bloco { margin-top:10px; border:1px solid #e0e0e0; border-radius:8px; padding:10px; background:#fff; font-size:12px; }
+        .resumo-bloco-titulo { font-weight:900; color:#004D40; margin-bottom:8px; }
+        .resumo-linha { display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid #eee; padding:5px 0; }
+        .resumo-linha:last-child { border-bottom:0; }
+        .resumo-linha strong { white-space:nowrap; font-variant-numeric:tabular-nums; }
+        .resumo-texto-preview { white-space:pre-wrap; background:#f9f9f9; border:1px solid #eee; border-radius:6px; padding:8px; max-height:170px; overflow:auto; font-size:11px; color:#444; }
+        .resumo-acoes { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
         .resumo-periodo-label { color: #555; font-size: 12px; font-weight: 700; margin-bottom: 10px; text-align: center; }
         .contra-linha { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,0,0,.06); padding: 4px 0; }
         .contra-linha span:first-child { min-width: 0; }
@@ -137,11 +144,12 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .contra-resumo-bar.aberto .contra-resumo-dados { display:flex; gap:12px; flex-wrap:wrap; }
         .contra-card { border:1px solid #e0e0e0; border-left:4px solid #6A1B9A; border-radius:8px; margin-bottom:10px; background:#fff; overflow:hidden; cursor:pointer; }
         .contra-card.fechado { border-left-color:#2E7D32; }
-        .contra-card-header { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:10px; }
+        .contra-card-header { display:flex; flex-direction:column; gap:5px; align-items:stretch; padding:10px; }
         .contra-card.fechado .contra-card-header { background:#E8F5E9; }
+        .contra-card-top { display:flex; justify-content:space-between; gap:10px; align-items:center; min-width:0; }
         .contra-nome { font-weight:800; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .contra-status { color:#777; font-size:11px; font-weight:800; white-space:nowrap; }
-        .contra-equacao { color:#6A1B9A; white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums; }
+        .contra-equacao { color:#6A1B9A; white-space:normal; text-align:left; font-variant-numeric:tabular-nums; font-size:12px; line-height:1.25; }
         .contra-detalhes { padding:0 10px 10px; cursor:default; }
         .contra-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; font-size:12px; }
         .contra-box { border-radius:6px; padding:8px; }
@@ -155,7 +163,10 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .btn-contra-check.ativo { background:#D32F2F; color:#fff; }
         .btn-contra-check:disabled { opacity:.5; cursor:not-allowed; }
         .btn-cancelar-quinzena { border:none; background:#FFEBEE; color:#D32F2F; border-radius:6px; width:26px; height:26px; font-size:14px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
-        .contra-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+        .contra-actions { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+        .contra-actions-left { display:flex; gap:6px; flex-wrap:wrap; }
+        .btn-contra-util { border:1px solid #0277BD; background:#fff; color:#0277BD; border-radius:6px; padding:7px 9px; font-size:12px; font-weight:800; cursor:pointer; }
+        .btn-contra-util.whats { border-color:#2E7D32; color:#2E7D32; }
         .btn-fechar-contra { border:none; background:#2E7D32; color:#fff; border-radius:6px; padding:8px 10px; font-size:12px; font-weight:800; cursor:pointer; }
         .pix-list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
         .pix-list-row .pix-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
