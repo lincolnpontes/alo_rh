@@ -416,13 +416,39 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function trocarPerfilAdmin() {
         if(db.administradores.length === 0) return alert('Cadastre um administrador primeiro.');
-        const senha = prompt('Digite a senha do perfil:');
-        if(senha === null) return;
+        const lista = document.getElementById('listaPerfisAdmin');
+        lista.innerHTML = db.administradores.map(admin => `<div class="perfil-admin-card"><strong>${escapeHTML(admin.nome || 'Administrador')}</strong><span>${adminRestrito(admin) ? 'perfil com permissões definidas' : 'perfil completo'}</span></div>`).join('');
+        const input = document.getElementById('senhaTrocaPerfilAdmin');
+        input.value = '';
+        document.getElementById('trocaPerfilErro').style.display = 'none';
+        document.getElementById('modalTrocarPerfilAdmin').style.display = 'flex';
+        setTimeout(() => { input.focus(); input.select(); }, 120);
+    }
+
+    function aoDigitarSenhaPerfilAdmin(input) {
+        input.value = input.value.replace(/[^0-9]/g, '');
+        document.getElementById('trocaPerfilErro').style.display = 'none';
+        const admin = getAdminPorSenha(input.value);
+        if(admin) entrarComPerfilAdmin(admin);
+    }
+
+    function validarTrocaPerfilAdmin() {
+        const senha = document.getElementById('senhaTrocaPerfilAdmin').value;
         const admin = getAdminPorSenha(senha);
-        if(!admin) return alert('Senha de administrador não encontrada.');
+        if(!admin) {
+            document.getElementById('trocaPerfilErro').style.display = 'block';
+            return;
+        }
+        entrarComPerfilAdmin(admin);
+    }
+
+    function entrarComPerfilAdmin(admin) {
         adminSessaoId = admin.id;
         sessionStorage.setItem('alorh_admin_sessao', adminSessaoId);
+        fecharModal('modalTrocarPerfilAdmin');
         atualizarBoxPerfilAdmin();
+        atualizarVisibilidadePermissoes();
+        renderizarLista();
     }
 
     function sairPerfilAdmin() {
@@ -485,7 +511,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     // 3. GERENCIAMENTO CRUD
     function abrirGerenciar(tipo) {
-        const permissoesGerenciar = { empresa: 'dadosEmpresa', configGerais: 'configGerais', administradores: 'gerenciarAdministradores' };
+        const permissoesGerenciar = { empresa: 'dadosEmpresa', configGerais: 'configGerais', administradores: 'gerenciarAdministradores', categorias: 'vinculoHorarios', funcoes: 'vinculoHorarios' };
         if(permissoesGerenciar[tipo] && !garantirPermissao(permissoesGerenciar[tipo], () => abrirGerenciar(tipo), 'abrir esta área')) return;
         fecharModal('modalPainelUnificado');
         if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; document.getElementById('confDiasAquisitivoFerias').value = db.configGerais.diasAquisitivoFerias || 360; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
@@ -493,15 +519,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
         if(tipo === 'funcionarios') {
-            document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = 'flex'; document.getElementById('btnFuncoesListagem').style.display = 'flex'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
+            const podeVinculoFuncao = temPermissaoAtual('vinculoHorarios');
+            const podeArquivar = temPermissaoAtual('dadosPessoais');
+            document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = podeVinculoFuncao ? 'flex' : 'none'; document.getElementById('btnFuncoesListagem').style.display = podeVinculoFuncao ? 'flex' : 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
             document.getElementById('btnVoltarListagem').onclick = () => { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex'; };
             let funcs = [...db.funcionarios].sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || '')));
             const renderFuncionarioGerenciar = (f) => {
                 let codStr = f.codigo ? `<strong style="color:#00695C;">[${escapeHTML(f.codigo)}]</strong> ` : '';
                 let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? formatarFuncaoLista(funName) : 'Sem função';
-                let acaoArquivo = f.arquivado
+                let acaoArquivo = !podeArquivar ? '' : (f.arquivado
                     ? `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#2E7D32;" title="Restaurar" onclick="restaurarFuncionario(${jsArg(f.id)})">↩️</button>`
-                    : `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#F57F17;" title="Arquivar" onclick="arquivarFuncionario(${jsArg(f.id)})">📦</button>`;
+                    : `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#F57F17;" title="Arquivar" onclick="arquivarFuncionario(${jsArg(f.id)})">📦</button>`);
                 return `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; opacity:${f.arquivado ? '0.65' : '1'};"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${escapeHTML(f.nome)}</strong>${f.arquivado ? ' <small style="color:#F57F17; font-weight:bold;">(Arquivado)</small>' : ''}<br><small style="color:#666;">${escapeHTML(funName)}</small></div><div style="flex-shrink:0; margin-left:10px; display:flex; gap:4px; align-items:center;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc(${jsArg(f.id)})">✏️</button>${acaoArquivo}</div></div>`;
             };
             const ativos = funcs.filter(f => !f.arquivado);
@@ -534,6 +562,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function excluirItem(tipo, id) { if(confirm("Deseja realmente excluir?")) { const item = (db[tipo] || []).find(x => x.id === id); db[tipo] = db[tipo].filter(x => x.id !== id); registrarAuditoria('Item excluído', `${tipo}: ${item ? (item.nome || item.razao || id) : id}.`, tipo, id); salvarBanco(); abrirGerenciar(tipo); if(tipo==='categorias') renderizarFiltros(); } }
     function arquivarFuncionario(id) {
+        if(!garantirPermissao('dadosPessoais', () => arquivarFuncionario(id), 'arquivar funcionário')) return;
         const f = db.funcionarios.find(x => x.id === id);
         if(!f) return;
         if(!confirm(`Arquivar ${f.nome || 'funcionário'}? Ele não aparecerá nas listas, filtros e impressões de ativos.`)) return;
@@ -546,6 +575,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         renderizarLista();
     }
     function restaurarFuncionario(id) {
+        if(!garantirPermissao('dadosPessoais', () => restaurarFuncionario(id), 'restaurar funcionário')) return;
         const f = db.funcionarios.find(x => x.id === id);
         if(!f) return;
         f.arquivado = false;
@@ -1559,9 +1589,189 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     <div>Prazo: <b>${escapeHTML(prazo)}</b></div>
                     <div>Dias aquisitivos: <b>${getDiasAquisitivoFerias()}</b></div>
                 </div>
-                <div class="ferias-actions"><button class="btn-outline" style="border-color:#F57F17; color:#E65100; margin:0; text-align:center;" onclick="abrirFeriasPeloCalendario(${jsArg(f.id)})">Registrar férias</button></div>
+                <div class="ferias-actions">
+                    <button class="btn-outline btn-ferias-calc" onclick="abrirCalculoFerias(${jsArg(f.id)})">Calcular férias</button>
+                    <button class="btn-outline btn-ferias-pagamento" onclick="abrirCalculoFerias(${jsArg(f.id)}, true)">Informar pagamento</button>
+                    <button class="btn-outline btn-ferias-registro" onclick="abrirFeriasPeloCalendario(${jsArg(f.id)})">Registrar férias</button>
+                </div>
             </div>`;
         }).join('');
+    }
+
+    function chavePagamentoFerias(funcId, aqInicio, aqFim) {
+        return `ferias|${funcId}|${aqInicio || 'sem-inicio'}|${aqFim || 'sem-fim'}`;
+    }
+
+    function obterPagamentoFerias(funcId, aqInicio, aqFim) {
+        return db.registros.find(r => r.type === 'ferias_pagamento' && r.funcId === funcId && r.periodoAquisitivoInicio === aqInicio && r.periodoAquisitivoFim === aqFim);
+    }
+
+    function abrirCalculoFerias(funcId, focoPagamento = false) {
+        if(!garantirPermissao('lancarFerias', () => abrirCalculoFerias(funcId, focoPagamento), 'calcular férias')) return;
+        const f = db.funcionarios.find(x => x.id === funcId);
+        if(!f) return alert('Funcionário não encontrado.');
+        if(!funcionarioTemDireitoFerias(f)) return alert('Este funcionário está marcado como sem direito a férias.');
+        const situacao = calcularSituacaoFerias(f);
+        const periodo = situacao.periodoInicio || situacao.periodoFim ? { inicio: situacao.periodoInicio, fim: situacao.periodoFim } : sugerirPeriodoAquisitivoFuncionario(funcId);
+        document.getElementById('calcFeriasFuncId').value = funcId;
+        document.getElementById('calcFeriasNome').innerHTML = `${escapeHTML(f.nome || 'Funcionário')}<br><small>Período sugerido: ${formatDataBR(periodo.inicio)} a ${formatDataBR(periodo.fim)}</small>`;
+        document.getElementById('calcFeriasAqInicio').value = periodo.inicio || '';
+        document.getElementById('calcFeriasAqFim').value = periodo.fim || '';
+        document.getElementById('calcFeriasGozoInicio').value = getHojeSTR();
+        document.getElementById('calcFeriasDiasGozados').value = 30;
+        document.getElementById('calcFeriasDiasAbono').value = 0;
+        document.getElementById('calcFeriasDecimo').value = 'nao';
+        fecharModal('modalCalendarioFerias');
+        document.getElementById('modalCalculoFerias').style.display = 'flex';
+        renderCalculoFerias();
+        if(focoPagamento) {
+            setTimeout(() => {
+                const btn = document.querySelector('#modalCalculoFerias .modal-actions .btn-action');
+                if(btn) btn.focus();
+            }, 120);
+        }
+    }
+
+    function aoMudarCalculoFerias() {
+        const inicio = document.getElementById('calcFeriasAqInicio').value;
+        if(inicio) document.getElementById('calcFeriasAqFim').value = somarDiasISO(inicio, getDiasAquisitivoFerias() - 1);
+        renderCalculoFerias();
+    }
+
+    function getBaseRemuneracaoFerias(f) {
+        const categoria = db.categorias.find(c => c.id === f.categoria);
+        const campos = getCamposFuncionarioClasse(categoria || {});
+        const beneficios = getBeneficiosVinculo(categoria || {});
+        const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
+        const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
+        const qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
+        const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 * qtdQuinquenios : 0;
+        return { salario, gratificacao, quinquenio, base: salario + gratificacao + quinquenio };
+    }
+
+    function obterAdiantamentosFerias(f, chave) {
+        const registros = db.registros
+            .filter(r => r.type === 'adiantamento' && r.funcId === f.id && !r.descontado)
+            .sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')));
+        const total = registros.reduce((acc, r) => acc + getValorDescontoContracheque(r, chave), 0);
+        return { quinzenaRegs: [], doMes: [], anteriores: registros, total };
+    }
+
+    function calcularDadosFeriasForm() {
+        const funcId = document.getElementById('calcFeriasFuncId').value;
+        const f = db.funcionarios.find(x => x.id === funcId);
+        if(!f) return null;
+        const aqInicio = document.getElementById('calcFeriasAqInicio').value;
+        const aqFim = document.getElementById('calcFeriasAqFim').value;
+        const gozoInicio = document.getElementById('calcFeriasGozoInicio').value;
+        const diasGozados = Math.max(0, Math.min(30, Number(document.getElementById('calcFeriasDiasGozados').value || 0)));
+        const diasAbono = Math.max(0, Math.min(10, Number(document.getElementById('calcFeriasDiasAbono').value || 0)));
+        const diasDireito = 30;
+        const diasRestantes = Math.max(0, diasDireito - diasGozados - diasAbono);
+        const gozoFim = gozoInicio && diasGozados > 0 ? somarDiasISO(gozoInicio, diasGozados - 1) : '';
+        const retorno = gozoFim ? somarDiasISO(gozoFim, 1) : '';
+        const limite = aqFim ? subtrairDiasISO(somarMesesISO(aqFim, 12), Math.max(0, diasGozados - 1)) : '';
+        const chave = chavePagamentoFerias(funcId, aqInicio, aqFim);
+        const base = getBaseRemuneracaoFerias(f);
+        const valorDia = base.base / 30;
+        const ferias = valorDia * diasGozados;
+        const tercoFerias = ferias / 3;
+        const abono = valorDia * diasAbono;
+        const tercoAbono = abono / 3;
+        const decimoTerceiro = document.getElementById('calcFeriasDecimo').value === 'sim' ? base.base / 2 : 0;
+        const adiantamentos = obterAdiantamentosFerias(f, chave);
+        const bruto = ferias + tercoFerias + abono + tercoAbono + decimoTerceiro;
+        const liquido = bruto - adiantamentos.total;
+        return { f, funcId, aqInicio, aqFim, gozoInicio, gozoFim, retorno, diasDireito, diasGozados, diasAbono, diasRestantes, limite, chave, base, valorDia, ferias, tercoFerias, abono, tercoAbono, decimoTerceiro, adiantamentos, bruto, liquido };
+    }
+
+    function linhaCalculoFerias(label, valor) {
+        return `<div class="ferias-calc-linha"><span>${label}</span><strong>${valor}</strong></div>`;
+    }
+
+    function renderCalculoFerias() {
+        const box = document.getElementById('resultadoCalculoFerias');
+        if(!box) return;
+        const d = calcularDadosFeriasForm();
+        if(!d) {
+            box.innerHTML = '<div class="ferias-calc-box">Funcionário não encontrado.</div>';
+            return;
+        }
+        const pagamento = obterPagamentoFerias(d.funcId, d.aqInicio, d.aqFim);
+        const status = pagamento ? `<div class="ferias-pagamento-status">Pagamento informado em ${formatDataBR(pagamento.data)}: <b>R$ ${formatMoedaContracheque(pagamento.valorPago)}</b></div>` : '';
+        box.innerHTML = `${status}
+            <div class="ferias-calc-box">
+                <div class="ferias-calc-tabela">
+                    ${linhaCalculoFerias('Início aquisitivo', formatDataBR(d.aqInicio))}
+                    ${linhaCalculoFerias('Fim aquisitivo', formatDataBR(d.aqFim))}
+                    ${linhaCalculoFerias('Início gozo férias', formatDataBR(d.gozoInicio))}
+                    ${linhaCalculoFerias('Fim gozo férias', formatDataBR(d.gozoFim))}
+                    ${linhaCalculoFerias('Retorno', formatDataBR(d.retorno))}
+                    ${linhaCalculoFerias('Limite p/ gozo', formatDataBR(d.limite))}
+                    ${linhaCalculoFerias('Dias dir.', d.diasDireito)}
+                    ${linhaCalculoFerias('Dias goz.', d.diasGozados)}
+                    ${linhaCalculoFerias('Abono', d.diasAbono)}
+                    ${linhaCalculoFerias('Dias rest.', d.diasRestantes)}
+                </div>
+            </div>
+            <div class="contra-grid">
+                <div class="contra-box contra-box-proventos"><b style="color:#2E7D32;">Cálculo</b>
+                    ${linhaContracheque('Salário', d.base.salario)}
+                    ${linhaContracheque('Gratificação', d.base.gratificacao)}
+                    ${linhaContracheque('Quinquênio', d.base.quinquenio)}
+                    ${linhaContracheque('Férias', d.ferias)}
+                    ${linhaContracheque('1/3 férias', d.tercoFerias)}
+                    ${linhaContracheque('Abono', d.abono)}
+                    ${linhaContracheque('1/3 abono', d.tercoAbono)}
+                    ${linhaContracheque('13º', d.decimoTerceiro)}
+                    ${linhaContracheque('Total bruto', d.bruto, { total: true })}
+                </div>
+                ${renderBoxAdiantamentosContracheque(d.f, d.chave, d.adiantamentos, true, 'ferias')}
+            </div>
+            <div class="ferias-calc-box ferias-calc-total">
+                ${linhaCalculoFerias('Bruto', 'R$ ' + formatMoedaContracheque(d.bruto))}
+                ${linhaCalculoFerias('Adiantamentos escolhidos', 'R$ ' + formatMoedaContracheque(d.adiantamentos.total))}
+                ${linhaCalculoFerias('Líquido a pagar', 'R$ ' + formatMoedaContracheque(d.liquido))}
+            </div>`;
+    }
+
+    function registrarPagamentoFerias() {
+        if(!garantirPermissao('lancarFerias', () => registrarPagamentoFerias(), 'informar pagamento de férias')) return;
+        const d = calcularDadosFeriasForm();
+        if(!d) return alert('Funcionário não encontrado.');
+        if(!d.aqInicio || !d.aqFim || d.aqInicio > d.aqFim) return alert('Confira o período aquisitivo.');
+        if(!d.gozoInicio || (d.gozoFim && d.gozoInicio > d.gozoFim)) return alert('Confira as datas de gozo das férias.');
+        const existente = obterPagamentoFerias(d.funcId, d.aqInicio, d.aqFim);
+        const agora = Date.now();
+        const registro = existente || { id: `fp_${d.funcId}_${agora}`, type: 'ferias_pagamento', funcId: d.funcId, criadoEm: agora };
+        Object.assign(registro, {
+            data: getHojeSTR(),
+            periodoAquisitivoInicio: d.aqInicio,
+            periodoAquisitivoFim: d.aqFim,
+            gozoInicio: d.gozoInicio,
+            gozoFim: d.gozoFim,
+            retorno: d.retorno,
+            diasDireito: d.diasDireito,
+            diasGozados: d.diasGozados,
+            diasAbono: d.diasAbono,
+            diasRestantes: d.diasRestantes,
+            limiteGozo: d.limite,
+            salario: d.base.salario,
+            gratificacao: d.base.gratificacao,
+            quinquenio: d.base.quinquenio,
+            valorBruto: d.bruto,
+            valorAdiantamentos: d.adiantamentos.total,
+            valorPago: d.liquido,
+            chaveDesconto: d.chave,
+            editadoEm: agora,
+            _syncAtualizadoEm: agora
+        });
+        if(!existente) db.registros.push(registro);
+        registrarAuditoria(existente ? 'Pagamento de férias atualizado' : 'Pagamento de férias informado', `${getNomeUsoFuncionario(d.f)}: R$ ${formatMoeda(d.liquido)}. Aquisitivo ${formatDataBR(d.aqInicio)} a ${formatDataBR(d.aqFim)}.`, 'ferias_pagamento', registro.id);
+        salvarBanco();
+        fecharModal('modalCalculoFerias');
+        renderCalendarioFerias();
+        document.getElementById('modalCalendarioFerias').style.display = 'flex';
     }
 
     function excluirRegistro(id, tela) { if(confirm("Apagar registro?")) { const registro = db.registros.find(r => r.id === id); const func = registro ? db.funcionarios.find(f => f.id === registro.funcId) : null; db.registros = db.registros.filter(r => r.id !== id); registrarAuditoria('Registro excluído', `${tela || (registro && registro.type) || 'registro'}${func ? ` - ${getNomeUsoFuncionario(func)}` : ''}${registro && registro.data ? ` em ${formatDataBR(registro.data)}` : ''}.`, tela || (registro && registro.type) || 'registro', id); salvarBanco(); let funcId = document.getElementById('acoesFuncId').value; if(tela === 'adiantamento') renderizarHistAdiantamento(funcId); else if(tela === 'falta') renderizarHistFaltas(funcId); else if(tela === 'atraso') renderizarHistAtrasos(funcId); else if(tela === 'ferias') renderizarHistFerias(funcId); else if(tela === 'presenca') renderizarPresencasPendentes(funcId); renderizarLista(); } }
@@ -1780,7 +1990,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function criarResumoVinculo(nome) {
-        return { nome, funcionarios: 0, pagoMes: 0, extrasPagos: 0, quinzena: 0, adiantamentos: 0, adiantamentosBaixados: 0, saldoAdiantamentos: 0 };
+        return { nome, funcionarios: 0, pagoMes: 0, extrasPagos: 0, quinzena: 0, ferias: 0, adiantamentos: 0, adiantamentosBaixados: 0, saldoAdiantamentos: 0 };
     }
 
     function calcularResumoPeriodo(intervalo) {
@@ -1798,7 +2008,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const totalAdiantamentosBaixados = adiantamentos.filter(r => r.descontado).reduce((acc, r) => acc + Number(r.valor || 0), 0);
         const quinzena = db.registros.filter(r => r.type === 'desconto_quinzena' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
         const totalQuinzena = quinzena.reduce((acc, r) => acc + Number(r.valor || 0), 0);
-        const totalPagoMes = totalPagoExtras + totalAdiantamentos + totalQuinzena;
+        const feriasPagas = db.registros.filter(r => r.type === 'ferias_pagamento' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
+        const totalFeriasPagas = feriasPagas.reduce((acc, r) => acc + Number(r.valorPago || 0), 0);
+        const totalPagoMes = totalPagoExtras + totalAdiantamentos + totalQuinzena + totalFeriasPagas;
         const saldoAdiantamentos = Math.max(0, totalAdiantamentos - totalAdiantamentosBaixados);
         const porVinculo = new Map();
         const nomeVinculo = (f) => {
@@ -1826,6 +2038,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             somarPagamento(r.funcId, 'quinzena', valor);
             somarPagamento(r.funcId, 'pagoMes', valor);
         });
+        feriasPagas.forEach(r => {
+            const valor = Number(r.valorPago || 0);
+            somarPagamento(r.funcId, 'ferias', valor);
+            somarPagamento(r.funcId, 'pagoMes', valor);
+        });
         adiantamentos.forEach(r => {
             const valor = Number(r.valor || 0);
             somarPagamento(r.funcId, 'adiantamentos', valor);
@@ -1833,7 +2050,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             if(r.descontado) somarPagamento(r.funcId, 'adiantamentosBaixados', valor);
         });
         porVinculo.forEach(v => { v.saldoAdiantamentos = Math.max(0, v.adiantamentos - v.adiantamentosBaixados); });
-        return { ativos, faltas, faltaram, atrasos, minutosAtraso, extras, totalExtrasLancados, pagamentosExtras, totalPagoExtras, adiantamentos, totalAdiantamentos, totalAdiantamentosBaixados, saldoAdiantamentos, quinzena, totalQuinzena, totalPagoMes, porVinculo: [...porVinculo.values()].sort((a, b) => a.nome.localeCompare(b.nome)) };
+        return { ativos, faltas, faltaram, atrasos, minutosAtraso, extras, totalExtrasLancados, pagamentosExtras, totalPagoExtras, adiantamentos, totalAdiantamentos, totalAdiantamentosBaixados, saldoAdiantamentos, quinzena, totalQuinzena, feriasPagas, totalFeriasPagas, totalPagoMes, porVinculo: [...porVinculo.values()].sort((a, b) => a.nome.localeCompare(b.nome)) };
     }
 
     function montarResumoGeralWhatsapp(intervalo) {
@@ -1851,6 +2068,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             `*Financeiro do período*`,
             `Pago/lançado: R$ ${formatMoeda(r.totalPagoMes)}`,
             `- Quinzena: R$ ${formatMoeda(r.totalQuinzena)}`,
+            `- Férias pagas: R$ ${formatMoeda(r.totalFeriasPagas)}`,
             `- Pagamento de extras: R$ ${formatMoeda(r.totalPagoExtras)}`,
             `- Adiantamentos: R$ ${formatMoeda(r.totalAdiantamentos)}`,
             `Adiantamentos baixados: R$ ${formatMoeda(r.totalAdiantamentosBaixados)}`,
@@ -1863,7 +2081,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             `*Financeiro por vínculo*`
         );
         r.porVinculo.forEach(v => {
-            linhas.push(`- ${v.nome}: pago R$ ${formatMoeda(v.pagoMes)} | quinzena R$ ${formatMoeda(v.quinzena)} | adiant. R$ ${formatMoeda(v.adiantamentos)} | baixado R$ ${formatMoeda(v.adiantamentosBaixados)} | saldo R$ ${formatMoeda(v.saldoAdiantamentos)}`);
+            linhas.push(`- ${v.nome}: pago R$ ${formatMoeda(v.pagoMes)} | quinzena R$ ${formatMoeda(v.quinzena)} | férias R$ ${formatMoeda(v.ferias)} | adiant. R$ ${formatMoeda(v.adiantamentos)} | baixado R$ ${formatMoeda(v.adiantamentosBaixados)} | saldo R$ ${formatMoeda(v.saldoAdiantamentos)}`);
         });
         return linhas.join('\n');
     }
@@ -1910,6 +2128,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             <div class="resumo-vinculo-grid">
                 <div><span>Pago mês</span><strong>R$ ${formatMoeda(v.pagoMes)}</strong></div>
                 <div><span>Quinzena</span><strong>R$ ${formatMoeda(v.quinzena)}</strong></div>
+                <div><span>Férias</span><strong>R$ ${formatMoeda(v.ferias)}</strong></div>
                 <div><span>Extras</span><strong>R$ ${formatMoeda(v.extrasPagos)}</strong></div>
                 <div><span>Adiant.</span><strong>R$ ${formatMoeda(v.adiantamentos)}</strong></div>
                 <div><span>Baixado</span><strong>R$ ${formatMoeda(v.adiantamentosBaixados)}</strong></div>
@@ -1922,6 +2141,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalPagoMes)}</strong><span>pago/lançado no período</span></div>
             <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.saldoAdiantamentos)}</strong><span>saldo de adiantamentos</span></div>
             <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalQuinzena)}</strong><span>quinzena gerada</span></div>
+            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalFeriasPagas)}</strong><span>férias pagas (${resumo.feriasPagas.length})</span></div>
             <div class="resumo-card"><strong>${resumo.atrasos.length}</strong><span>atrasos${resumo.minutosAtraso ? ` (${resumo.minutosAtraso} min)` : ''}</span></div>
         </div>
         <div class="resumo-bloco"><div class="resumo-bloco-titulo">Funcionários ativos por vínculo</div>${linhasAtivos || '<div style="color:#999;">Nenhum vínculo cadastrado.</div>'}</div>
@@ -2063,9 +2283,27 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return db.registros.find(r => r.type === 'recibo_mensal_pago' && r.funcId === funcId && r.mesRef === mesRef);
     }
 
-    function calcularDadosReciboMensalFuncionario(f, mesRef) {
+    function chaveReciboMensal(funcId, mesRef) {
+        return `${funcId}|${mesRef}`;
+    }
+
+    function toggleResumoReciboMensal() {
+        resumoReciboMensalVisivel = !resumoReciboMensalVisivel;
+        gerarPreviaReciboMensal();
+    }
+
+    function toggleDetalhesReciboMensal(funcId, event) {
+        if(event && event.target && event.target.closest('button,input,select,label')) return;
+        const mesRef = document.getElementById('reciboMesRef').value || getHojeSTR().substring(0, 7);
+        const key = chaveReciboMensal(funcId, mesRef);
+        if(recibosMensaisAbertos.has(key)) recibosMensaisAbertos.delete(key);
+        else recibosMensaisAbertos.add(key);
+        gerarPreviaReciboMensal();
+    }
+
+    function calcularDadosReciboMensalFuncionario(f, mesRef, vtMesRef = '') {
         const [ano, mes] = mesRef.split('-').map(Number);
-        const vtMesRef = somarMesReferencia(mesRef, 1);
+        vtMesRef = vtMesRef || somarMesReferencia(mesRef, 1);
         const [anoVT, mesVT] = vtMesRef.split('-').map(Number);
         const categoria = db.categorias.find(c => c.id === f.categoria);
         const campos = getCamposFuncionarioClasse(categoria || {});
@@ -2081,30 +2319,37 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const decimoTerceiro = baseRemuneracao / 12;
         const inss = (campos.pedirINSS && f.descontaINSS !== false) ? baseRemuneracao * 0.075 : 0;
         const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, vales.total) : 0;
+        const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
         const proventos = salario + gratificacao + vales.total + fgts + multaFgts + ferias + tercoFerias + decimoTerceiro;
         const descontos = descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
         const liquido = proventos - descontos;
-        return { ano, mes, vtMesRef, salario, gratificacao, vales, faltas, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, proventos, descontos, liquido };
-    }
-
-    function linhaReciboMensal(label, valor, opcoes = {}) {
-        if(!opcoes.total && Math.abs(Number(valor) || 0) < 0.0001) return '';
-        const classe = opcoes.total ? ' style="font-weight:900; border-top:1px solid #ddd; margin-top:3px;"' : '';
-        return `<div${classe}><span>${label}</span><strong>R$ ${formatMoedaContracheque(valor)}</strong></div>`;
+        const liquidoAPagar = liquido - adiantamentosContra.total;
+        return { ano, mes, anoVT, mesVT, vtMesRef, campos, salario, gratificacao, vales, faltas, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, adiantamentosContra, proventos, descontos, liquido, liquidoAPagar };
     }
 
     function abrirConfigReciboMensal(mesRefForcado = '') {
         if(!garantirPermissao('gerarContracheque', () => abrirConfigReciboMensal(mesRefForcado), 'gerar recibo mensal')) return;
         if(itensSelecionados.size === 0) return alert('Selecione funcionários!');
-        document.getElementById('reciboMesRef').value = mesRefForcado || getHojeSTR().substring(0, 7);
+        resumoReciboMensalVisivel = false;
+        recibosMensaisAbertos.clear();
+        const mesAtual = mesRefForcado || getHojeSTR().substring(0, 7);
+        document.getElementById('reciboMesRef').value = mesAtual;
+        document.getElementById('reciboVTMesRef').value = somarMesReferencia(mesAtual, 1);
         gerarPreviaReciboMensal();
         document.getElementById('modalReciboMensal').style.display = 'flex';
+    }
+
+    function aoAlterarMesReciboMensal() {
+        const mesRef = document.getElementById('reciboMesRef').value || getHojeSTR().substring(0, 7);
+        document.getElementById('reciboVTMesRef').value = somarMesReferencia(mesRef, 1);
+        gerarPreviaReciboMensal();
     }
 
     function gerarPreviaReciboMensal() {
         const box = document.getElementById('areaReciboMensal');
         if(!box) return;
         const mesRef = document.getElementById('reciboMesRef').value || getHojeSTR().substring(0, 7);
+        const vtMesRef = document.getElementById('reciboVTMesRef').value || somarMesReferencia(mesRef, 1);
         const funcs = obterFuncionariosSelecionados()
             .filter(funcionarioRecebeReciboMensal)
             .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
@@ -2113,43 +2358,65 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             return;
         }
         let total = 0;
-        box.innerHTML = funcs.map((f) => {
-            const d = calcularDadosReciboMensalFuncionario(f, mesRef);
+        let totalAPagar = 0;
+        let html = '';
+        funcs.forEach((f) => {
+            const d = calcularDadosReciboMensalFuncionario(f, mesRef, vtMesRef);
             total += d.liquido;
+            totalAPagar += d.liquidoAPagar;
             const pago = obterReciboMensalPago(f.id, mesRef);
-            return `<div class="recibo-card">
-                <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;"><strong>${escapeHTML(f.nome || 'Sem nome')}</strong><span style="color:${pago ? '#2E7D32' : '#795548'}; font-weight:900;">${pago ? 'Gerado' : 'Pendente'}</span></div>
-                <div style="font-size:11px; color:#777; margin-top:3px;">Mês ${escapeHTML(getExtensoMes(d.mes))} de ${d.ano} • VT ${escapeHTML(getExtensoMes(Number(d.vtMesRef.split('-')[1])))} de ${d.vtMesRef.split('-')[0]}</div>
-                <div class="recibo-grid">
-                    ${linhaReciboMensal('Salário', d.salario)}
-                    ${linhaReciboMensal('Gratificação', d.gratificacao)}
-                    ${linhaReciboMensal('VT', d.vales.total)}
-                    ${linhaReciboMensal('FGTS 8%', d.fgts)}
-                    ${linhaReciboMensal('FGTS 40%', d.multaFgts)}
-                    ${linhaReciboMensal('Férias', d.ferias)}
-                    ${linhaReciboMensal('1/3 férias', d.tercoFerias)}
-                    ${linhaReciboMensal('13º', d.decimoTerceiro)}
-                    ${linhaReciboMensal('Passagem', d.descontoPassagem)}
-                    ${linhaReciboMensal(`Falta (${d.faltas.diasFalta})`, d.faltas.valorFaltas)}
-                    ${linhaReciboMensal(`DSR (${d.faltas.dsr})`, d.faltas.valorDSR)}
-                    ${linhaReciboMensal('INSS 7,5%', d.inss)}
-                    ${linhaReciboMensal('Total líquido', d.liquido, { total: true })}
+            const key = chaveReciboMensal(f.id, mesRef);
+            const aberto = recibosMensaisAbertos.has(key);
+            const editavel = !pago;
+            const status = pago ? 'Gerado' : (aberto ? 'Aberto' : 'Tocar para abrir');
+            const detalheFaltas = d.faltas.diasFalta ? ' • ' + d.faltas.diasFalta + ' falta(s)' : '';
+            const linhaFaltaRecibo = linhaContracheque('Falta (' + d.faltas.diasFalta + ')', d.faltas.valorFaltas);
+            const linhaDsrRecibo = linhaContracheque('DSR (' + d.faltas.dsr + ')', d.faltas.valorDSR);
+            const detalhes = aberto ? `<div class="contra-detalhes">
+                <div style="font-size:11px; color:#777; margin-bottom:8px;">Mensal ${escapeHTML(getExtensoMes(d.mes))} de ${d.ano} • VT ${escapeHTML(getExtensoMes(d.mesVT))} de ${d.anoVT} • ${d.vales.passagens} passagens${detalheFaltas}</div>
+                <div class="contra-grid">
+                    <div class="contra-box contra-box-proventos"><b style="color:#2E7D32;">Proventos</b>
+                        ${linhaContracheque('Salário', d.salario)}
+                        ${linhaContracheque('Gratificação', d.gratificacao)}
+                        ${linhaContracheque('VT', d.vales.total)}
+                        ${linhaContracheque('FGTS 8%', d.fgts)}
+                        ${linhaContracheque('FGTS 40%', d.multaFgts)}
+                        ${linhaContracheque('Férias', d.ferias)}
+                        ${linhaContracheque('1/3 férias', d.tercoFerias)}
+                        ${linhaContracheque('13º', d.decimoTerceiro)}
+                        ${linhaContracheque('Total', d.proventos, { total: true })}
+                    </div>
+                    <div class="contra-box contra-box-descontos"><b style="color:#D32F2F;">Descontos</b>
+                        ${linhaContracheque('Passagem', d.descontoPassagem)}
+                        ${linhaFaltaRecibo}
+                        ${linhaDsrRecibo}
+                        ${linhaContracheque('INSS 7,5%', d.inss)}
+                        ${linhaContracheque('Total', d.descontos, { total: true })}
+                    </div>
+                    ${renderBoxAdiantamentosContracheque(f, mesRef, d.adiantamentosContra, editavel, 'recibo')}
                 </div>
-            </div>`;
-        }).join('') + `<div class="recibo-card" style="border-left-color:#00695C;"><div class="recibo-grid">${linhaReciboMensal(`${funcs.length} funcionário(s)`, total, { total: true })}</div></div>`;
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button></div>${pago ? '<span class="contra-status">Pagamento informado</span>' : '<span class="contra-status">Gere o recibo para informar pagamento</span>'}</div>
+            </div>` : '';
+            const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(d.liquido)} - R$ ${formatMoedaContracheque(d.adiantamentosContra.total)} = R$ ${formatMoedaContracheque(d.liquidoAPagar)}</strong>` : '';
+            html += `<div class="contra-card recibo-mensal ${pago ? 'fechado' : ''}" onclick="toggleDetalhesReciboMensal(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;
+        });
+        const classeResumo = resumoReciboMensalVisivel ? 'contra-resumo-bar aberto' : 'contra-resumo-bar';
+        const classeOlho = resumoReciboMensalVisivel ? 'contra-resumo-toggle' : 'contra-resumo-toggle cortado';
+        box.innerHTML = `<div class="${classeResumo}" style="background:#EFEBE9; color:#4E342E;"><div class="contra-resumo-dados"><span>${funcs.length} funcionário(s) - Líquido: R$ ${formatMoedaContracheque(total)} - A pagar: R$ ${formatMoedaContracheque(totalAPagar)}</span></div><button class="${classeOlho}" onclick="toggleResumoReciboMensal()" title="Mostrar ou ocultar resumo"><span>👁️‍🗨️</span></button></div>${html}`;
     }
 
     function registrarReciboMensalPago(funcId, mesRef, dados) {
         const existente = obterReciboMensalPago(funcId, mesRef);
         const agora = Date.now();
         const registro = existente || { id: `rm_${funcId}_${mesRef.replace('-', '')}_${agora}`, type: 'recibo_mensal_pago', funcId, mesRef, criadoEm: agora };
-        Object.assign(registro, { data: getHojeSTR(), valor: dados.liquido, editadoEm: agora, _syncAtualizadoEm: agora });
+        Object.assign(registro, { data: getHojeSTR(), vtMesRef: dados.vtMesRef, valor: dados.liquido, valorAPagar: dados.liquidoAPagar, adiantamentos: dados.adiantamentosContra.total, editadoEm: agora, _syncAtualizadoEm: agora });
         if(!existente) db.registros.push(registro);
     }
 
     function imprimirRecibosMensaisSelecionados() {
         if(!garantirPermissao('gerarContracheque', () => imprimirRecibosMensaisSelecionados(), 'gerar recibo mensal')) return;
         const mesRef = document.getElementById('reciboMesRef').value || getHojeSTR().substring(0, 7);
+        const vtMesRef = document.getElementById('reciboVTMesRef').value || somarMesReferencia(mesRef, 1);
         const funcs = obterFuncionariosSelecionados()
             .filter(funcionarioRecebeReciboMensal)
             .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
@@ -2176,11 +2443,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             .assinatura{width:82mm;border-top:1px solid #000;text-align:center;margin:18mm auto 0;padding-top:3px;font-weight:normal;}
         </style></head><body>`;
         funcs.forEach((f) => {
-            const d = calcularDadosReciboMensalFuncionario(f, mesRef);
+            const d = calcularDadosReciboMensalFuncionario(f, mesRef, vtMesRef);
             registrarReciboMensalPago(f.id, mesRef, d);
+            const linhaFaltaPrintRecibo = linhaPrintRecibo('Falta (' + d.faltas.diasFalta + ')', d.faltas.valorFaltas);
+            const linhaDsrPrintRecibo = linhaPrintRecibo('DSR (' + d.faltas.dsr + ')', d.faltas.valorDSR);
+            const linhaAdiantamentosPrint = d.adiantamentosContra.total ? '<div class="linha total" style="margin-top:8mm;"><span>Adiantamentos descontados</span><strong>R$ ' + formatMoedaContracheque(d.adiantamentosContra.total) + '</strong></div>' : '';
             html += `<section class="recibo-folha"><div class="topo"><div class="empresa">${escapeHTML(empresa)}</div><div class="cnpj">CNPJ ${escapeHTML(db.empresa.cnpj || '')}</div></div>
                 <div class="titulo">Recibo de Pagamento Mensal</div>
-                <div class="texto">Declaro que recebi da empresa supracitada os valores referentes ao pagamento do mês de <b>${escapeHTML(mes)} de ${escapeHTML(ano)}</b>, conforme discriminação abaixo.</div>
+                <div class="texto">Declaro que recebi da empresa supracitada os valores referentes ao pagamento do mês de <b>${escapeHTML(mes)} de ${escapeHTML(ano)}</b>, incluindo VT de <b>${escapeHTML(getExtensoMes(d.mesVT).toLowerCase())} de ${d.anoVT}</b>, conforme discriminação abaixo.</div>
                 <div class="func">${escapeHTML(f.nome || 'Funcionário')}</div>
                 <div class="grid">
                     <div><div class="bloco-titulo">Proventos</div>
@@ -2196,13 +2466,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     </div>
                     <div><div class="bloco-titulo">Descontos</div>
                         ${linhaPrintRecibo('Passagem', d.descontoPassagem)}
-                        ${linhaPrintRecibo(`Falta (${d.faltas.diasFalta})`, d.faltas.valorFaltas)}
-                        ${linhaPrintRecibo(`DSR (${d.faltas.dsr})`, d.faltas.valorDSR)}
+                        ${linhaFaltaPrintRecibo}
+                        ${linhaDsrPrintRecibo}
                         ${linhaPrintRecibo('INSS 7,5%', d.inss)}
                         ${linhaPrintRecibo('Total', d.descontos, true)}
                     </div>
                 </div>
-                <div class="linha total" style="margin-top:8mm;"><span>Líquido a receber</span><strong>R$ ${formatMoedaContracheque(d.liquido)}</strong></div>
+                ${linhaAdiantamentosPrint}
+                <div class="linha total" style="margin-top:${d.adiantamentosContra.total ? '2mm' : '8mm'};"><span>Líquido a receber</span><strong>R$ ${formatMoedaContracheque(d.liquidoAPagar)}</strong></div>
                 <div class="rodape">${escapeHTML(typeof formatDataExtensoPrint === 'function' ? formatDataExtensoPrint(getHojeSTR(), cidade) : formatDataBR(getHojeSTR()))}</div>
                 <div class="assinatura">Assinatura do Funcionário</div>
             </section>`;
@@ -2476,8 +2747,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return Math.min(valorOriginal, Math.max(0, valor));
     }
 
-    function definirDescontoAdiantamentoContracheque(id, mesRef, valorMaximo, event) {
+    function definirDescontoAdiantamentoContracheque(id, mesRef, valorMaximo, event, contexto = 'contracheque') {
         if(event) event.stopPropagation();
+        contextoDescontoAtual = contexto;
         const registro = db.registros.find(r => r.id === id);
         if(!registro) return;
         if(registro.type === 'desconto_quinzena') return;
@@ -2511,7 +2783,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         registrarAuditoria('Desconto no contracheque ajustado', `${getNomeUsoFuncionario(db.funcionarios.find(f => f.id === registro.funcId))}: ${valor <= 0 ? 'sem desconto' : `R$ ${formatMoeda(valor)}`} em ${mesRef}.`, 'contracheque', id);
         salvarBanco();
         fecharModal('modalDescontoContracheque');
-        gerarPreviaContracheque();
+        if(contextoDescontoAtual === 'recibo') gerarPreviaReciboMensal();
+        else if(contextoDescontoAtual === 'ferias') renderCalculoFerias();
+        else gerarPreviaContracheque();
     }
 
     function confirmarDescontoContracheque() {
@@ -2540,7 +2814,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         };
     }
 
-    function renderLinhaAdiantamentoContracheque(registro, mesRef, label, editavel, padraoAutomatico = false) {
+    function renderLinhaAdiantamentoContracheque(registro, mesRef, label, editavel, padraoAutomatico = false, contexto = 'contracheque') {
         const valorOriginal = typeof registro.valor === 'number' ? registro.valor : parseMoeda(registro.valor);
         const valorDesconto = getValorDescontoContracheque(registro, mesRef, padraoAutomatico);
         const ativo = valorDesconto > 0;
@@ -2549,21 +2823,21 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
         const textoBotao = ativo ? `R$ ${formatMoedaContracheque(valorDesconto)}` : 'Descontar';
         const disabled = editavel ? '' : 'disabled';
-        return `<div class="linha-adiant"><button class="btn-contra-check ${ativo ? 'ativo' : ''}" ${disabled} onclick="definirDescontoAdiantamentoContracheque(${jsArg(registro.id)}, ${jsArg(mesRef)}, ${valorOriginal}, event)">${textoBotao}</button><span>${label}</span><span class="valor">R$ ${formatMoedaContracheque(valorOriginal)}</span></div>`;
+        return `<div class="linha-adiant"><button class="btn-contra-check ${ativo ? 'ativo' : ''}" ${disabled} onclick="definirDescontoAdiantamentoContracheque(${jsArg(registro.id)}, ${jsArg(mesRef)}, ${valorOriginal}, event, ${jsArg(contexto)})">${textoBotao}</button><span>${label}</span><span class="valor">R$ ${formatMoedaContracheque(valorOriginal)}</span></div>`;
     }
 
-    function renderBoxAdiantamentosContracheque(f, mesRef, dados, editavel = true) {
+    function renderBoxAdiantamentosContracheque(f, mesRef, dados, editavel = true, contexto = 'contracheque') {
         const linhas = [];
         dados.quinzenaRegs.forEach(r => {
-            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, 'Quinzena', editavel, true));
+            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, 'Quinzena', editavel, true, contexto));
         });
         dados.doMes.forEach(r => {
             const obs = r.observacao ? ` - ${escapeHTML(r.observacao)}` : '';
-            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, `${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Adiantamento')}${obs}`, editavel));
+            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, `${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Adiantamento')}${obs}`, editavel, false, contexto));
         });
         dados.anteriores.forEach(r => {
             const obs = r.observacao ? ` - ${escapeHTML(r.observacao)}` : '';
-            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, `${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Pendente anterior')}${obs}`, editavel));
+            linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, `${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Pendente anterior')}${obs}`, editavel, false, contexto));
         });
         if(linhas.length === 0) return '';
         return `<div class="contra-adiantamentos-box"><b style="color:#D32F2F;">Adiantamentos</b>${linhas.join('')}<div class="contra-linha contra-total"><span>Total adiantamentos</span><strong class="valor">R$ ${formatMoedaContracheque(dados.total)}</strong></div></div>`;

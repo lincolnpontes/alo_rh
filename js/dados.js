@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.40';
+    const APP_VERSION = 'v1.0.41';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -28,7 +28,7 @@
     let db = carregarBanco();
     let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
     let isSyncingFundo = false; let syncPendente = false; let timerSincronizacao = null; let timerSyncRegistros = null; let isPuxandoNuvem = false;
-    let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null; let overridesContracheque = {}; let resumoContrachequeVisivel = false; let contrachequesAbertos = new Set(); let adminSessaoId = sessionStorage.getItem('alorh_admin_sessao') || '';
+    let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null; let overridesContracheque = {}; let resumoContrachequeVisivel = false; let contrachequesAbertos = new Set(); let recibosMensaisAbertos = new Set(); let resumoReciboMensalVisivel = false; let contextoDescontoAtual = 'contracheque'; let adminSessaoId = sessionStorage.getItem('alorh_admin_sessao') || '';
     let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar'; let origemModalFerias = 'acoes';
     let assinaturasRegistros = new Map(); let idsRegistrosConhecidos = new Set(); registrarEstadoRegistros();
 

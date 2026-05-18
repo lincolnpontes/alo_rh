@@ -83,6 +83,9 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .perfil-admin-acoes { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
         .perfil-admin-acoes button { border:1px solid #00695C; background:#fff; color:#00695C; border-radius:6px; padding:6px 8px; font-size:11px; font-weight:800; cursor:pointer; }
         .perfil-admin-acoes .sair { border-color:#B0BEC5; color:#607D8B; }
+        .perfil-admin-lista { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+        .perfil-admin-card { border:1px solid #DCE8E5; border-left:4px solid #00695C; border-radius:8px; padding:9px; background:#F7FAFA; font-size:12px; color:#455A64; }
+        .perfil-admin-card strong { display:block; color:#004D40; font-size:14px; margin-bottom:2px; }
         .auditoria-resumo { background:#F7FAFA; border:1px solid #DCE8E5; border-radius:8px; padding:8px; margin-bottom:10px; font-size:12px; color:#455A64; font-weight:700; }
         .auditoria-lista { display:flex; flex-direction:column; gap:7px; max-height:55vh; overflow:auto; }
         .auditoria-item { border:1px solid #e5e5e5; border-left:4px solid #00695C; border-radius:8px; background:#fff; padding:9px; font-size:12px; }
@@ -187,9 +190,20 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .ferias-card.formacao .ferias-status { background:#BBDEFB; color:#0D47A1; }
         .ferias-meta { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; color:#555; }
         .ferias-meta b { color:#263238; }
-        .ferias-actions { margin-top:8px; display:flex; justify-content:flex-end; }
-        .ferias-actions button { flex:0 0 auto; padding:7px 10px; border-radius:6px; font-size:12px; }
-        @media (max-width: 430px) { .ferias-resumo-grid { grid-template-columns:1fr 1fr; } .ferias-meta { grid-template-columns:1fr; } }
+        .ferias-actions { margin-top:8px; display:flex; justify-content:flex-end; gap:6px; flex-wrap:wrap; }
+        .ferias-actions button { flex:0 0 auto; padding:7px 10px; border-radius:6px; font-size:12px; margin:0; text-align:center; }
+        .btn-ferias-calc { border-color:#6D4C41; color:#6D4C41; }
+        .btn-ferias-pagamento { border-color:#2E7D32; color:#2E7D32; }
+        .btn-ferias-registro { border-color:#F57F17; color:#E65100; }
+        .ferias-calc-nome { background:#FFF8E1; border:1px solid #FFE0B2; border-radius:8px; padding:9px; font-size:13px; color:#5D4037; font-weight:900; margin-bottom:10px; }
+        .ferias-calc-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
+        .ferias-calc-box { border:1px solid #FFE0B2; border-left:4px solid #F57F17; border-radius:8px; padding:10px; background:#fffdf7; font-size:12px; margin-bottom:8px; }
+        .ferias-pagamento-status { border:1px solid #C8E6C9; border-left:4px solid #2E7D32; border-radius:8px; padding:8px; background:#F1F8E9; color:#1B5E20; font-size:12px; font-weight:800; margin-bottom:8px; }
+        .ferias-calc-tabela { display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; }
+        .ferias-calc-linha { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(0,0,0,.06); padding:4px 0; }
+        .ferias-calc-linha strong { text-align:right; font-variant-numeric:tabular-nums; }
+        .ferias-calc-total { border-left-color:#2E7D32; background:#f8fbf8; }
+        @media (max-width: 430px) { .ferias-resumo-grid { grid-template-columns:1fr 1fr; } .ferias-meta { grid-template-columns:1fr; } .ferias-calc-grid, .ferias-calc-tabela { grid-template-columns:1fr; } }
         .contra-linha { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,0,0,.06); padding: 4px 0; }
         .contra-linha span:first-child { min-width: 0; }
         .contra-linha .valor { margin-left: auto; text-align: right; min-width: 82px; font-variant-numeric: tabular-nums; }
@@ -206,6 +220,9 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .contra-resumo-dados { display:none; margin-right:auto; }
         .contra-resumo-bar.aberto .contra-resumo-dados { display:flex; gap:12px; flex-wrap:wrap; }
         .contra-card { border:1px solid #e0e0e0; border-left:4px solid #6A1B9A; border-radius:8px; margin-bottom:10px; background:#fff; overflow:hidden; cursor:pointer; }
+        .contra-card.recibo-mensal { border-left-color:#795548; }
+        .contra-card.recibo-mensal.fechado { border-left-color:#2E7D32; }
+        .contra-card.recibo-mensal .contra-equacao { color:#795548; }
         .contra-card.fechado { border-left-color:#2E7D32; }
         .contra-card-header { display:flex; flex-direction:column; gap:5px; align-items:stretch; padding:10px; }
         .contra-card.fechado .contra-card-header { background:#E8F5E9; }
