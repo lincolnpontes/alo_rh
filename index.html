@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.38</title>
+    <title>Alô RH v1.0.39</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.38">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.39">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.38</div>
+    <div class="splash-versao">v1.0.39</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -63,13 +63,14 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.38</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.39</small>
         </h2>
         <div id="perfilAdminBox" class="perfil-admin-box"></div>
         <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
         <button class="btn-outline" onclick="abrirGerenciar('configGerais')">⚙️ Configurações Gerais</button>
         <button class="btn-outline" onclick="abrirGerenciar('administradores')">🛡️ Gerenciar Administradores</button>
+        <button class="btn-outline" onclick="abrirAuditoria()">📋 Registro do Sistema</button>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
         <h3 style="font-size: 16px; color: #d32f2f; margin-top: 15px; margin-bottom: 10px;">Avançado</h3>
         <button class="btn-danger" style="width: 100%; margin-bottom: 10px;" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
@@ -131,6 +132,16 @@
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <div class="form-group"><label>App travou ou quer puxar versão nova?</label><button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; width: 100%; text-align: center;" onclick="forcarAtualizacao()">🔄 Forçar Atualização do App</button></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalConfigAvancadas'); document.getElementById('modalPainelUnificado').style.display='flex';">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalAuditoria">
+    <div class="modal" style="width:95%; max-width:720px;">
+        <div class="modal-title">Registro do Sistema</div>
+        <div class="form-group"><label>Buscar:</label><input type="text" id="auditoriaBusca" placeholder="Funcionário, administrador ou ação" oninput="renderAuditoria()"></div>
+        <div id="auditoriaResumo" class="auditoria-resumo"></div>
+        <div id="listaAuditoria" class="auditoria-lista"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalAuditoria'); document.getElementById('modalPainelUnificado').style.display='flex';" style="width:100%;">Voltar</button></div>
     </div>
 </div>
 
@@ -289,7 +300,7 @@
         <div id="boxPermissoesSemanais" style="display:none; background:#FFF3E0; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #FFE0B2;">
             <div style="font-size:12px; font-weight:bold; color:#E65100; margin-bottom:5px;">Permissões para Pagamento por Semana:</div>
             <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:5px;"><input type="checkbox" id="funcHabFaltas" checked> Habilitar botão de Registrar Ausência</label>
-            <label style="display:flex; align-items:center; gap:5px; font-size:12px; margin-bottom:5px;"><input type="checkbox" id="funcHabFerias" checked> Habilitar botão de Lançar Férias</label>
+            <label style="display:none;"><input type="checkbox" id="funcHabFerias"> Habilitar botão de Lançar Férias</label>
             <label style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" id="funcHabAtrasos" checked> Habilitar registro de atraso</label>
         </div>
 
@@ -628,15 +639,15 @@
         
         <div id="areaEditFerias" class="">
             <div style="display: flex; gap: 10px;">
-                <div class="form-group" style="flex:1;"><label>Data Início:</label><input type="date" id="feriasData"></div>
-                <div class="form-group" style="flex:1;"><label>Data Fim:</label><input type="date" id="feriasDataFim"></div>
+                <div class="form-group" style="flex:1;"><label>Data Início:</label><input type="date" id="feriasData" onchange="atualizarPeriodoFeriasPorInicio()"></div>
+                <div class="form-group" style="flex:1;"><label>Data Fim:</label><input type="date" id="feriasDataFim" onchange="atualizarRetornoFerias()"></div>
             </div>
+            <div class="form-group"><label>Data de Retorno ao Trabalho:</label><input type="date" id="feriasRetorno"></div>
             <div class="section-title" style="margin-top:5px;">Período Aquisitivo</div>
             <div style="display: flex; gap: 10px;">
                 <div class="form-group" style="flex:1;"><label>Início:</label><input type="date" id="feriasAquisitivoInicio" onchange="sugerirFimPeriodoAquisitivo()"></div>
                 <div class="form-group" style="flex:1;"><label>Fim:</label><input type="date" id="feriasAquisitivoFim"></div>
             </div>
-            <div class="form-group"><label>Data de Retorno ao Trabalho:</label><input type="date" id="feriasRetorno"></div>
             <div class="form-group"><label>Registrado por:</label><select id="feriasAdmin"></select></div>
 
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -781,7 +792,7 @@
     <div class="modal" style="width:95%; max-width:720px;">
         <div class="modal-title" style="color:#F57F17; border-color:#F57F17;">Calendário de Férias</div>
         <div class="ferias-legenda">
-            <strong>Regra usada:</strong> 12 meses de período aquisitivo + 12 meses de período concessivo. Depois do prazo, há risco de férias em dobro.
+            <strong>Regra usada:</strong> período aquisitivo configurado + 12 meses de concessivo. O limite exibido é o último dia para iniciar 30 dias de férias.
         </div>
         <div style="display:flex; gap:10px; align-items:flex-end;">
             <div class="form-group" style="flex:1;"><label>Filtro:</label><select id="filtroCalendarioFerias" onchange="renderCalendarioFerias()"><option value="todos">Todos</option><option value="vencido">Vencidos</option><option value="urgente">Até 30 dias</option><option value="atencao">Até 90 dias</option><option value="sem_admissao">Sem admissão</option></select></div>
@@ -792,11 +803,11 @@
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalCalendarioFerias')" style="width: 100%;">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.38"></script>
-<script src="js/calculos.js?v=1.0.38"></script>
-<script src="js/interface.js?v=1.0.38"></script>
-<script src="js/impressao.js?v=1.0.38"></script>
-<script src="js/sincronizacao.js?v=1.0.38"></script>
+<script src="js/dados.js?v=1.0.39"></script>
+<script src="js/calculos.js?v=1.0.39"></script>
+<script src="js/interface.js?v=1.0.39"></script>
+<script src="js/impressao.js?v=1.0.39"></script>
+<script src="js/sincronizacao.js?v=1.0.39"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.38';
+    const APP_VERSION = 'v1.0.39';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -40,6 +40,7 @@
             funcoes: [],
             funcionarios: [],
             administradores: [],
+            auditoria: [],
             configGerais: { salarioMinimo: "1621,00", adiantamentoQuinzena: "500,00", diasAquisitivoFerias: 360, diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [], inssFaixas: criarTabelaINSSPadrao(), folgasGerais: [] },
             registros: [],
             configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, ultimaSincronizacao: 0, registrosExcluidos: {}, senhaAdminHash: "", senhaAdminSalt: "", segurancaVersao: 2 }
@@ -70,6 +71,7 @@
             registrarAtraso: true,
             registrarPresencaSemanal: true,
             acessoResumo: true,
+            auditoria: true,
             dadosEmpresa: true,
             configGerais: true,
             gerenciarAdministradores: true
@@ -92,6 +94,7 @@
         normalizado.funcionarios = Array.isArray(normalizado.funcionarios) ? normalizado.funcionarios : [];
         normalizado.administradores = Array.isArray(normalizado.administradores) ? normalizado.administradores : [];
         normalizado.administradores = normalizado.administradores.map((admin) => ({ ...admin, permissoes: { ...criarPermissoesAdminPadrao(), ...((admin && admin.permissoes) || {}) } }));
+        normalizado.auditoria = Array.isArray(normalizado.auditoria) ? normalizado.auditoria : [];
         normalizado.registros = Array.isArray(normalizado.registros) ? normalizado.registros : [];
         normalizado.configGerais.diasFuncionamento = Array.isArray(normalizado.configGerais.diasFuncionamento) ? normalizado.configGerais.diasFuncionamento : ['1','2','3','4','5','6'];
         normalizado.configGerais.valesTransporte = Array.isArray(normalizado.configGerais.valesTransporte) ? normalizado.configGerais.valesTransporte : [];
@@ -106,7 +109,7 @@
         normalizado.categorias = normalizado.categorias.map((categoria) => ({
             ...categoria,
             temQuinquenio: categoria && categoria.temQuinquenio === true,
-            temFerias: !(categoria && categoria.temFerias === false),
+            temFerias: !(categoria && categoria.semanal) && !(categoria && categoria.temFerias === false),
             recebeQuinzena: !(categoria && categoria.recebeQuinzena === false),
             recebeContracheque: !(categoria && categoria.recebeContracheque === false),
             camposFuncionario: { ...camposFuncionarioPadrao, ...((categoria && categoria.camposFuncionario) || {}) }
@@ -254,6 +257,28 @@
             registrosExcluidos: exclusoes,
             mudouLocal: assinaturaListaRegistros(local.registros, local.configs.registrosExcluidos) !== assinaturaFinal,
             precisaEnviar: assinaturaListaRegistros(nuvem.registros, nuvem.configs.registrosExcluidos) !== assinaturaFinal
+        };
+    }
+
+    function assinaturaAuditoria(auditoria) {
+        return JSON.stringify([...(auditoria || [])].sort((a, b) => String(a.id).localeCompare(String(b.id))));
+    }
+
+    function mesclarAuditoriaBancos(bancoA, bancoB) {
+        const local = normalizarBanco(bancoA);
+        const nuvem = normalizarBanco(bancoB);
+        const porId = new Map();
+        [...local.auditoria, ...nuvem.auditoria].forEach((item) => {
+            if(item && item.id) porId.set(item.id, { ...item });
+        });
+        const auditoria = Array.from(porId.values())
+            .sort((a, b) => Number(b.data || 0) - Number(a.data || 0))
+            .slice(0, 700);
+        const assinaturaFinal = assinaturaAuditoria(auditoria);
+        return {
+            auditoria,
+            mudouLocal: assinaturaAuditoria(local.auditoria) !== assinaturaFinal,
+            precisaEnviar: assinaturaAuditoria(nuvem.auditoria) !== assinaturaFinal
         };
     }
 

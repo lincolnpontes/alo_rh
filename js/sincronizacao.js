@@ -235,15 +235,17 @@
         }
         const outro = base === nuvem ? localAtual : nuvem;
         const mergeRegistros = mesclarRegistrosBancos(base, outro);
+        const mergeAuditoria = typeof mesclarAuditoriaBancos === 'function' ? mesclarAuditoriaBancos(base, outro) : { auditoria: base.auditoria || [], mudouLocal: false, precisaEnviar: false };
         const novoBanco = normalizarBanco(base);
 
         novoBanco.registros = mergeRegistros.registros;
+        novoBanco.auditoria = mergeAuditoria.auditoria;
         novoBanco.configs.registrosExcluidos = mergeRegistros.registrosExcluidos;
         db = preservarConfigsLocais(novoBanco, localAtual);
 
         const mudouLocal = JSON.stringify(prepararBancoCompartilhado(localAtual)) !== JSON.stringify(prepararBancoCompartilhado(db));
         salvarBanco({ sincronizar: false, atualizarMudanca: false });
-        return { mudouLocal, precisaEnviar: (modo === 'completo' && localTs > nuvemTs) || mergeRegistros.precisaEnviar };
+        return { mudouLocal: mudouLocal || mergeAuditoria.mudouLocal, precisaEnviar: (modo === 'completo' && localTs > nuvemTs) || mergeRegistros.precisaEnviar || mergeAuditoria.precisaEnviar };
     }
 
     async function sincronizarAoEntrar(manual = false) {
