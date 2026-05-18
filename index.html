@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.30</title>
+    <title>Alô RH v1.0.31</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.30">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.31">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.30</div>
+    <div class="splash-versao">v1.0.31</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -61,7 +61,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.30</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.31</small>
         </h2>
         <button class="btn-outline" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
@@ -299,8 +299,6 @@
             <div class="checkbox-dias" id="boxDiasFolgaFunc"></div>
         </div>
 
-        <div class="form-group" id="boxCampoVT"><label>Rota do Vale Transporte:</label><select id="funcVTRota"></select></div>
-        
         <div class="form-group">
             <label>Chaves PIX:</label>
             <div style="display: flex; gap: 5px; margin-bottom: 5px; align-items:stretch;">
@@ -318,6 +316,10 @@
         <div id="boxBeneficiosVinculo" class="switch-panel" style="display:none;">
             <div style="font-size:12px; font-weight:bold; color:#00695C; margin-bottom:8px;">Regras e benefícios do funcionário</div>
             <div class="switch-grid">
+                <div id="linhaFuncVT" class="switch-row switch-row-financeiro">
+                    <span class="switch-row-text">Vale-Transporte</span>
+                    <div class="switch-money-group"><select id="funcVTRota" class="switch-select-input"></select><label class="switch"><input type="checkbox" id="funcTemVT" checked onchange="toggleValorBeneficioFuncionario('funcTemVT','funcVTRota')"><span class="slider"></span></label></div>
+                </div>
                 <div id="linhaFuncGratificacao" class="switch-row switch-row-financeiro">
                     <span class="switch-row-text">Gratificação</span>
                     <div class="switch-money-group"><input type="text" id="funcGratificacao" class="switch-money-input" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"><label class="switch"><input type="checkbox" id="funcTemGratificacao" checked onchange="toggleValorBeneficioFuncionario('funcTemGratificacao','funcGratificacao')"><span class="slider"></span></label></div>
@@ -680,6 +682,17 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalSenhaAdminContracheque" style="z-index:1500;">
+    <div class="modal">
+        <div class="modal-title" style="color:#2E7D32; border-color:#2E7D32;">Abrir Contracheque Fechado</div>
+        <input type="hidden" id="contraSenhaFuncId">
+        <p style="font-size:12px; color:#666; margin-top:0;">Digite a senha de um administrador para visualizar este contracheque fechado.</p>
+        <div class="form-group"><label>Senha do ADM:</label><input type="password" id="contraSenhaAdmin" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+        <div id="contraSenhaErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;">Senha incorreta.</div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalSenhaAdminContracheque')">Cancelar</button><button class="btn-action" style="background:#2E7D32;" onclick="validarSenhaContracheque()">Abrir</button></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalEditINSSContracheque" style="z-index:1500;">
     <div class="modal">
         <div class="modal-title" style="color:#6A1B9A; border-color:#6A1B9A;">Ajustar INSS</div>
@@ -716,11 +729,11 @@
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalResumo')">Fechar</button></div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.30"></script>
-<script src="js/calculos.js?v=1.0.30"></script>
-<script src="js/interface.js?v=1.0.30"></script>
-<script src="js/impressao.js?v=1.0.30"></script>
-<script src="js/sincronizacao.js?v=1.0.30"></script>
+<script src="js/dados.js?v=1.0.31"></script>
+<script src="js/calculos.js?v=1.0.31"></script>
+<script src="js/interface.js?v=1.0.31"></script>
+<script src="js/impressao.js?v=1.0.31"></script>
+<script src="js/sincronizacao.js?v=1.0.31"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
