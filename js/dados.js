@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.41';
+    const APP_VERSION = 'v1.0.43';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;

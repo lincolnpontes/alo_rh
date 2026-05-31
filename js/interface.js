@@ -1274,6 +1274,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     // FALTAS E FÉRIAS
+    function registroDescontaDSR(registro) {
+        return registro && registro.tipo === 'Falta' && registro.descontarDia !== false;
+    }
+
     function changeTipoFalta() { let t = document.getElementById('faltaTipo').value; if(t === 'Atestado' || t === 'Folga') document.getElementById('faltaDescontarDia').checked = false; else document.getElementById('faltaDescontarDia').checked = true; }
     
     function abrirModalFalta(editId = null) {
@@ -1318,7 +1322,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1;
             let diasUteisFalta = 0;
             for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) {
-                if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; groups[mY].dsrSemanas.add(getWeekNumber(d)); }
+                if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; if(registroDescontaDSR(r)) groups[mY].dsrSemanas.add(getWeekNumber(d)); }
             }
             if(r.descontarDia) { groups[mY].diasDesc += diasUteisFalta; }
             if(r.descontarPassagem) groups[mY].passDesc += diasUteisFalta;
@@ -1942,7 +1946,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 atualFunc = nome;
             }
             const dias = listarDiasUteisRegistroIntervalo(r, intervalo.inicio, intervalo.fim);
-            const dsr = r.descontarDia ? new Set(dias.map(d => chaveSemanaAno(new Date(d + "T00:00:00")))).size : 0;
+            const dsr = registroDescontaDSR(r) ? new Set(dias.map(d => chaveSemanaAno(new Date(d + "T00:00:00")))).size : 0;
             const periodo = r.dataFim ? `${formatDataBR(r.data)} a ${formatDataBR(r.dataFim)}` : formatDataBR(r.data);
             linhas.push(`- ${periodo}: ${getTipoAusenciaResumo(r)} | ${dias.length} dia(s) | DSR ${dsr} | desc. dia: ${r.descontarDia ? 'sim' : 'não'}`);
         });
@@ -2107,7 +2111,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             }
             const dias = listarDiasUteisRegistroIntervalo(r, intervalo.inicio, intervalo.fim);
             const qtdDias = dias.length || contarDiasUteisRegistroIntervalo(r, intervalo.inicio, intervalo.fim);
-            const dsr = r.descontarDia ? new Set(dias.map(d => chaveSemanaAno(new Date(d + "T00:00:00")))).size : 0;
+            const dsr = registroDescontaDSR(r) ? new Set(dias.map(d => chaveSemanaAno(new Date(d + "T00:00:00")))).size : 0;
             const periodo = (r.dataFim && r.dataFim !== r.data) ? `${formatDataBR(r.data)} a ${formatDataBR(r.dataFim)}` : formatDataBR(r.data);
             const tipo = getTipoAusenciaContador(r);
             const complemento = r.descontarDia ? ` Descontar: ${qtdDias} dia(s)${dsr ? ` + ${dsr} DSR` : ''}` : `${tipo.endsWith('.') ? ' ' : '. '}${qtdDias} dia(s)`;
@@ -2161,6 +2165,16 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
     }
 
+    function labelMesRef(mesRef) {
+        const mes = Number(String(mesRef || '').split('-')[1] || 0);
+        return getExtensoMes(mes).toLowerCase();
+    }
+
+    function labelRubricaMes(nome, mesRef) {
+        const mes = labelMesRef(mesRef);
+        return mes ? `${nome} (${mes})` : nome;
+    }
+
     function funcionarioRecebeContracheque(f) {
         if(!f || f.arquivado) return false;
         const categoria = db.categorias.find(c => c.id === f.categoria);
@@ -2187,6 +2201,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const salarioFamilia = campos.pedirSalFamilia && f.temSalFamilia !== false ? parseMoeda(f.salFamilia) : 0;
         const unidentis = campos.pedirUnidentis && f.temUnidentis !== false ? parseMoeda(f.unidentis) : 0;
         const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
+        const valesPassagem = calcularValesCombustivelMes(f, ano, mes);
         const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
         const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
         const podeDescontarINSS = campos.pedirINSS && f.descontaINSS !== false;
@@ -2195,12 +2210,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const overrideInss = overridesContracheque[f.id];
         const inss = podeDescontarINSS ? (overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
         const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
-        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, vales.total) : 0;
+        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
         const proventos = salario + gratificacao + quinquenio + salarioFamilia + vales.total;
         const descontos = unidentis + descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
         const liquido = proventos - descontos;
         const liquidoAPagar = liquido - adiantamentosContra.total;
-        return { ano, mes, anoVT, mesVT, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, liquido, liquidoAPagar };
+        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, liquido, liquidoAPagar };
     }
 
     function montarMensagemContrachequeFuncionario(f, mesRef, vtMesRef) {
@@ -2214,10 +2229,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         ];
         if(d.gratificacao) linhas.push(`Gratificação: R$ ${formatMoedaContracheque(d.gratificacao)}`);
         if(d.quinquenio) linhas.push(`Quinquênio (${d.qtdQuinquenios}): R$ ${formatMoedaContracheque(d.quinquenio)}`);
-        if(d.vales.total) linhas.push(`VT: R$ ${formatMoedaContracheque(d.vales.total)}`);
+        if(d.vales.total) linhas.push(`${labelRubricaMes('VT', d.vtMesRef)}: R$ ${formatMoedaContracheque(d.vales.total)}`);
         if(d.salarioFamilia) linhas.push(`Salário Família: R$ ${formatMoedaContracheque(d.salarioFamilia)}`);
         linhas.push(`Total proventos: R$ ${formatMoedaContracheque(d.proventos)}`, '', 'Descontos:');
-        if(d.descontoPassagem) linhas.push(`Passagem: R$ ${formatMoedaContracheque(d.descontoPassagem)}`);
+        if(d.descontoPassagem) linhas.push(`${labelRubricaMes('Passagem', d.mesRef)}: R$ ${formatMoedaContracheque(d.descontoPassagem)}`);
         if(d.faltas.valorFaltas) linhas.push(`Falta (${d.faltas.diasFalta}): R$ ${formatMoedaContracheque(d.faltas.valorFaltas)}`);
         if(d.faltas.valorDSR) linhas.push(`DSR (${d.faltas.dsr}): R$ ${formatMoedaContracheque(d.faltas.valorDSR)}`);
         if(d.inss) linhas.push(`INSS (${formatPercentual(d.inssAliquota)}%): R$ ${formatMoedaContracheque(d.inss)}`);
@@ -2310,6 +2325,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
         const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
         const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
+        const valesPassagem = calcularValesCombustivelMes(f, ano, mes);
         const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
         const baseRemuneracao = Math.max(0, salario + gratificacao - faltas.valorFaltas - faltas.valorDSR);
         const fgts = baseRemuneracao * 0.08;
@@ -2318,13 +2334,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const tercoFerias = ferias / 3;
         const decimoTerceiro = baseRemuneracao / 12;
         const inss = (campos.pedirINSS && f.descontaINSS !== false) ? baseRemuneracao * 0.075 : 0;
-        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, vales.total) : 0;
+        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
         const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
         const proventos = salario + gratificacao + vales.total + fgts + multaFgts + ferias + tercoFerias + decimoTerceiro;
         const descontos = descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
         const liquido = proventos - descontos;
         const liquidoAPagar = liquido - adiantamentosContra.total;
-        return { ano, mes, anoVT, mesVT, vtMesRef, campos, salario, gratificacao, vales, faltas, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, adiantamentosContra, proventos, descontos, liquido, liquidoAPagar };
+        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, salario, gratificacao, vales, valesPassagem, faltas, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, adiantamentosContra, proventos, descontos, liquido, liquidoAPagar };
     }
 
     function abrirConfigReciboMensal(mesRefForcado = '') {
@@ -2378,7 +2394,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     <div class="contra-box contra-box-proventos"><b style="color:#2E7D32;">Proventos</b>
                         ${linhaContracheque('Salário', d.salario)}
                         ${linhaContracheque('Gratificação', d.gratificacao)}
-                        ${linhaContracheque('VT', d.vales.total)}
+                        ${linhaContracheque(labelRubricaMes('VT', d.vtMesRef), d.vales.total)}
                         ${linhaContracheque('FGTS 8%', d.fgts)}
                         ${linhaContracheque('FGTS 40%', d.multaFgts)}
                         ${linhaContracheque('Férias', d.ferias)}
@@ -2387,7 +2403,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque('Total', d.proventos, { total: true })}
                     </div>
                     <div class="contra-box contra-box-descontos"><b style="color:#D32F2F;">Descontos</b>
-                        ${linhaContracheque('Passagem', d.descontoPassagem)}
+                        ${linhaContracheque(labelRubricaMes('Passagem', d.mesRef), d.descontoPassagem)}
                         ${linhaFaltaRecibo}
                         ${linhaDsrRecibo}
                         ${linhaContracheque('INSS 7,5%', d.inss)}
@@ -2456,7 +2472,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     <div><div class="bloco-titulo">Proventos</div>
                         ${linhaPrintRecibo('Salário', d.salario)}
                         ${linhaPrintRecibo('Gratificação', d.gratificacao)}
-                        ${linhaPrintRecibo('VT', d.vales.total)}
+                        ${linhaPrintRecibo(labelRubricaMes('VT', d.vtMesRef), d.vales.total)}
                         ${linhaPrintRecibo('FGTS 8%', d.fgts)}
                         ${linhaPrintRecibo('FGTS 40%', d.multaFgts)}
                         ${linhaPrintRecibo('Férias', d.ferias)}
@@ -2465,7 +2481,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaPrintRecibo('Total', d.proventos, true)}
                     </div>
                     <div><div class="bloco-titulo">Descontos</div>
-                        ${linhaPrintRecibo('Passagem', d.descontoPassagem)}
+                        ${linhaPrintRecibo(labelRubricaMes('Passagem', d.mesRef), d.descontoPassagem)}
                         ${linhaFaltaPrintRecibo}
                         ${linhaDsrPrintRecibo}
                         ${linhaPrintRecibo('INSS 7,5%', d.inss)}
@@ -2616,7 +2632,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let diasFalta = 0;
         const semanasDSR = new Set();
         db.registros
-            .filter(r => r.type === 'falta' && r.funcId === f.id && r.descontarDia !== false && registroNoIntervalo(r, limiteInicio, limiteFim))
+            .filter(r => r.type === 'falta' && r.funcId === f.id && registroNoIntervalo(r, limiteInicio, limiteFim))
             .forEach((registro) => {
                 const inicio = registro.data < limiteInicio ? limiteInicio : registro.data;
                 const fim = (registro.dataFim || registro.data) > limiteFim ? limiteFim : (registro.dataFim || registro.data);
@@ -2624,8 +2640,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 const fimReal = new Date(fim + "T00:00:00");
                 for(; atual <= fimReal; atual.setDate(atual.getDate() + 1)) {
                     if(!db.configGerais.diasFuncionamento.includes(String(atual.getDay()))) continue;
-                    diasFalta++;
-                    semanasDSR.add(chaveSemanaAno(atual));
+                    if(registro.descontarDia !== false) diasFalta++;
+                    if(registroDescontaDSR(registro)) semanasDSR.add(chaveSemanaAno(atual));
                 }
             });
         return {
@@ -2921,6 +2937,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const salarioFamilia = campos.pedirSalFamilia && f.temSalFamilia !== false ? parseMoeda(f.salFamilia) : 0;
             const unidentis = campos.pedirUnidentis && f.temUnidentis !== false ? parseMoeda(f.unidentis) : 0;
             const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
+            const valesPassagem = calcularValesCombustivelMes(f, ano, mes);
             const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
             const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
             const podeDescontarINSS = campos.pedirINSS && f.descontaINSS !== false;
@@ -2929,7 +2946,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const overrideInss = overridesContracheque[f.id];
             const inss = podeDescontarINSS ? (overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
             const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
-            const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, vales.total) : 0;
+            const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
             const proventos = salario + gratificacao + quinquenio + salarioFamilia + vales.total;
             const descontos = unidentis + descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
             const liquido = proventos - descontos;
@@ -2948,12 +2965,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque('Salário', salario)}
                         ${linhaContracheque('Gratificação', gratificacao)}
                         ${linhaContracheque(`Quinquênio (${quinquenio ? qtdQuinquenios : 0})`, quinquenio)}
-                        ${linhaContracheque('VT', vales.total)}
+                        ${linhaContracheque(labelRubricaMes('VT', vtMesRef), vales.total)}
                         ${linhaContracheque('Salário Família', salarioFamilia)}
                         ${linhaContracheque('Total', proventos, { total: true })}
                     </div>
                     <div class="contra-box contra-box-descontos"><b style="color:#D32F2F;">Descontos</b>
-                        ${linhaContracheque('Passagem', descontoPassagem)}
+                        ${linhaContracheque(labelRubricaMes('Passagem', mesRef), descontoPassagem)}
                         ${linhaContracheque(`Falta (${faltas.diasFalta})`, faltas.valorFaltas)}
                         ${linhaContracheque(`DSR (${faltas.dsr})`, faltas.valorDSR)}
                         ${linhaContracheque(inssLabel, inss)}
