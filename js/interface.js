@@ -2200,7 +2200,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 * qtdQuinquenios : 0;
         const salarioFamilia = campos.pedirSalFamilia && f.temSalFamilia !== false ? parseMoeda(f.salFamilia) : 0;
         const unidentis = campos.pedirUnidentis && f.temUnidentis !== false ? parseMoeda(f.unidentis) : 0;
-        const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
+        const vales = calcularValesCombustivelPagamento(f, anoVT, mesVT);
         const valesPassagem = calcularValesCombustivelMes(f, ano, mes);
         const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
         const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
@@ -2211,11 +2211,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const inss = podeDescontarINSS ? (overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
         const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
         const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
-        const proventos = salario + gratificacao + quinquenio + salarioFamilia + vales.total;
+        const proventos = salario + gratificacao + quinquenio + salarioFamilia;
         const descontos = unidentis + descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
-        const liquido = proventos - descontos;
+        const subtotalSalario = proventos - descontos;
+        const liquido = subtotalSalario + vales.total;
         const liquidoAPagar = liquido - adiantamentosContra.total;
-        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, liquido, liquidoAPagar };
+        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, subtotalSalario, liquido, liquidoAPagar };
     }
 
     function montarMensagemContrachequeFuncionario(f, mesRef, vtMesRef) {
@@ -2229,7 +2230,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         ];
         if(d.gratificacao) linhas.push(`Gratificação: R$ ${formatMoedaContracheque(d.gratificacao)}`);
         if(d.quinquenio) linhas.push(`Quinquênio (${d.qtdQuinquenios}): R$ ${formatMoedaContracheque(d.quinquenio)}`);
-        if(d.vales.total) linhas.push(`${labelRubricaMes('VT', d.vtMesRef)}: R$ ${formatMoedaContracheque(d.vales.total)}`);
         if(d.salarioFamilia) linhas.push(`Salário Família: R$ ${formatMoedaContracheque(d.salarioFamilia)}`);
         linhas.push(`Total proventos: R$ ${formatMoedaContracheque(d.proventos)}`, '', 'Descontos:');
         if(d.descontoPassagem) linhas.push(`${labelRubricaMes('Passagem', d.mesRef)}: R$ ${formatMoedaContracheque(d.descontoPassagem)}`);
@@ -2238,6 +2238,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(d.inss) linhas.push(`INSS (${formatPercentual(d.inssAliquota)}%): R$ ${formatMoedaContracheque(d.inss)}`);
         if(d.unidentis) linhas.push(`Unidentis: R$ ${formatMoedaContracheque(d.unidentis)}`);
         linhas.push(`Total descontos: R$ ${formatMoedaContracheque(d.descontos)}`);
+        if(d.vales.total) {
+            linhas.push('', 'Vale-Transporte:');
+            linhas.push(`${labelRubricaMes('VT', d.vtMesRef)}: R$ ${formatMoedaContracheque(d.vales.total)} (${d.vales.passagens} passagens)`);
+        }
         if(d.adiantamentosContra.total) linhas.push('', `Adiantamentos: R$ ${formatMoedaContracheque(d.adiantamentosContra.total)}`);
         linhas.push('', `Líquido do mês: R$ ${formatMoedaContracheque(d.liquido)}`);
         linhas.push(`A pagar após adiantamentos: R$ ${formatMoedaContracheque(d.liquidoAPagar)}`);
@@ -2667,6 +2671,27 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return { passagens, total: passagens * parseMoeda(rotaObj.valor) };
     }
 
+    function calcularValesCombustivelPagamento(f, ano, mes) {
+        const rotaObj = (db.configGerais.valesTransporte || []).find(v => v.rota === f.vtRota);
+        if(!rotaObj) return { passagens: 0, total: 0, passagensBase: 0, passagensDescontadas: 0, faltasDescontadas: 0, feriasDescontadas: 0, folgasGerais: 0, valorUnit: 0 };
+        const refAnterior = new Date(ano, mes - 2, 1);
+        const anoAnterior = refAnterior.getFullYear();
+        const mesAnterior = refAnterior.getMonth() + 1;
+        const diasBase = contarDiasEmpresaNoMes(ano, mes);
+        const faltasDescontadas = db.registros
+            .filter(r => r.type === 'falta' && r.funcId === f.id && r.descontarPassagem)
+            .reduce((acc, r) => acc + contarDiasUteisRegistroNoMes(r, anoAnterior, mesAnterior), 0);
+        const feriasDescontadas = db.registros
+            .filter(r => r.type === 'ferias' && r.funcId === f.id)
+            .reduce((acc, r) => acc + contarDiasUteisRegistroNoMes(r, ano, mes), 0);
+        const folgasGerais = contarFolgasGeraisNoVT(ano, mes);
+        const passagensBase = diasBase * 2;
+        const passagensDescontadas = (faltasDescontadas + feriasDescontadas + folgasGerais) * 2;
+        const passagens = Math.max(0, passagensBase - passagensDescontadas);
+        const valorUnit = parseMoeda(rotaObj.valor);
+        return { passagens, total: passagens * valorUnit, passagensBase, passagensDescontadas, faltasDescontadas, feriasDescontadas, folgasGerais, valorUnit, rota: rotaObj.rota };
+    }
+
     function calcularDescontoQuinzenaMes(f, mesRef) {
         return db.registros
             .filter(r => r.type === 'desconto_quinzena' && r.funcId === f.id && r.mesRef === mesRef)
@@ -2859,6 +2884,19 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return `<div class="contra-adiantamentos-box"><b style="color:#D32F2F;">Adiantamentos</b>${linhas.join('')}<div class="contra-linha contra-total"><span>Total adiantamentos</span><strong class="valor">R$ ${formatMoedaContracheque(dados.total)}</strong></div></div>`;
     }
 
+    function renderBoxVTContracheque(d) {
+        if(!d || !d.vales || !d.vales.total) return '';
+        const detalhes = [];
+        if(d.vales.passagensBase) detalhes.push(`Base: ${d.vales.passagensBase}`);
+        if(d.vales.passagensDescontadas) detalhes.push(`Desc.: -${d.vales.passagensDescontadas}`);
+        detalhes.push(`${d.vales.passagens} passagens`);
+        return `<div class="contra-vt-box">
+            <b style="color:#00695C;">Vale-Transporte</b>
+            ${linhaContracheque(labelRubricaMes('VT', d.vtMesRef), d.vales.total)}
+            <div class="contra-vt-detalhe">${escapeHTML(detalhes.join(' | '))}</div>
+        </div>`;
+    }
+
     function calcularINSSPrevia(base) {
         if(base <= 0) return { valor: 0, aliquotaEfetiva: 0 };
         const faixas = ordenarINSS((db.configGerais && db.configGerais.inssFaixas) || criarTabelaINSSPadrao())
@@ -2927,30 +2965,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let totalLiquido = 0;
         let html = '';
         funcs.forEach((f) => {
-            const categoria = db.categorias.find(c => c.id === f.categoria);
-            const campos = getCamposFuncionarioClasse(categoria || {});
-            const beneficios = getBeneficiosVinculo(categoria || {});
-            const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
-            const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
-            const qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
-            const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 * qtdQuinquenios : 0;
-            const salarioFamilia = campos.pedirSalFamilia && f.temSalFamilia !== false ? parseMoeda(f.salFamilia) : 0;
-            const unidentis = campos.pedirUnidentis && f.temUnidentis !== false ? parseMoeda(f.unidentis) : 0;
-            const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
-            const valesPassagem = calcularValesCombustivelMes(f, ano, mes);
-            const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
-            const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
-            const podeDescontarINSS = campos.pedirINSS && f.descontaINSS !== false;
-            const baseInss = Math.max(0, salario + gratificacao + quinquenio - faltas.valorFaltas - faltas.valorDSR);
-            const inssCalc = podeDescontarINSS ? calcularINSSPrevia(baseInss) : { valor: 0, aliquotaEfetiva: 0 };
-            const overrideInss = overridesContracheque[f.id];
-            const inss = podeDescontarINSS ? (overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
-            const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
-            const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
-            const proventos = salario + gratificacao + quinquenio + salarioFamilia + vales.total;
-            const descontos = unidentis + descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
-            const liquido = proventos - descontos;
-            const liquidoAPagar = liquido - adiantamentosContra.total;
+            const d = calcularDadosContrachequeFuncionario(f, mesRef, vtMesRef);
+            const { salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, liquido, liquidoAPagar } = d;
             totalLiquido += liquido;
             const key = chaveContracheque(f.id, mesRef);
             const fechado = !!obterFechamentoContracheque(f.id, mesRef);
@@ -2965,7 +2981,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque('Salário', salario)}
                         ${linhaContracheque('Gratificação', gratificacao)}
                         ${linhaContracheque(`Quinquênio (${quinquenio ? qtdQuinquenios : 0})`, quinquenio)}
-                        ${linhaContracheque(labelRubricaMes('VT', vtMesRef), vales.total)}
                         ${linhaContracheque('Salário Família', salarioFamilia)}
                         ${linhaContracheque('Total', proventos, { total: true })}
                     </div>
@@ -2977,6 +2992,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque('Unidentis', unidentis)}
                         ${linhaContracheque('Total', descontos, { total: true })}
                     </div>
+                    ${renderBoxVTContracheque(d)}
                     ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel)}
                 </div>
                 <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">📝 WhatsApp</button></div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
