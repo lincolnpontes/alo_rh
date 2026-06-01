@@ -19,7 +19,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.45';
+    const APP_VERSION = 'v1.0.46';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -124,7 +124,7 @@
         }).map((categoria) => ({ ...categoria, semanal: categoria.tipoPagamento === 'semanal', recebeContracheque: categoria.tipoPagamento === 'contracheque', temFerias: categoria.tipoPagamento !== 'semanal' && categoria.temFerias !== false }));
         normalizado.funcoes = normalizado.funcoes.map((funcao) => ({ numero: "", ...funcao }));
         normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => {
-            const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, recebeContracheque: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, temControlePonto: true, temFerias: true, ...funcionario };
+            const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, recebeContracheque: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, recebeINSSProvento: true, temControlePonto: true, temFerias: true, ...funcionario };
             f.qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
             return f;
         });

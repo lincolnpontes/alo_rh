@@ -142,7 +142,7 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .pendente-actions-linha button { flex:0 0 auto; min-width:38px; padding:8px 10px; border-radius:7px; font-weight:900; }
         .btn-pendente-pix { background:#ECEFF1 !important; color:#455A64 !important; border:1px solid #CFD8DC !important; }
         .btn-pendente-whats { background:#E8F5E9 !important; color:#2E7D32 !important; border:1px solid #C8E6C9 !important; }
-        .btn-pendente-pagar { background:#00695C !important; color:#fff !important; }
+        .btn-pendente-pagar { background:#F57F17 !important; color:#fff !important; }
         .recibo-card { border:1px solid #e0e0e0; border-left:4px solid #795548; border-radius:8px; padding:10px; margin-bottom:8px; background:#fff; font-size:12px; }
         .recibo-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px 10px; margin-top:6px; }
         .recibo-grid div { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid #eee; padding:3px 0; }
@@ -270,7 +270,7 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .btn-contra-util.whats { border-color:#2E7D32; color:#2E7D32; }
         .emoji-pix { display:inline-block; filter:grayscale(1); opacity:.72; margin-right:4px; }
         .btn-pix-app { display:inline-flex; align-items:center; justify-content:center; gap:4px; }
-        .btn-fechar-contra { border:none; background:#2E7D32; color:#fff; border-radius:6px; padding:8px 10px; font-size:12px; font-weight:800; cursor:pointer; }
+        .btn-fechar-contra { border:none; background:#2E7D32; color:#fff; border-radius:6px; padding:8px 10px; min-height:34px; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; }
         .pix-list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
         .pix-list-row .pix-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         @media (max-width: 430px) { .switch-grid { grid-template-columns: 1fr; } }
