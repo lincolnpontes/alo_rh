@@ -259,6 +259,8 @@
             if(resultado.mudouLocal) {
                 renderizarFiltros();
                 renderizarLista();
+                if(typeof aplicarTemaApp === 'function') aplicarTemaApp();
+                if(typeof atualizarLogoTopo === 'function') atualizarLogoTopo();
             }
             if(resultado.precisaEnviar) await sincronizarFundo(false, true);
             atualizarTextoSincronizacao(`Ultima sincronizacao: ${textoHorarioSync()}`);
@@ -285,7 +287,7 @@
         try {
             const nuvemDB = await puxarBancoNuvem();
             const resultado = aplicarBancoNuvem(nuvemDB, 'registros');
-            if(resultado.mudouLocal) renderizarLista();
+            if(resultado.mudouLocal) { renderizarLista(); if(typeof aplicarTemaApp === 'function') aplicarTemaApp(); if(typeof atualizarLogoTopo === 'function') atualizarLogoTopo(); }
             if(resultado.precisaEnviar) agendarSincronizacao(300);
             atualizarTextoSincronizacao(`Lancamentos conferidos: ${textoHorarioSync()}`);
         } catch(e) {
@@ -749,6 +751,8 @@
             salvarBanco();
             renderizarFiltros();
             renderizarLista();
+            if(typeof aplicarTemaApp === 'function') aplicarTemaApp();
+            if(typeof atualizarLogoTopo === 'function') atualizarLogoTopo();
             alert(`Importacao concluida.\n\nCriados: ${criados}\nAtualizados: ${atualizados}\nIgnorados: ${ignorados}`);
         } catch(e) {
             alert(`Nao foi possivel importar a planilha.\n\nDetalhe: ${e.message || 'Verifique o modelo XLSX.'}`);

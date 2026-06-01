@@ -1,7 +1,49 @@
 function toggleDiv(id) { let el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
     function converterLogo(input) { if (input.files && input.files[0]) { let reader = new FileReader(); reader.onload = function(e) { document.getElementById('empLogoBase64').value = e.target.result; document.getElementById('previewLogo').innerHTML = `<img src="${e.target.result}" style="max-height:50px;">`; }; reader.readAsDataURL(input.files[0]); } }
     
-    window.onload = async () => { await migrarSenhaAvancadaLegada(); prepararModaisNoTopo(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none';}, 500); }, 1000); document.getElementById('actionBar').style.display = 'grid'; initDiasFiltro(); atualizarAcoesMassa(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
+    window.onload = async () => { await migrarSenhaAvancadaLegada(); prepararModaisNoTopo(); if(db.administradores.length) { adminSessaoId = ''; sessionStorage.removeItem('alorh_admin_sessao'); } aplicarTemaApp(); atualizarLogoTopo(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none'; if(db.administradores.length) trocarPerfilAdmin(true);}, 500); }, 1000); document.getElementById('actionBar').style.display = 'grid'; initDiasFiltro(); atualizarAcoesMassa(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
+
+    const TEMAS_APP = [
+        { id: 'verde', nome: 'Verde', cor: '#00695C' },
+        { id: 'azul', nome: 'Azul', cor: '#1565C0' },
+        { id: 'vinho', nome: 'Vinho', cor: '#8E244D' },
+        { id: 'grafite', nome: 'Grafite', cor: '#455A64' },
+        { id: 'roxo', nome: 'Roxo', cor: '#6A1B9A' },
+        { id: 'laranja', nome: 'Laranja', cor: '#E65100' }
+    ];
+
+    function aplicarTemaApp(tema = '') {
+        const escolhido = tema || (db.configGerais && db.configGerais.tema) || 'verde';
+        document.body.classList.remove(...TEMAS_APP.map(t => `tema-${t.id}`));
+        document.body.classList.add(`tema-${escolhido}`);
+        const meta = document.getElementById('metaThemeColor');
+        const info = TEMAS_APP.find(t => t.id === escolhido) || TEMAS_APP[0];
+        if(meta) meta.setAttribute('content', info.cor);
+    }
+
+    function renderTemasConfig() {
+        const box = document.getElementById('confTemasApp');
+        if(!box) return;
+        const atual = (db.configGerais && db.configGerais.tema) || 'verde';
+        box.innerHTML = TEMAS_APP.map(t => `<button type="button" class="theme-option ${t.id === atual ? 'ativo' : ''}" style="background:${t.cor};" onclick="selecionarTemaConfig(${jsArg(t.id)})">${escapeHTML(t.nome)}</button>`).join('');
+    }
+
+    function selecionarTemaConfig(tema) {
+        db.configGerais.tema = tema;
+        renderTemasConfig();
+        aplicarTemaApp(tema);
+    }
+
+    function atualizarLogoTopo() {
+        const img = document.getElementById('headerLogoEmpresa');
+        const header = document.querySelector('.header');
+        if(!img || !header) return;
+        const mostrar = !!(db.empresa && db.empresa.mostrarLogoTopo && db.empresa.logo);
+        img.style.display = mostrar ? 'block' : 'none';
+        header.classList.toggle('com-logo', mostrar);
+        if(mostrar) img.src = db.empresa.logo;
+        else img.removeAttribute('src');
+    }
 
     function toggleModoSelecao() { 
         atualizarAcoesMassa();
@@ -273,7 +315,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         { chave: 'registrarAtraso', label: 'Registrar Atraso' },
         { chave: 'registrarPresencaSemanal', label: 'Registrar Presença Semanal' },
         { chave: 'acessoResumo', label: 'Acesso ao Resumo' },
-        { chave: 'auditoria', label: 'Acesso ao Registro do Sistema' },
+        { chave: 'auditoria', label: 'Acesso à Auditoria do Sistema' },
         { chave: 'dadosEmpresa', label: 'Acesso aos Dados da Empresa' },
         { chave: 'configGerais', label: 'Acesso às Configurações Gerais' },
         { chave: 'gerenciarAdministradores', label: 'Gerenciar Administradores' }
@@ -414,12 +456,18 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
     }
 
-    function trocarPerfilAdmin() {
+    function trocarPerfilAdmin(obrigatorio = false) {
         if(db.administradores.length === 0) return alert('Cadastre um administrador primeiro.');
         const lista = document.getElementById('listaPerfisAdmin');
         lista.innerHTML = db.administradores.map(admin => `<div class="perfil-admin-card"><strong>${escapeHTML(admin.nome || 'Administrador')}</strong><span>${adminRestrito(admin) ? 'perfil com permissões definidas' : 'perfil completo'}</span></div>`).join('');
         const input = document.getElementById('senhaTrocaPerfilAdmin');
         input.value = '';
+        const titulo = document.getElementById('tituloTrocaPerfilAdmin');
+        if(titulo) titulo.innerText = obrigatorio ? 'Entrar no Alô RH' : 'Trocar Perfil';
+        const btnFechar = document.getElementById('btnFecharTrocaPerfil');
+        if(btnFechar) btnFechar.style.display = obrigatorio ? 'none' : 'inline-flex';
+        const btnCancelar = document.querySelector('#modalTrocarPerfilAdmin .btn-cancel');
+        if(btnCancelar) btnCancelar.style.display = obrigatorio ? 'none' : '';
         document.getElementById('trocaPerfilErro').style.display = 'none';
         document.getElementById('modalTrocarPerfilAdmin').style.display = 'flex';
         setTimeout(() => { input.focus(); input.select(); }, 120);
@@ -455,6 +503,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         adminSessaoId = '';
         sessionStorage.removeItem('alorh_admin_sessao');
         atualizarBoxPerfilAdmin();
+        if(db.administradores.length) trocarPerfilAdmin(true);
     }
 
     function registrarAuditoria(acao, detalhes = '', entidade = '', alvoId = '') {
@@ -479,7 +528,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirAuditoria() {
-        if(!garantirPermissao('auditoria', () => abrirAuditoria(), 'abrir o registro do sistema')) return;
+        if(!garantirPermissao('auditoria', () => abrirAuditoria(), 'abrir a auditoria do sistema')) return;
         fecharModal('modalPainelUnificado');
         const busca = document.getElementById('auditoriaBusca');
         if(busca) busca.value = '';
@@ -514,8 +563,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const permissoesGerenciar = { empresa: 'dadosEmpresa', configGerais: 'configGerais', administradores: 'gerenciarAdministradores', categorias: 'vinculoHorarios', funcoes: 'vinculoHorarios' };
         if(permissoesGerenciar[tipo] && !garantirPermissao(permissoesGerenciar[tipo], () => abrirGerenciar(tipo), 'abrir esta área')) return;
         fecharModal('modalPainelUnificado');
-        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; document.getElementById('confDiasAquisitivoFerias').value = db.configGerais.diasAquisitivoFerias || 360; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
-        if(tipo === 'empresa') { document.getElementById('empLogoBase64').value = db.empresa.logo || ''; document.getElementById('previewLogo').innerHTML = db.empresa.logo ? `<img src="${db.empresa.logo}" style="max-height:50px;">` : ''; document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
+        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; document.getElementById('confDiasAquisitivoFerias').value = db.configGerais.diasAquisitivoFerias || 360; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderTemasConfig(); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
+        if(tipo === 'empresa') { document.getElementById('empLogoBase64').value = db.empresa.logo || ''; document.getElementById('previewLogo').innerHTML = db.empresa.logo ? `<img src="${db.empresa.logo}" style="max-height:50px;">` : ''; document.getElementById('empMostrarLogoTopo').checked = !!db.empresa.mostrarLogoTopo; document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
         
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
         if(tipo === 'funcionarios') {
@@ -588,7 +637,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function salvarEmpresa() { 
         let cnpj = document.getElementById('empCNPJ').value; if(cnpj && cnpj.length < 18) return alert("CNPJ incompleto. Digite os 14 números.");
-        db.empresa.logo = document.getElementById('empLogoBase64').value; db.empresa.razao = document.getElementById('empRazao').value; db.empresa.fantasia = document.getElementById('empFantasia').value; db.empresa.cnpj = cnpj; db.empresa.rua = document.getElementById('empRua').value; db.empresa.numero = document.getElementById('empNum').value; db.empresa.bairro = document.getElementById('empBairro').value; db.empresa.cidade = document.getElementById('empCidade').value; db.empresa.uf = document.getElementById('empUF').value; registrarAuditoria('Dados da empresa salvos', db.empresa.razao || db.empresa.fantasia || 'Empresa', 'empresa', 'empresa'); salvarBanco(); fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display = 'flex'; 
+        db.empresa.logo = document.getElementById('empLogoBase64').value; db.empresa.mostrarLogoTopo = document.getElementById('empMostrarLogoTopo').checked; db.empresa.razao = document.getElementById('empRazao').value; db.empresa.fantasia = document.getElementById('empFantasia').value; db.empresa.cnpj = cnpj; db.empresa.rua = document.getElementById('empRua').value; db.empresa.numero = document.getElementById('empNum').value; db.empresa.bairro = document.getElementById('empBairro').value; db.empresa.cidade = document.getElementById('empCidade').value; db.empresa.uf = document.getElementById('empUF').value; registrarAuditoria('Dados da empresa salvos', db.empresa.razao || db.empresa.fantasia || 'Empresa', 'empresa', 'empresa'); salvarBanco(); atualizarLogoTopo(); fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display = 'flex'; 
     }
     
     function abrirFormAdmin(id) {
@@ -631,6 +680,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             pedirUnidentis: campos.pedirUnidentis !== false,
             pedirDescontoPassagem: campos.pedirDescontoPassagem !== false,
             pedirINSS: campos.pedirINSS !== false,
+            pedirINSSProvento: campos.pedirINSSProvento === true,
             temControlePonto: campos.temControlePonto !== false
         };
     }
@@ -660,6 +710,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('classePedirUnidentis').checked = campos.pedirUnidentis;
         document.getElementById('classePedirDescontoPassagem').checked = campos.pedirDescontoPassagem;
         document.getElementById('classePedirINSS').checked = campos.pedirINSS;
+        document.getElementById('classePedirINSSProvento').checked = campos.pedirINSSProvento;
         document.getElementById('classeTemControlePonto').checked = campos.temControlePonto;
         const beneficios = getBeneficiosVinculo(c);
         document.getElementById('classeTemQuinquenio').checked = beneficios.temQuinquenio;
@@ -679,6 +730,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(titulo) titulo.style.display = semanal ? 'none' : '';
         if(box) box.style.display = semanal ? 'none' : '';
         if(linhaContracheque) linhaContracheque.style.display = 'none';
+        const chkINSSProvento = document.getElementById('classePedirINSSProvento');
+        if(chkINSSProvento && tipo === 'mensal_sem_carteira' && !document.getElementById('classeId').value) chkINSSProvento.checked = true;
     }
 
     function aoMudarTipoPagamentoVinculo() {
@@ -731,6 +784,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 pedirUnidentis: document.getElementById('classePedirUnidentis').checked,
                 pedirDescontoPassagem: document.getElementById('classePedirDescontoPassagem').checked,
                 pedirINSS: document.getElementById('classePedirINSS').checked,
+                pedirINSSProvento: document.getElementById('classePedirINSSProvento').checked,
                 temControlePonto: document.getElementById('classeTemControlePonto').checked
             },
             horarios: {
@@ -985,7 +1039,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function moverMotivo(idx, dir) { if(dir === -1 && idx > 0) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx-1]; tempMotivos[idx-1] = t; } if(dir === 1 && idx < tempMotivos.length-1) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx+1]; tempMotivos[idx+1] = t; } renderListasConfig(); }
     function confirmarRemoverMotivo(idx) { motivoToDelete = idx; document.getElementById('modalConfirmExclusaoMotivo').style.display = 'flex'; }
     function executarRemocaoMotivo() { if(motivoToDelete !== null) { tempMotivos.splice(motivoToDelete, 1); renderListasConfig(); } fecharModal('modalConfirmExclusaoMotivo'); }
-    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasAquisitivoFerias = Math.max(1, Math.min(370, Number(document.getElementById('confDiasAquisitivoFerias').value || 360))); db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; db.configGerais.inssFaixas = ordenarINSS(tempINSS).length ? ordenarINSS(tempINSS) : criarTabelaINSSPadrao(); registrarAuditoria('Configurações gerais salvas', `Salário mínimo, quinzena, INSS, VT, motivos e férias atualizados. Dias aquisitivos: ${db.configGerais.diasAquisitivoFerias}.`, 'configuracoes', 'gerais'); salvarBanco(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
+    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasAquisitivoFerias = Math.max(1, Math.min(370, Number(document.getElementById('confDiasAquisitivoFerias').value || 360))); db.configGerais.tema = db.configGerais.tema || 'verde'; db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; db.configGerais.inssFaixas = ordenarINSS(tempINSS).length ? ordenarINSS(tempINSS) : criarTabelaINSSPadrao(); registrarAuditoria('Configurações gerais salvas', `Salário mínimo, quinzena, INSS, VT, motivos, férias e tema atualizados. Dias aquisitivos: ${db.configGerais.diasAquisitivoFerias}.`, 'configuracoes', 'gerais'); salvarBanco(); aplicarTemaApp(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
 
     // POPULAR ADMIN SELECT
     function getAdminOptions(selectedId = '') { let html = optionHTML('', '-- Selecione --'); db.administradores.forEach(a => { html += optionHTML(a.id, a.nome, selectedId === a.id); }); return html; }
@@ -1053,6 +1107,16 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function abrirWhatsappFuncionario(mensagem = '') {
         const f = getFuncionarioAcoes();
+        if(!f) return alert('Funcionário não encontrado.');
+        const telefone = normalizarTelefoneWhatsapp(f.telefone);
+        if(!telefone) return alert('Cadastre um WhatsApp válido para este funcionário.');
+        const texto = mensagem ? `?text=${encodeURIComponent(mensagem)}` : '';
+        window.open(`https://wa.me/${telefone}${texto}`, '_blank');
+    }
+
+    function abrirWhatsappFuncionarioPorId(funcId, mensagem = '', event = null) {
+        if(event) event.stopPropagation();
+        const f = db.funcionarios.find(x => x.id === funcId);
         if(!f) return alert('Funcionário não encontrado.');
         const telefone = normalizarTelefoneWhatsapp(f.telefone);
         if(!telefone) return alert('Cadastre um WhatsApp válido para este funcionário.');
@@ -2219,32 +2283,49 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, subtotalSalario, liquido, liquidoAPagar };
     }
 
+    function montarLinhaAdiantamentosMensagem(d) {
+        const partes = [];
+        d.adiantamentosContra.quinzenaRegs.forEach(r => {
+            const valor = getValorDescontoContracheque(r, d.mesRef, true);
+            if(valor > 0) partes.push(`R$ ${formatMoedaContracheque(valor)} (Quinzena)`);
+        });
+        [...d.adiantamentosContra.doMes, ...d.adiantamentosContra.anteriores].forEach(r => {
+            const valor = getValorDescontoContracheque(r, d.mesRef);
+            if(valor <= 0) return;
+            const data = r.data ? formatDataBR(r.data) : '';
+            const motivo = r.motivo || (String(r.data || '').substring(0, 7) < d.mesRef ? 'Pendente anterior' : 'Adiantamento');
+            partes.push(`R$ ${formatMoedaContracheque(valor)}${data || motivo ? ` (${[data, motivo].filter(Boolean).join(' - ')})` : ''}`);
+        });
+        if(partes.length === 0) return '*R$ 0,00*';
+        return `*${partes.join(' + ')} = R$ ${formatMoedaContracheque(d.adiantamentosContra.total)}*`;
+    }
+
     function montarMensagemContrachequeFuncionario(f, mesRef, vtMesRef) {
         const d = calcularDadosContrachequeFuncionario(f, mesRef, vtMesRef);
         const linhas = [
-            `Contracheque - ${getExtensoMes(d.mes)} de ${d.ano}`,
-            `${f.nome || 'Funcionário'}`,
+            `> *Contracheque - ${getExtensoMes(d.mes)} de ${d.ano}*`,
+            `*${f.nome || 'Funcionário'}*`,
             '',
-            'Proventos:',
-            `Salário: R$ ${formatMoedaContracheque(d.salario)}`
+            '> *Proventos:*',
+            `- Salário: R$ ${formatMoedaContracheque(d.salario)}`
         ];
-        if(d.gratificacao) linhas.push(`Gratificação: R$ ${formatMoedaContracheque(d.gratificacao)}`);
-        if(d.quinquenio) linhas.push(`Quinquênio (${d.qtdQuinquenios}): R$ ${formatMoedaContracheque(d.quinquenio)}`);
-        if(d.salarioFamilia) linhas.push(`Salário Família: R$ ${formatMoedaContracheque(d.salarioFamilia)}`);
-        linhas.push(`Total proventos: R$ ${formatMoedaContracheque(d.proventos)}`, '', 'Descontos:');
-        if(d.descontoPassagem) linhas.push(`${labelRubricaMes('Passagem', d.mesRef)}: R$ ${formatMoedaContracheque(d.descontoPassagem)}`);
-        if(d.faltas.valorFaltas) linhas.push(`Falta (${d.faltas.diasFalta}): R$ ${formatMoedaContracheque(d.faltas.valorFaltas)}`);
-        if(d.faltas.valorDSR) linhas.push(`DSR (${d.faltas.dsr}): R$ ${formatMoedaContracheque(d.faltas.valorDSR)}`);
-        if(d.inss) linhas.push(`INSS (${formatPercentual(d.inssAliquota)}%): R$ ${formatMoedaContracheque(d.inss)}`);
-        if(d.unidentis) linhas.push(`Unidentis: R$ ${formatMoedaContracheque(d.unidentis)}`);
-        linhas.push(`Total descontos: R$ ${formatMoedaContracheque(d.descontos)}`);
-        if(d.vales.total) {
-            linhas.push('', 'Vale-Transporte:');
-            linhas.push(`${labelRubricaMes('VT', d.vtMesRef)}: R$ ${formatMoedaContracheque(d.vales.total)} (${d.vales.passagens} passagens)`);
-        }
-        if(d.adiantamentosContra.total) linhas.push('', `Adiantamentos: R$ ${formatMoedaContracheque(d.adiantamentosContra.total)}`);
-        linhas.push('', `Líquido do mês: R$ ${formatMoedaContracheque(d.liquido)}`);
-        linhas.push(`A pagar após adiantamentos: R$ ${formatMoedaContracheque(d.liquidoAPagar)}`);
+        if(d.gratificacao) linhas.push(`- Gratificação: R$ ${formatMoedaContracheque(d.gratificacao)}`);
+        if(d.quinquenio) linhas.push(`- Quinquênio (${d.qtdQuinquenios}): R$ ${formatMoedaContracheque(d.quinquenio)}`);
+        if(d.salarioFamilia) linhas.push(`- Salário Família: R$ ${formatMoedaContracheque(d.salarioFamilia)}`);
+        linhas.push(`*- Total proventos:* R$ ${formatMoedaContracheque(d.proventos)}`);
+        linhas.push('', '> *Descontos:*');
+        if(d.descontoPassagem) linhas.push(`- ${labelRubricaMes('Passagem', d.mesRef)}: R$ ${formatMoedaContracheque(d.descontoPassagem)}`);
+        if(d.faltas.valorFaltas) linhas.push(`- Falta (${d.faltas.diasFalta}): R$ ${formatMoedaContracheque(d.faltas.valorFaltas)}`);
+        if(d.faltas.valorDSR) linhas.push(`- DSR (${d.faltas.dsr}): R$ ${formatMoedaContracheque(d.faltas.valorDSR)}`);
+        if(d.inss) linhas.push(`- INSS (${formatPercentual(d.inssAliquota)}%): R$ ${formatMoedaContracheque(d.inss)}`);
+        if(d.unidentis) linhas.push(`- Unidentis: R$ ${formatMoedaContracheque(d.unidentis)}`);
+        linhas.push(`*- Total descontos: R$ ${formatMoedaContracheque(d.descontos)}*`);
+        linhas.push('', `> *Vale-Transporte (${getExtensoMes(d.mesVT).toLowerCase()}):*`);
+        linhas.push(`*- ${d.vales.passagens} passagens: R$ ${formatMoedaContracheque(d.vales.total)}*`);
+        linhas.push('', '> *Adiantamentos:*');
+        linhas.push(montarLinhaAdiantamentosMensagem(d));
+        linhas.push('', '> *Valor a receber:*');
+        linhas.push(`R$ ${formatMoedaContracheque(d.liquidoAPagar)}`);
         return linhas.join('\n');
     }
 
@@ -2302,6 +2383,50 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return db.registros.find(r => r.type === 'recibo_mensal_pago' && r.funcId === funcId && r.mesRef === mesRef);
     }
 
+    function obterPagamentoDocumento(tipo, funcId, mesRef) {
+        return db.registros.find(r => r.type === 'pagamento_documento' && r.documentoTipo === tipo && r.funcId === funcId && r.mesRef === mesRef);
+    }
+
+    function calcularDocumentoPagamento(tipo, f, mesRef, vtMesRef = '') {
+        const vtRef = vtMesRef || somarMesReferencia(mesRef, 1);
+        return tipo === 'recibo' ? calcularDadosReciboMensalFuncionario(f, mesRef, vtRef) : calcularDadosContrachequeFuncionario(f, mesRef, vtRef);
+    }
+
+    function informarPagamentoDocumento(tipo, funcId, mesRef = '', event = null) {
+        if(event) event.stopPropagation();
+        if(!garantirPermissao('gerarContracheque', () => informarPagamentoDocumento(tipo, funcId, mesRef, event), 'informar pagamento')) return;
+        const f = db.funcionarios.find(x => x.id === funcId);
+        if(!f) return alert('Funcionário não encontrado.');
+        const ref = mesRef || (tipo === 'recibo' ? document.getElementById('reciboMesRef').value : document.getElementById('contraMesRef').value) || getHojeSTR().substring(0, 7);
+        const vtRef = tipo === 'recibo' ? (document.getElementById('reciboVTMesRef')?.value || somarMesReferencia(ref, 1)) : (document.getElementById('contraVTMesRef')?.value || somarMesReferencia(ref, 1));
+        if(obterPagamentoDocumento(tipo, funcId, ref)) return alert('Pagamento já informado para este mês.');
+        const d = calcularDocumentoPagamento(tipo, f, ref, vtRef);
+        if(!confirm(`Informar pagamento de ${getNomeUsoFuncionario(f)} no valor de R$ ${formatMoedaContracheque(d.liquidoAPagar)}?`)) return;
+        const agora = Date.now();
+        const registro = {
+            id: `pgdoc_${tipo}_${funcId}_${ref.replace('-', '')}_${agora}`,
+            type: 'pagamento_documento',
+            documentoTipo: tipo,
+            funcId,
+            mesRef: ref,
+            vtMesRef: vtRef,
+            data: getHojeSTR(),
+            valor: d.liquidoAPagar,
+            valorBruto: d.liquido,
+            adiantamentos: d.adiantamentosContra.total,
+            adminId: (getAdminAtual() || {}).id || '',
+            criadoEm: agora,
+            editadoEm: agora,
+            _syncAtualizadoEm: agora
+        };
+        db.registros.push(registro);
+        registrarAuditoria('Pagamento informado', `${getNomeUsoFuncionario(f)} - ${tipo === 'recibo' ? 'recibo mensal' : 'contracheque'} ${ref}: R$ ${formatMoedaContracheque(d.liquidoAPagar)}.`, 'pagamento', registro.id);
+        salvarBanco();
+        if(document.getElementById('modalReciboMensal')?.style.display === 'flex') gerarPreviaReciboMensal();
+        if(document.getElementById('modalContracheque')?.style.display === 'flex') gerarPreviaContracheque();
+        if(document.getElementById('modalPagamentosPendentes')?.style.display === 'flex') renderPagamentosPendentes();
+    }
+
     function chaveReciboMensal(funcId, mesRef) {
         return `${funcId}|${mesRef}`;
     }
@@ -2331,20 +2456,21 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
         const valesPassagem = calcularValesCombustivelMes(f, ano, mes);
         const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
+        const baseSemGratificacao = Math.max(0, salario - faltas.valorFaltas - faltas.valorDSR);
         const baseRemuneracao = Math.max(0, salario + gratificacao - faltas.valorFaltas - faltas.valorDSR);
-        const fgts = baseRemuneracao * 0.08;
+        const fgts = baseSemGratificacao * 0.08;
         const multaFgts = fgts * 0.40;
         const ferias = baseRemuneracao / 12;
         const tercoFerias = ferias / 3;
         const decimoTerceiro = baseRemuneracao / 12;
-        const inss = (campos.pedirINSS && f.descontaINSS !== false) ? baseRemuneracao * 0.075 : 0;
+        const inss = (campos.pedirINSSProvento && f.descontaINSS !== false) ? baseSemGratificacao * 0.075 : 0;
         const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
         const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
-        const proventos = salario + gratificacao + vales.total + fgts + multaFgts + ferias + tercoFerias + decimoTerceiro;
-        const descontos = descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
+        const proventos = salario + gratificacao + vales.total + fgts + multaFgts + inss + ferias + tercoFerias + decimoTerceiro;
+        const descontos = descontoPassagem + faltas.valorFaltas + faltas.valorDSR;
         const liquido = proventos - descontos;
         const liquidoAPagar = liquido - adiantamentosContra.total;
-        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, salario, gratificacao, vales, valesPassagem, faltas, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, adiantamentosContra, proventos, descontos, liquido, liquidoAPagar };
+        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, salario, gratificacao, vales, valesPassagem, faltas, baseSemGratificacao, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, adiantamentosContra, proventos, descontos, liquido, liquidoAPagar };
     }
 
     function abrirConfigReciboMensal(mesRefForcado = '') {
@@ -2385,10 +2511,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             total += d.liquido;
             totalAPagar += d.liquidoAPagar;
             const pago = obterReciboMensalPago(f.id, mesRef);
+            const pagamentoDoc = obterPagamentoDocumento('recibo', f.id, mesRef);
             const key = chaveReciboMensal(f.id, mesRef);
             const aberto = recibosMensaisAbertos.has(key);
             const editavel = !pago;
             const status = pago ? 'Gerado' : (aberto ? 'Aberto' : 'Tocar para abrir');
+            const acaoPagamento = pagamentoDoc ? `<span class="contra-status">Pago em ${formatDataBR(pagamentoDoc.data)}</span>` : `<button class="btn-fechar-contra" style="background:#00695C;" onclick="informarPagamentoDocumento('recibo', ${jsArg(f.id)}, ${jsArg(mesRef)}, event)">Informar pagamento</button>`;
+            const acaoRecibo = pago ? `<button class="btn-fechar-contra" style="background:#795548;" onclick="abrirReaberturaReciboMensal(${jsArg(f.id)}, event)">Reabrir Recibo</button>` : '<span class="contra-status">Gere o recibo para marcar como gerado</span>';
             const detalheFaltas = d.faltas.diasFalta ? ' • ' + d.faltas.diasFalta + ' falta(s)' : '';
             const linhaFaltaRecibo = linhaContracheque('Falta (' + d.faltas.diasFalta + ')', d.faltas.valorFaltas);
             const linhaDsrRecibo = linhaContracheque('DSR (' + d.faltas.dsr + ')', d.faltas.valorDSR);
@@ -2401,6 +2530,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque(labelRubricaMes('VT', d.vtMesRef), d.vales.total)}
                         ${linhaContracheque('FGTS 8%', d.fgts)}
                         ${linhaContracheque('FGTS 40%', d.multaFgts)}
+                        ${linhaContracheque('INSS (7,5%)', d.inss)}
                         ${linhaContracheque('Férias', d.ferias)}
                         ${linhaContracheque('1/3 férias', d.tercoFerias)}
                         ${linhaContracheque('13º', d.decimoTerceiro)}
@@ -2410,12 +2540,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque(labelRubricaMes('Passagem', d.mesRef), d.descontoPassagem)}
                         ${linhaFaltaRecibo}
                         ${linhaDsrRecibo}
-                        ${linhaContracheque('INSS 7,5%', d.inss)}
                         ${linhaContracheque('Total', d.descontos, { total: true })}
                     </div>
                     ${renderBoxAdiantamentosContracheque(f, mesRef, d.adiantamentosContra, editavel, 'recibo')}
                 </div>
-                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button></div>${pago ? '<span class="contra-status">Pagamento informado</span>' : '<span class="contra-status">Gere o recibo para informar pagamento</span>'}</div>
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button>${acaoPagamento}</div>${acaoRecibo}</div>
             </div>` : '';
             const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(d.liquido)} - R$ ${formatMoedaContracheque(d.adiantamentosContra.total)} = R$ ${formatMoedaContracheque(d.liquidoAPagar)}</strong>` : '';
             html += `<div class="contra-card recibo-mensal ${pago ? 'fechado' : ''}" onclick="toggleDetalhesReciboMensal(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;
@@ -2479,6 +2608,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaPrintRecibo(labelRubricaMes('VT', d.vtMesRef), d.vales.total)}
                         ${linhaPrintRecibo('FGTS 8%', d.fgts)}
                         ${linhaPrintRecibo('FGTS 40%', d.multaFgts)}
+                        ${linhaPrintRecibo('INSS (7,5%)', d.inss)}
                         ${linhaPrintRecibo('Férias', d.ferias)}
                         ${linhaPrintRecibo('1/3 férias', d.tercoFerias)}
                         ${linhaPrintRecibo('13º', d.decimoTerceiro)}
@@ -2488,7 +2618,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaPrintRecibo(labelRubricaMes('Passagem', d.mesRef), d.descontoPassagem)}
                         ${linhaFaltaPrintRecibo}
                         ${linhaDsrPrintRecibo}
-                        ${linhaPrintRecibo('INSS 7,5%', d.inss)}
                         ${linhaPrintRecibo('Total', d.descontos, true)}
                     </div>
                 </div>
@@ -2544,6 +2673,24 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('modalPagamentosPendentes').style.display = 'flex';
     }
 
+    function confirmarPagamentoSemanaFuncionario(funcId, event = null) {
+        if(event) event.stopPropagation();
+        if(!garantirPermissao('registrarPresencaSemanal', () => confirmarPagamentoSemanaFuncionario(funcId, event), 'confirmar pagamento semanal')) return;
+        const f = db.funcionarios.find(x => x.id === funcId);
+        if(!f) return alert('Funcionário não encontrado.');
+        const pendentes = db.registros.filter(r => r.type === 'presenca' && r.funcId === funcId && r.status === 'pendente');
+        if(pendentes.length === 0) return alert('Não há dias trabalhados pendentes para este funcionário.');
+        const total = pendentes.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+        if(!confirm(`Informar pagamento semanal de ${getNomeUsoFuncionario(f)} no valor de R$ ${formatMoedaContracheque(total)}?`)) return;
+        const diasIds = [];
+        pendentes.forEach(r => { r.status = 'pago'; r.editadoEm = Date.now(); r._syncAtualizadoEm = r.editadoEm; diasIds.push(r.data); });
+        const pagamento = { id: 'reg_'+Date.now(), type: 'pagamento_semana', funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds, adminId: (getAdminAtual() || {}).id || '' };
+        db.registros.push(pagamento);
+        registrarAuditoria('Pagamento semanal confirmado', `${getNomeUsoFuncionario(f)}: R$ ${formatMoeda(total)} (${diasIds.length} dia(s)).`, 'pagamento_semana', pagamento.id);
+        salvarBanco();
+        renderPagamentosPendentes();
+    }
+
     function renderPagamentosPendentes() {
         const box = document.getElementById('listaPagamentosPendentes');
         if(!box) return;
@@ -2552,12 +2699,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const mesEncerrado = mesRefEncerrado(mesRef);
         if(mesEncerrado && temPermissaoAtual('gerarContracheque')) {
             db.funcionarios.filter(funcionarioRecebeContracheque).forEach((f) => {
-                if(!obterFechamentoContracheque(f.id, mesRef)) itens.push({ tipo: 'contra', func: f, titulo: 'Contracheque pendente', detalhe: `${getExtensoMes(Number(mesRef.split('-')[1]))} de ${mesRef.split('-')[0]}`, valor: '' });
+                if(!obterPagamentoDocumento('contracheque', f.id, mesRef)) {
+                    const d = calcularDadosContrachequeFuncionario(f, mesRef, somarMesReferencia(mesRef, 1));
+                    const doc = obterFechamentoContracheque(f.id, mesRef) ? 'contracheque fechado' : 'contracheque ainda aberto';
+                    itens.push({ tipo: 'contra', func: f, titulo: 'Pagamento de contracheque pendente', detalhe: `${getExtensoMes(Number(mesRef.split('-')[1]))} de ${mesRef.split('-')[0]} • ${doc}`, valor: `R$ ${formatMoedaContracheque(d.liquidoAPagar)}` });
+                }
             });
             db.funcionarios.filter(funcionarioRecebeReciboMensal).forEach((f) => {
-                if(!obterReciboMensalPago(f.id, mesRef)) {
+                if(!obterPagamentoDocumento('recibo', f.id, mesRef)) {
                     const d = calcularDadosReciboMensalFuncionario(f, mesRef);
-                    itens.push({ tipo: 'recibo', func: f, titulo: 'Recibo mensal pendente', detalhe: `${getExtensoMes(Number(mesRef.split('-')[1]))} de ${mesRef.split('-')[0]}`, valor: `R$ ${formatMoedaContracheque(d.liquido)}` });
+                    const doc = obterReciboMensalPago(f.id, mesRef) ? 'recibo gerado' : 'recibo ainda não gerado';
+                    itens.push({ tipo: 'recibo', func: f, titulo: 'Pagamento de recibo pendente', detalhe: `${getExtensoMes(Number(mesRef.split('-')[1]))} de ${mesRef.split('-')[0]} • ${doc}`, valor: `R$ ${formatMoedaContracheque(d.liquidoAPagar)}` });
                 }
             });
         }
@@ -2580,11 +2732,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             box.innerHTML = `<div style="color:#999; text-align:center; padding:16px;">Nenhum pagamento pendente${mesEncerrado ? '.' : '. Os pagamentos mensais aparecem depois do último dia do mês.'}</div>`;
             return;
         }
-        box.innerHTML = itens.map((item) => `<div class="pendente-card ${item.tipo}">
+        box.innerHTML = itens.map((item) => {
+            const tipoDoc = item.tipo === 'contra' ? 'contracheque' : item.tipo;
+            const acaoInformar = item.tipo === 'semanal'
+                ? `confirmarPagamentoSemanaFuncionario(${jsArg(item.func.id)}, event)`
+                : `informarPagamentoDocumento(${jsArg(tipoDoc)}, ${jsArg(item.func.id)}, ${jsArg(mesRef)}, event)`;
+            return `<div class="pendente-card ${item.tipo}">
             <div class="pendente-head"><strong>${escapeHTML(getNomeUsoFuncionario(item.func))}</strong><span>${escapeHTML(item.valor || '')}</span></div>
             <div style="color:#555;"><b>${escapeHTML(item.titulo)}</b><br><small>${escapeHTML(item.detalhe)}</small></div>
-            <div class="pendente-actions"><button class="btn-action" onclick="abrirDocumentoPendente(${jsArg(item.tipo === 'contra' ? 'contracheque' : item.tipo)}, ${jsArg(item.func.id)}, ${jsArg(mesRef)})">${item.tipo === 'semanal' ? 'Abrir pagamento' : 'Gerar documento'}</button></div>
-        </div>`).join('');
+            <div class="pendente-actions-linha"><button class="btn-action" onclick="abrirDocumentoPendente(${jsArg(tipoDoc)}, ${jsArg(item.func.id)}, ${jsArg(mesRef)})">Abrir pagamento</button><button class="btn-pendente-pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(item.func.id)}, event)" title="Copiar Pix"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-pendente-pagar" onclick="${acaoInformar}">Informar pagamento</button><button class="btn-pendente-whats" onclick="abrirWhatsappFuncionarioPorId(${jsArg(item.func.id)}, '', event)" title="WhatsApp">WhatsApp</button></div>
+        </div>`;
+        }).join('');
     }
 
     function contarDiasEmpresaNoMes(ano, mes) {
@@ -2733,6 +2891,24 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(event) event.stopPropagation();
         if(db.administradores.length === 0) return alert('Cadastre ao menos um administrador para reabrir contracheques fechados.');
         document.getElementById('contraSenhaFuncId').value = funcId;
+        document.getElementById('contraSenhaContexto').value = 'contracheque';
+        document.getElementById('contraSenhaMesRef').value = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
+        document.getElementById('contraSenhaTitulo').innerText = 'Reabrir Contracheque';
+        document.getElementById('contraSenhaTexto').innerText = 'Digite a senha de um administrador para reabrir e permitir ajustes neste contracheque.';
+        document.getElementById('contraSenhaAdmin').value = '';
+        document.getElementById('contraSenhaErro').style.display = 'none';
+        document.getElementById('modalSenhaAdminContracheque').style.display = 'flex';
+        setTimeout(() => document.getElementById('contraSenhaAdmin').focus(), 100);
+    }
+
+    function abrirReaberturaReciboMensal(funcId, event) {
+        if(event) event.stopPropagation();
+        if(db.administradores.length === 0) return alert('Cadastre ao menos um administrador para reabrir recibos.');
+        document.getElementById('contraSenhaFuncId').value = funcId;
+        document.getElementById('contraSenhaContexto').value = 'recibo';
+        document.getElementById('contraSenhaMesRef').value = document.getElementById('reciboMesRef').value || getHojeSTR().substring(0, 7);
+        document.getElementById('contraSenhaTitulo').innerText = 'Reabrir Recibo';
+        document.getElementById('contraSenhaTexto').innerText = 'Digite a senha de um administrador para desmarcar o recibo gerado e permitir ajustes.';
         document.getElementById('contraSenhaAdmin').value = '';
         document.getElementById('contraSenhaErro').style.display = 'none';
         document.getElementById('modalSenhaAdminContracheque').style.display = 'flex';
@@ -2749,7 +2925,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
         adminSessaoId = admin.id;
         sessionStorage.setItem('alorh_admin_sessao', adminSessaoId);
-        const mesRef = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
+        const contexto = document.getElementById('contraSenhaContexto').value || 'contracheque';
+        const mesRef = document.getElementById('contraSenhaMesRef').value || getHojeSTR().substring(0, 7);
+        if(contexto === 'recibo') {
+            db.registros = db.registros.filter(r => !(r.type === 'recibo_mensal_pago' && r.funcId === funcId && r.mesRef === mesRef) && !(r.type === 'pagamento_documento' && r.documentoTipo === 'recibo' && r.funcId === funcId && r.mesRef === mesRef));
+            recibosMensaisAbertos.add(chaveReciboMensal(funcId, mesRef));
+            fecharModal('modalSenhaAdminContracheque');
+            registrarAuditoria('Recibo reaberto', `${getNomeUsoFuncionario(db.funcionarios.find(f => f.id === funcId))} - ${mesRef}.`, 'recibo_mensal', funcId);
+            salvarBanco();
+            gerarPreviaReciboMensal();
+            return;
+        }
         db.registros = db.registros.filter(r => !(r.type === 'contracheque_fechado' && r.funcId === funcId && r.mesRef === mesRef));
         contrachequesAbertos.add(chaveContracheque(funcId, mesRef));
         fecharModal('modalSenhaAdminContracheque');
@@ -2970,10 +3156,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             totalLiquido += liquido;
             const key = chaveContracheque(f.id, mesRef);
             const fechado = !!obterFechamentoContracheque(f.id, mesRef);
+            const pagamentoDoc = obterPagamentoDocumento('contracheque', f.id, mesRef);
             const aberto = contrachequesAbertos.has(key);
             const editavel = !fechado;
             const inssLabel = editavel ? `INSS (${formatPercentual(inssAliquota)}%) <button class="btn-mini-edit" onclick="abrirEdicaoINSSContracheque(${jsArg(f.id)}, ${inssAliquota}, ${inss})" title="Editar INSS">✏️</button>` : `INSS (${formatPercentual(inssAliquota)}%)`;
-            const status = fechado ? 'Fechado' : (aberto ? 'Aberto' : 'Tocar para abrir');
+            const status = pagamentoDoc ? 'Pago' : (fechado ? 'Fechado' : (aberto ? 'Aberto' : 'Tocar para abrir'));
+            const acaoPagamento = pagamentoDoc ? `<span class="contra-status">Pago em ${formatDataBR(pagamentoDoc.data)}</span>` : `<button class="btn-fechar-contra" style="background:#00695C;" onclick="informarPagamentoDocumento('contracheque', ${jsArg(f.id)}, ${jsArg(mesRef)}, event)">Informar pagamento</button>`;
             const detalhes = aberto ? `<div class="contra-detalhes">
                 <div style="font-size:11px; color:#777; margin-bottom:8px;">Salário ${escapeHTML(getExtensoMes(mes))} de ${ano} • VT ${escapeHTML(getExtensoMes(mesVT))} de ${anoVT} • ${vales.passagens} passagens${faltas.diasFalta ? ` • ${faltas.diasFalta} falta(s)` : ''}</div>
                 <div class="contra-grid">
@@ -2995,7 +3183,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     ${renderBoxVTContracheque(d)}
                     ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel)}
                 </div>
-                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">📝 WhatsApp</button></div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">📝 WhatsApp</button>${acaoPagamento}</div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
             </div>` : '';
             const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(liquido)} - R$ ${formatMoedaContracheque(adiantamentosContra.total)} = R$ ${formatMoedaContracheque(liquidoAPagar)}</strong>` : '';
             html += `<div class="contra-card ${fechado ? 'fechado' : ''}" onclick="toggleDetalhesContracheque(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;

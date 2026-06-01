@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.44</title>
+    <title>Alô RH v1.0.45</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.44">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.45">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.44</div>
+    <div class="splash-versao">v1.0.45</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -31,6 +31,7 @@
 <div class="app-container">
     <div class="header">
         <div class="header-title">Alô RH</div>
+        <img id="headerLogoEmpresa" class="header-logo-empresa" alt="Logo da empresa">
         <div class="header-actions">
             <button id="btnHeaderAniversarios" onclick="abrirModalAniversarios()">🎂</button>
             <button id="btnHeaderFerias" onclick="abrirCalendarioFerias()" title="Férias" aria-label="Férias">🏖️</button>
@@ -63,14 +64,14 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.44</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.45</small>
         </h2>
         <div id="perfilAdminBox" class="perfil-admin-box"></div>
         <button class="btn-outline menu-perm" data-perm="dadosEmpresa" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
         <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
         <button class="btn-outline menu-perm" data-perm="configGerais" onclick="abrirGerenciar('configGerais')">⚙️ Configurações Gerais</button>
         <button class="btn-outline menu-perm" data-perm="gerenciarAdministradores" onclick="abrirGerenciar('administradores')">🛡️ Gerenciar Administradores</button>
-        <button class="btn-outline menu-perm" data-perm="auditoria" onclick="abrirAuditoria()">📋 Registro do Sistema</button>
+        <button class="btn-outline menu-perm" data-perm="auditoria" onclick="abrirAuditoria()">📋 Auditoria do Sistema</button>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
         <h3 style="font-size: 16px; color: #d32f2f; margin-top: 15px; margin-bottom: 10px;">Avançado</h3>
         <button class="btn-danger" style="width: 100%; margin-bottom: 10px;" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
@@ -79,10 +80,11 @@
 </div>
 
 <div class="modal-overlay" id="modalTrocarPerfilAdmin" style="z-index:1500;">
-    <div class="modal">
-        <div class="modal-title" style="color:#00695C; border-color:#00695C;">Trocar Perfil<button class="modal-x" onclick="fecharModal('modalTrocarPerfilAdmin')">X</button></div>
-        <div id="listaPerfisAdmin" class="perfil-admin-lista"></div>
-        <div class="form-group"><label>Senha do perfil:</label><input type="password" id="senhaTrocaPerfilAdmin" inputmode="numeric" oninput="aoDigitarSenhaPerfilAdmin(this)" onkeydown="if(event.key==='Enter') validarTrocaPerfilAdmin()"></div>
+    <div class="modal modal-login-perfil">
+        <div class="modal-title" style="color:#00695C; border-color:#00695C;"><span id="tituloTrocaPerfilAdmin">Entrar no Alô RH</span><button class="modal-x" id="btnFecharTrocaPerfil" onclick="fecharModal('modalTrocarPerfilAdmin')">X</button></div>
+        <div class="login-perfil-intro">Digite a senha numérica do seu perfil. O acesso e os botões do app seguem as permissões desse administrador.</div>
+        <div id="listaPerfisAdmin" class="perfil-admin-lista login-perfis"></div>
+        <div class="form-group login-senha-box"><label>Senha do perfil:</label><input type="password" id="senhaTrocaPerfilAdmin" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" oninput="aoDigitarSenhaPerfilAdmin(this)" onkeydown="if(event.key==='Enter') validarTrocaPerfilAdmin()" placeholder="••••"></div>
         <div id="trocaPerfilErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;">Senha não encontrada.</div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalTrocarPerfilAdmin')">Cancelar</button><button class="btn-action" onclick="validarTrocaPerfilAdmin()">Entrar</button></div>
     </div>
@@ -147,7 +149,7 @@
 
 <div class="modal-overlay" id="modalAuditoria">
     <div class="modal" style="width:95%; max-width:720px;">
-        <div class="modal-title">Registro do Sistema</div>
+        <div class="modal-title">Auditoria do Sistema</div>
         <div class="form-group"><label>Buscar:</label><input type="text" id="auditoriaBusca" placeholder="Funcionário, administrador ou ação" oninput="renderAuditoria()"></div>
         <div id="auditoriaResumo" class="auditoria-resumo"></div>
         <div id="listaAuditoria" class="auditoria-lista"></div>
@@ -180,6 +182,7 @@
             <input type="file" id="empLogoInput" accept="image/*" onchange="converterLogo(this)">
             <input type="hidden" id="empLogoBase64">
             <div id="previewLogo" style="margin-top:5px;"></div>
+            <label class="checkbox-inline-empresa"><input type="checkbox" id="empMostrarLogoTopo"> Mostrar logo centralizada no cabeçalho da tela inicial</label>
         </div>
         <div class="form-group"><label>Razão Social:</label><input type="text" id="empRazao"></div>
         <div class="form-group"><label>Nome Fantasia:</label><input type="text" id="empFantasia"></div>
@@ -237,6 +240,7 @@
                 <label class="switch-row"><span class="switch-row-text">Quinquênio</span><span class="switch"><input type="checkbox" id="classeTemQuinquenio"><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Desconto passagem</span><span class="switch"><input type="checkbox" id="classePedirDescontoPassagem" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Desconto INSS</span><span class="switch"><input type="checkbox" id="classePedirINSS" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span class="switch-row-text">INSS nos proventos<small>Ressarcimento patronal no recibo</small></span><span class="switch"><input type="checkbox" id="classePedirINSSProvento"><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Recebe quinzena</span><span class="switch"><input type="checkbox" id="classeRecebeQuinzena" checked><span class="slider"></span></span></label>
                 <label class="switch-row" id="linhaClasseRecebeContracheque"><span class="switch-row-text">Recebe Contracheque</span><span class="switch"><input type="checkbox" id="classeRecebeContracheque" checked><span class="slider"></span></span></label>
                 <label class="switch-row"><span class="switch-row-text">Controle de ponto</span><span class="switch"><input type="checkbox" id="classeTemControlePonto" checked><span class="slider"></span></span></label>
@@ -407,6 +411,7 @@
         </div>
         <div style="display: flex; gap: 10px;">
             <div class="form-group" style="flex:1;"><label>Dias para adquirir férias:</label><input type="number" id="confDiasAquisitivoFerias" inputmode="numeric" min="1" max="370" placeholder="360"></div>
+            <div class="form-group" style="flex:1;"><label>Tema do app:</label><div id="confTemasApp" class="theme-picker"></div></div>
         </div>
         
         <div class="section-title">Dias de Funcionamento da Empresa</div>
@@ -769,9 +774,11 @@
 
 <div class="modal-overlay" id="modalSenhaAdminContracheque" style="z-index:1500;">
     <div class="modal">
-        <div class="modal-title" style="color:#2E7D32; border-color:#2E7D32;">Reabrir Contracheque</div>
+        <div class="modal-title" style="color:#2E7D32; border-color:#2E7D32;" id="contraSenhaTitulo">Reabrir Contracheque</div>
         <input type="hidden" id="contraSenhaFuncId">
-        <p style="font-size:12px; color:#666; margin-top:0;">Digite a senha de um administrador para reabrir e permitir ajustes neste contracheque.</p>
+        <input type="hidden" id="contraSenhaContexto" value="contracheque">
+        <input type="hidden" id="contraSenhaMesRef">
+        <p id="contraSenhaTexto" style="font-size:12px; color:#666; margin-top:0;">Digite a senha de um administrador para reabrir e permitir ajustes neste contracheque.</p>
         <div class="form-group"><label>Senha do ADM:</label><input type="password" id="contraSenhaAdmin" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
         <div id="contraSenhaErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;">Senha incorreta.</div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalSenhaAdminContracheque')">Cancelar</button><button class="btn-action" style="background:#2E7D32;" onclick="validarSenhaContracheque()">Reabrir</button></div>
@@ -864,11 +871,11 @@
         </div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.44"></script>
-<script src="js/calculos.js?v=1.0.44"></script>
-<script src="js/interface.js?v=1.0.44"></script>
-<script src="js/impressao.js?v=1.0.44"></script>
-<script src="js/sincronizacao.js?v=1.0.44"></script>
+<script src="js/dados.js?v=1.0.45"></script>
+<script src="js/calculos.js?v=1.0.45"></script>
+<script src="js/interface.js?v=1.0.45"></script>
+<script src="js/impressao.js?v=1.0.45"></script>
+<script src="js/sincronizacao.js?v=1.0.45"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

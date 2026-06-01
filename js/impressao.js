@@ -105,9 +105,9 @@
         const itensOrdenados = [...arrVTParaImprimir].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
         const paginas = quebrarPaginas(itensOrdenados, 16);
         let w = window.open('','_blank'); let html = `<html><head><title>Recibo VT</title><style>
-            @page{size:A4 portrait;margin:10mm;}
+            @page{size:A4 portrait;margin:12mm;}
             body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:16px;}
-            .vt-folha{height:277mm;border:4px double #000;box-sizing:border-box;padding:3mm 7mm 5mm;display:flex;flex-direction:column;page-break-after:always;}
+            .vt-folha{height:273mm;border:4px double #000;box-sizing:border-box;padding:3mm 6mm 5mm;display:flex;flex-direction:column;page-break-after:always;}
             .vt-folha:last-child{page-break-after:auto;}
             .vt-topo{text-align:center;font-weight:bold;}
             .logo-vt{max-height:28mm;max-width:58mm;object-fit:contain;display:block;margin:0 auto 1mm;}
