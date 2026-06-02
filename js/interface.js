@@ -1241,9 +1241,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     // ADIANTAMENTOS
-    function abrirModalAdiantamento(editId = null) {
-        if(!garantirPermissao('registrarAdiantamentos', () => abrirModalAdiantamento(editId), 'registrar adiantamentos')) return;
-        fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value;
+    function abrirModalAdiantamento(editId = null, origem = '') {
+        if(!garantirPermissao('registrarAdiantamentos', () => abrirModalAdiantamento(editId, origem), 'registrar adiantamentos')) return;
+        if(origem) origemModalAdiantamento = origem;
+        fecharModal('modalAcoesFunc');
+        fecharModal('modalContracheque');
+        fecharModal('modalReciboMensal');
+        fecharModal('modalCalculoFerias');
+        const funcId = document.getElementById('acoesFuncId').value;
         let selMotivo = document.getElementById('adiantMotivo'); selMotivo.innerHTML = ''; db.configGerais.motivosAdiantamento.forEach(m => selMotivo.innerHTML += optionHTML(m, m)); if(db.configGerais.motivosAdiantamento.length === 0) selMotivo.innerHTML = optionHTML('Vale', 'Vale');
         document.getElementById('adiantAdmin').innerHTML = getAdminOptions(db.administradores.length > 0 ? db.administradores[0].id : '');
         configurarSelectAdminPorPermissao('adiantAdmin', 'registrarAdiantamentos');
@@ -1252,14 +1257,31 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         else { document.getElementById('adiantEditId').value = ''; document.getElementById('adiantData').value = getHojeSTR(); document.getElementById('adiantValor').value = ''; document.getElementById('adiantObs').value = ''; document.getElementById('adiantForma').value = 'Pix'; document.getElementById('btnSalvarAdiantamento').innerText = "Gravar Lançamento"; document.getElementById('btnCancelEditAdiant').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistAdiantamento(funcId); document.getElementById('modalFormAdiantamento').style.display = 'flex';
     }
-    function cancelarEdicaoRegistro(tipo) { if(tipo === 'adiantamento') abrirModalAdiantamento(null); else if(tipo === 'falta') abrirModalFalta(null); else if(tipo === 'atraso') abrirModalAtraso(null); else if(tipo === 'ferias') abrirModalFerias(null, origemModalFerias); }
+    function abrirAdiantamentoDocumento(funcId, contexto, event = null) {
+        if(event) event.stopPropagation();
+        const f = db.funcionarios.find(x => x.id === funcId);
+        document.getElementById('acoesFuncId').value = funcId;
+        const titulo = document.getElementById('tituloAcoesFunc');
+        if(titulo && f) titulo.innerText = getNomeUsoFuncionario(f);
+        abrirModalAdiantamento(null, contexto);
+    }
+    function voltarModalAdiantamento() {
+        fecharModal('modalFormAdiantamento');
+        if(origemModalAdiantamento === 'contracheque') { gerarPreviaContracheque(); document.getElementById('modalContracheque').style.display = 'flex'; return; }
+        if(origemModalAdiantamento === 'recibo') { gerarPreviaReciboMensal(); document.getElementById('modalReciboMensal').style.display = 'flex'; return; }
+        if(origemModalAdiantamento === 'ferias') { renderCalculoFerias(); document.getElementById('modalCalculoFerias').style.display = 'flex'; return; }
+        document.getElementById('modalAcoesFunc').style.display = 'flex';
+    }
+    function cancelarEdicaoRegistro(tipo) { if(tipo === 'adiantamento') abrirModalAdiantamento(null, origemModalAdiantamento); else if(tipo === 'falta') abrirModalFalta(null); else if(tipo === 'atraso') abrirModalAtraso(null); else if(tipo === 'ferias') abrirModalFerias(null, origemModalFerias); }
     function salvarAdiantamento() {
         if(!adminSelecionadoTemPermissao('adiantAdmin', 'registrarAdiantamentos')) return;
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('adiantEditId').value; const valorStr = document.getElementById('adiantValor').value; if(!valorStr) return alert("Digite um valor.");
         const novo = { type: 'adiantamento', funcId: funcId, data: document.getElementById('adiantData').value, valor: parseMoeda(valorStr), motivo: document.getElementById('adiantMotivo').value, observacao: document.getElementById('adiantObs').value.trim(), forma: document.getElementById('adiantForma').value, adminId: document.getElementById('adiantAdmin').value, descontado: false };
         const f = db.funcionarios.find(x => x.id === funcId);
         if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Adiantamento editado', `${getNomeUsoFuncionario(f)}: R$ ${formatMoeda(novo.valor)} - ${novo.motivo}.`, 'adiantamento', editId); } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); registrarAuditoria('Adiantamento registrado', `${getNomeUsoFuncionario(f)}: R$ ${formatMoeda(novo.valor)} - ${novo.motivo}.`, 'adiantamento', novo.id); }
-        salvarBanco(); abrirModalAdiantamento(null); // reseta tela
+        salvarBanco();
+        if(origemModalAdiantamento === 'contracheque' || origemModalAdiantamento === 'recibo' || origemModalAdiantamento === 'ferias') voltarModalAdiantamento();
+        else abrirModalAdiantamento(null, origemModalAdiantamento); // reseta tela
     }
     
     function marcarDesconto(id) { let r = db.registros.find(x => x.id === id); if(!r) return; r.aguardandoDesconto = true; renderizarHistAdiantamento(r.funcId); setTimeout(() => { let rCheck = db.registros.find(x => x.id === id); if(rCheck && rCheck.aguardandoDesconto) { rCheck.aguardandoDesconto = false; rCheck.descontado = true; registrarAuditoria('Adiantamento marcado como descontado', `${getNomeUsoFuncionario(db.funcionarios.find(f => f.id === rCheck.funcId))}: R$ ${formatMoeda(rCheck.valor)}.`, 'adiantamento', id); salvarBanco(); if(document.getElementById('modalFormAdiantamento').style.display === 'flex') renderizarHistAdiantamento(rCheck.funcId); } }, 10000); }
@@ -2467,11 +2489,12 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const inss = (campos.pedirINSSProvento && f.recebeINSSProvento !== false) ? baseSemGratificacao * 0.075 : 0;
         const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
         const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
-        const proventos = salario + gratificacao + vales.total + fgts + multaFgts + inss + ferias + tercoFerias + decimoTerceiro;
+        const proventos = salario + gratificacao + fgts + multaFgts + inss + ferias + tercoFerias + decimoTerceiro;
         const descontos = descontoPassagem + faltas.valorFaltas + faltas.valorDSR;
-        const liquido = proventos - descontos;
+        const subtotalSalario = proventos - descontos;
+        const liquido = subtotalSalario + vales.total;
         const liquidoAPagar = liquido - adiantamentosContra.total;
-        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, salario, gratificacao, vales, valesPassagem, faltas, baseSemGratificacao, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, adiantamentosContra, proventos, descontos, liquido, liquidoAPagar };
+        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, salario, gratificacao, vales, valesPassagem, faltas, baseSemGratificacao, baseRemuneracao, fgts, multaFgts, ferias, tercoFerias, decimoTerceiro, inss, descontoPassagem, adiantamentosContra, proventos, descontos, subtotalSalario, liquido, liquidoAPagar };
     }
 
     function abrirConfigReciboMensal(mesRefForcado = '') {
@@ -2528,7 +2551,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     <div class="contra-box contra-box-proventos"><b style="color:#2E7D32;">Proventos</b>
                         ${linhaContracheque('Salário', d.salario)}
                         ${linhaContracheque('Gratificação', d.gratificacao)}
-                        ${linhaContracheque(labelRubricaMes('VT', d.vtMesRef), d.vales.total)}
                         ${linhaContracheque('FGTS 8%', d.fgts)}
                         ${linhaContracheque('FGTS 40%', d.multaFgts)}
                         ${linhaContracheque('INSS (7,5%)', d.inss)}
@@ -2543,7 +2565,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaDsrRecibo}
                         ${linhaContracheque('Total', d.descontos, { total: true })}
                     </div>
-                    ${renderBoxAdiantamentosContracheque(f, mesRef, d.adiantamentosContra, editavel, 'recibo')}
+                    ${renderBoxVTContracheque(d)}
+                    ${renderBoxAdiantamentosContracheque(f, mesRef, d.adiantamentosContra, editavel, 'recibo', d.liquido, d.liquidoAPagar)}
                 </div>
                 <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button>${acaoPagamento}</div>${acaoRecibo}</div>
             </div>` : '';
@@ -2598,6 +2621,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const linhaFaltaPrintRecibo = linhaPrintRecibo('Falta (' + d.faltas.diasFalta + ')', d.faltas.valorFaltas);
             const linhaDsrPrintRecibo = linhaPrintRecibo('DSR (' + d.faltas.dsr + ')', d.faltas.valorDSR);
             const linhaAdiantamentosPrint = d.adiantamentosContra.total ? '<div class="linha total" style="margin-top:8mm;"><span>Adiantamentos descontados</span><strong>R$ ' + formatMoedaContracheque(d.adiantamentosContra.total) + '</strong></div>' : '';
+            const linhaVTPrint = d.vales.total ? '<div class="linha total" style="margin-top:6mm;"><span>' + labelRubricaMes('VT', d.vtMesRef) + ' (' + d.vales.passagens + ' passagens)</span><strong>R$ ' + formatMoedaContracheque(d.vales.total) + '</strong></div>' : '';
             html += `<section class="recibo-folha"><div class="topo"><div class="empresa">${escapeHTML(empresa)}</div><div class="cnpj">CNPJ ${escapeHTML(db.empresa.cnpj || '')}</div></div>
                 <div class="titulo">Recibo de Pagamento Mensal</div>
                 <div class="texto">Declaro que recebi da empresa supracitada os valores referentes ao pagamento do mês de <b>${escapeHTML(mes)} de ${escapeHTML(ano)}</b>, incluindo VT de <b>${escapeHTML(getExtensoMes(d.mesVT).toLowerCase())} de ${d.anoVT}</b>, conforme discriminação abaixo.</div>
@@ -2606,7 +2630,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     <div><div class="bloco-titulo">Proventos</div>
                         ${linhaPrintRecibo('Salário', d.salario)}
                         ${linhaPrintRecibo('Gratificação', d.gratificacao)}
-                        ${linhaPrintRecibo(labelRubricaMes('VT', d.vtMesRef), d.vales.total)}
                         ${linhaPrintRecibo('FGTS 8%', d.fgts)}
                         ${linhaPrintRecibo('FGTS 40%', d.multaFgts)}
                         ${linhaPrintRecibo('INSS (7,5%)', d.inss)}
@@ -2622,6 +2645,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaPrintRecibo('Total', d.descontos, true)}
                     </div>
                 </div>
+                ${linhaVTPrint}
                 ${linhaAdiantamentosPrint}
                 <div class="linha total" style="margin-top:${d.adiantamentosContra.total ? '2mm' : '8mm'};"><span>Líquido a receber</span><strong>R$ ${formatMoedaContracheque(d.liquidoAPagar)}</strong></div>
                 <div class="rodape">${escapeHTML(typeof formatDataExtensoPrint === 'function' ? formatDataExtensoPrint(getHojeSTR(), cidade) : formatDataBR(getHojeSTR()))}</div>
@@ -3054,7 +3078,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return `<div class="linha-adiant"><button class="btn-contra-check ${ativo ? 'ativo' : ''}" ${disabled} onclick="definirDescontoAdiantamentoContracheque(${jsArg(registro.id)}, ${jsArg(mesRef)}, ${valorOriginal}, event, ${jsArg(contexto)})">${textoBotao}</button><span>${label}</span><span class="valor">R$ ${formatMoedaContracheque(valorOriginal)}</span></div>`;
     }
 
-    function renderBoxAdiantamentosContracheque(f, mesRef, dados, editavel = true, contexto = 'contracheque') {
+    function renderBoxAdiantamentosContracheque(f, mesRef, dados, editavel = true, contexto = 'contracheque', totalAntesAdiantamentos = null, totalAPagar = null) {
         const linhas = [];
         dados.quinzenaRegs.forEach(r => {
             linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, 'Quinzena', editavel, true, contexto));
@@ -3067,8 +3091,15 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const obs = r.observacao ? ` - ${escapeHTML(r.observacao)}` : '';
             linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, `${formatDataBR(r.data)} - ${escapeHTML(r.motivo || 'Pendente anterior')}${obs}`, editavel, false, contexto));
         });
-        if(linhas.length === 0) return '';
-        return `<div class="contra-adiantamentos-box"><b style="color:#D32F2F;">Adiantamentos</b>${linhas.join('')}<div class="contra-linha contra-total"><span>Total adiantamentos</span><strong class="valor">R$ ${formatMoedaContracheque(dados.total)}</strong></div></div>`;
+        const fixo = contexto === 'contracheque' || contexto === 'recibo';
+        if(linhas.length === 0 && !fixo) return '';
+        const botaoNovo = editavel && fixo ? `<button class="btn-adiant-plus" onclick="abrirAdiantamentoDocumento(${jsArg(f.id)}, ${jsArg(contexto)}, event)" title="Novo adiantamento">+</button>` : '';
+        const vazio = linhas.length === 0 ? '<div class="contra-adiant-empty">Nenhum adiantamento para este mês.</div>' : '';
+        const totalFinal = Number.isFinite(Number(totalAntesAdiantamentos)) && Number.isFinite(Number(totalAPagar)) ? `<div class="contra-total-receber">
+            <div class="contra-linha"><span>Depois dos descontos e VT</span><strong class="valor">R$ ${formatMoedaContracheque(totalAntesAdiantamentos)}</strong></div>
+            <div class="contra-linha contra-total"><span>Valor a receber</span><strong class="valor">R$ ${formatMoedaContracheque(totalAPagar)}</strong></div>
+        </div>` : '';
+        return `<div class="contra-adiantamentos-box"><div class="contra-adiant-head"><b style="color:#D32F2F;">Adiantamentos</b>${botaoNovo}</div>${vazio}${linhas.join('')}<div class="contra-linha contra-total"><span>Total adiantamentos</span><strong class="valor">R$ ${formatMoedaContracheque(dados.total)}</strong></div>${totalFinal}</div>`;
     }
 
     function renderBoxVTContracheque(d) {
@@ -3182,7 +3213,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque('Total', descontos, { total: true })}
                     </div>
                     ${renderBoxVTContracheque(d)}
-                    ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel)}
+                    ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel, 'contracheque', liquido, liquidoAPagar)}
                 </div>
                 <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">📝 WhatsApp</button>${acaoPagamento}</div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
             </div>` : '';

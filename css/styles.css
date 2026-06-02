@@ -253,6 +253,11 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .contra-box-proventos { background:#f8fbf8; }
         .contra-box-descontos { background:#fff8f8; }
         .contra-adiantamentos-box { grid-column:1 / -1; border:2px solid #E53935; border-radius:6px; padding:8px; background:#fffafa; margin-top:8px; font-size:12px; }
+        .contra-adiant-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+        .btn-adiant-plus { width:28px; height:28px; border:0; border-radius:8px; background:#F57F17; color:#fff; font-size:20px; line-height:1; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+        .contra-adiant-empty { border:1px dashed #ffcdd2; border-radius:6px; color:#8D6E63; background:#fff; padding:7px; margin:6px 0; font-size:11px; font-weight:800; text-align:center; }
+        .contra-total-receber { border-top:1px solid rgba(0,0,0,.12); margin-top:6px; padding-top:4px; }
+        .contra-total-receber .contra-total .valor { color:#1B5E20; }
         .contra-vt-box { grid-column:1 / -1; border:1px solid #B2DFDB; border-left:4px solid #00695C; border-radius:6px; padding:8px; background:#F1FAF8; margin-top:2px; font-size:12px; }
         .contra-vt-detalhe { color:#607D8B; font-size:11px; font-weight:700; margin-top:4px; }
         .contra-adiantamentos-box .linha-adiant { display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid rgba(0,0,0,.07); padding:4px 0; }
