@@ -252,6 +252,10 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .contra-box { border-radius:6px; padding:8px; }
         .contra-box-proventos { background:#f8fbf8; }
         .contra-box-descontos { background:#fff8f8; }
+        .contra-box-extras { grid-column:1 / -1; background:#FFF7ED; border-left:4px solid #E65100; }
+        .contra-valor-doc-box { grid-column:1 / -1; border:1px solid #D1C4E9; border-left:4px solid #6A1B9A; border-radius:6px; padding:8px; background:#FAF7FF; font-size:12px; }
+        .contra-receber-box { grid-column:1 / -1; border:2px solid #2E7D32; border-radius:6px; padding:8px; background:#F1F8E9; font-size:13px; }
+        .contra-receber-box .contra-total .valor { color:#1B5E20; font-size:15px; }
         .contra-adiantamentos-box { grid-column:1 / -1; border:2px solid #E53935; border-radius:6px; padding:8px; background:#fffafa; margin-top:8px; font-size:12px; }
         .contra-adiant-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
         .btn-adiant-plus { width:28px; height:28px; border:0; border-radius:8px; background:#F57F17; color:#fff; font-size:20px; line-height:1; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }

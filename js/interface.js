@@ -245,10 +245,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function abrirMenuAdicionar() {
-        if(!garantirAlgumaPermissao(['gerarVT', 'gerarContracheque', 'registrarPresencaSemanal'], () => abrirMenuAdicionar(), 'abrir opções adicionais')) return;
+        if(!garantirAlgumaPermissao(['gerarVT', 'gerarContracheque', 'registrarPresencaSemanal', 'acessoResumo'], () => abrirMenuAdicionar(), 'abrir opções adicionais')) return;
         const opcoes = document.querySelectorAll('#modalMenuAdicionar .add-menu-opcao');
         if(opcoes[0]) opcoes[0].style.display = temPermissaoAtual('gerarVT') ? 'flex' : 'none';
         if(opcoes[1]) opcoes[1].style.display = (temPermissaoAtual('gerarContracheque') || temPermissaoAtual('registrarPresencaSemanal')) ? 'flex' : 'none';
+        if(opcoes[2]) opcoes[2].style.display = temPermissaoAtual('acessoResumo') ? 'flex' : 'none';
         document.getElementById('modalMenuAdicionar').style.display = 'flex';
     }
 
@@ -293,6 +294,77 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const mes = folga.mesDesconto ? folga.mesDesconto.split('-').reverse().join('/') : '';
             return `<div class="list-item-config"><span><b>${formatDataBR(folga.data)}</b> <small style="color:#F57F17; font-weight:bold;">VT ${escapeHTML(mes)}</small>${obs}</span><button onclick="excluirFolgaGeral(${jsArg(folga.id)})">X</button></div>`;
         }).join('');
+    }
+
+    function funcionarioGeraInformesContador(f) {
+        const categoria = getCategoriaFuncionario(f);
+        return !!(categoria && categoria.gerarInformesContador === true);
+    }
+
+    function getIntervaloMesRef(mesRef) {
+        const ref = mesRef || getHojeSTR().substring(0, 7);
+        const [ano, mes] = ref.split('-').map(Number);
+        return { inicio: `${ref}-01`, fim: dataISO(new Date(ano, mes, 0)), label: `${getExtensoMes(mes)} de ${ano}` };
+    }
+
+    function montarInformesContador(mesRef) {
+        const intervalo = getIntervaloMesRef(mesRef);
+        const categoriasMarcadas = db.categorias.filter(c => c.gerarInformesContador === true);
+        const ocorrencias = db.registros
+            .filter(r => r.type === 'falta' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim))
+            .map(r => ({ registro: r, funcionario: db.funcionarios.find(f => f.id === r.funcId) }))
+            .filter(item => item.funcionario && !item.funcionario.arquivado && funcionarioGeraInformesContador(item.funcionario))
+            .filter(item => item.registro.tipo === 'Atestado' || (item.registro.tipo === 'Falta' && item.registro.descontarDia !== false))
+            .sort((a, b) => String(a.funcionario.nome || '').localeCompare(String(b.funcionario.nome || '')) || String(a.registro.data || '').localeCompare(String(b.registro.data || '')));
+        const linhas = [`*Informes Contador*`, `*Período:* ${intervalo.label}`, ''];
+        if(categoriasMarcadas.length === 0) {
+            linhas.push('Nenhum vínculo está marcado para gerar informes ao contador.');
+            return linhas.join('\n');
+        }
+        if(ocorrencias.length === 0) {
+            linhas.push('Sem faltas injustificadas ou atestados médicos nos vínculos marcados.');
+            return linhas.join('\n');
+        }
+        let atual = '';
+        ocorrencias.forEach((item) => {
+            const r = item.registro;
+            const f = item.funcionario;
+            if(f.nome !== atual) {
+                if(atual) linhas.push('');
+                linhas.push(`*${f.nome || 'Funcionário'}*`);
+                atual = f.nome;
+            }
+            const dias = listarDiasUteisRegistroIntervalo(r, intervalo.inicio, intervalo.fim);
+            const dsr = registroDescontaDSR(r) ? new Set(dias.map(d => chaveSemanaAno(new Date(d + "T00:00:00")))).size : 0;
+            const periodo = (r.dataFim && r.dataFim !== r.data) ? `${formatDataBR(r.data)} a ${formatDataBR(r.dataFim)}` : formatDataBR(r.data);
+            const tipo = r.tipo === 'Atestado' ? 'Atestado Médico' : 'Falta Injustificada';
+            linhas.push(`- ${tipo}: ${periodo} | Faltas: ${dias.length || 1} | DSR: ${dsr}`);
+        });
+        return linhas.join('\n');
+    }
+
+    function abrirInformesContador() {
+        if(!garantirPermissao('acessoResumo', () => abrirInformesContador(), 'abrir informes do contador')) return;
+        document.getElementById('informesContadorMes').value = getHojeSTR().substring(0, 7);
+        renderInformesContador();
+        document.getElementById('modalInformesContador').style.display = 'flex';
+    }
+
+    function renderInformesContador() {
+        const box = document.getElementById('textoInformesContador');
+        if(!box) return;
+        const mesRef = document.getElementById('informesContadorMes').value || getHojeSTR().substring(0, 7);
+        box.textContent = montarInformesContador(mesRef);
+    }
+
+    function copiarInformesContador() {
+        const mesRef = document.getElementById('informesContadorMes').value || getHojeSTR().substring(0, 7);
+        copiarTextoSeguro(montarInformesContador(mesRef));
+    }
+
+    function enviarInformesContadorWhatsapp() {
+        const mesRef = document.getElementById('informesContadorMes').value || getHojeSTR().substring(0, 7);
+        abrirWhatsappTexto(montarInformesContador(mesRef));
     }
 
     function formatarFuncaoLista(funcao) {
@@ -698,7 +770,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             temQuinquenio: c && c.temQuinquenio === true,
             temFerias: tipoPagamento !== 'semanal' && !(c && c.temFerias === false),
             recebeQuinzena: !(c && c.recebeQuinzena === false),
-            recebeContracheque: tipoPagamento === 'contracheque' && !(c && c.recebeContracheque === false)
+            recebeContracheque: tipoPagamento === 'contracheque' && !(c && c.recebeContracheque === false),
+            gerarInformesContador: c && c.gerarInformesContador === true
         };
     }
 
@@ -717,6 +790,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('classeTemFerias').checked = beneficios.temFerias;
         document.getElementById('classeRecebeQuinzena').checked = beneficios.recebeQuinzena;
         document.getElementById('classeRecebeContracheque').checked = beneficios.recebeContracheque;
+        document.getElementById('classeGerarInformesContador').checked = beneficios.gerarInformesContador;
     }
 
     function toggleRegrasVinculoSemanal() {
@@ -777,6 +851,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             temFerias: !semanal && document.getElementById('classeTemFerias').checked,
             recebeQuinzena: document.getElementById('classeRecebeQuinzena').checked,
             recebeContracheque: tipoPagamento === 'contracheque',
+            gerarInformesContador: !semanal && document.getElementById('classeGerarInformesContador').checked,
             camposFuncionario: {
                 pedirVT: document.getElementById('classePedirVT').checked,
                 pedirGratificacao: document.getElementById('classePedirGratificacao').checked,
@@ -2299,11 +2374,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
         const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
         const proventos = salario + gratificacao + quinquenio + salarioFamilia;
-        const descontos = unidentis + descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
-        const subtotalSalario = proventos - descontos;
+        const descontosNormais = descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
+        const valorContracheque = proventos - descontosNormais;
+        const descontosExtras = unidentis;
+        const descontos = descontosNormais + descontosExtras;
+        const subtotalSalario = valorContracheque - descontosExtras;
         const liquido = subtotalSalario + vales.total;
         const liquidoAPagar = liquido - adiantamentosContra.total;
-        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, subtotalSalario, liquido, liquidoAPagar };
+        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontosNormais, valorContracheque, descontosExtras, descontos, subtotalSalario, liquido, liquidoAPagar };
     }
 
     function montarLinhaAdiantamentosMensagem(d) {
@@ -2341,8 +2419,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(d.faltas.valorFaltas) linhas.push(`- Falta (${d.faltas.diasFalta}): R$ ${formatMoedaContracheque(d.faltas.valorFaltas)}`);
         if(d.faltas.valorDSR) linhas.push(`- DSR (${d.faltas.dsr}): R$ ${formatMoedaContracheque(d.faltas.valorDSR)}`);
         if(d.inss) linhas.push(`- INSS (${formatPercentual(d.inssAliquota)}%): R$ ${formatMoedaContracheque(d.inss)}`);
-        if(d.unidentis) linhas.push(`- Unidentis: R$ ${formatMoedaContracheque(d.unidentis)}`);
-        linhas.push(`*- Total descontos: R$ ${formatMoedaContracheque(d.descontos)}*`);
+        linhas.push(`*- Total descontos: R$ ${formatMoedaContracheque(d.descontosNormais)}*`);
+        linhas.push('', `> *Valor do contracheque:*`);
+        linhas.push(`*R$ ${formatMoedaContracheque(d.valorContracheque)}*`);
+        if(d.descontosExtras) {
+            linhas.push('', '> *Descontos extras:*');
+            if(d.unidentis) linhas.push(`- Unidentis: R$ ${formatMoedaContracheque(d.unidentis)}`);
+            linhas.push(`*- Total descontos extras: R$ ${formatMoedaContracheque(d.descontosExtras)}*`);
+        }
         linhas.push('', `> *Vale-Transporte (${getExtensoMes(d.mesVT).toLowerCase()}):*`);
         linhas.push(`*- ${d.vales.passagens} passagens: R$ ${formatMoedaContracheque(d.vales.total)}*`);
         linhas.push('', '> *Adiantamentos:*');
@@ -2566,7 +2650,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque('Total', d.descontos, { total: true })}
                     </div>
                     ${renderBoxVTContracheque(d)}
-                    ${renderBoxAdiantamentosContracheque(f, mesRef, d.adiantamentosContra, editavel, 'recibo', d.liquido, d.liquidoAPagar)}
+                    ${renderBoxAdiantamentosContracheque(f, mesRef, d.adiantamentosContra, editavel, 'recibo')}
+                    ${renderBoxValorReceber(d.liquidoAPagar)}
                 </div>
                 <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button>${acaoPagamento}</div>${acaoRecibo}</div>
             </div>` : '';
@@ -3078,7 +3163,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return `<div class="linha-adiant"><button class="btn-contra-check ${ativo ? 'ativo' : ''}" ${disabled} onclick="definirDescontoAdiantamentoContracheque(${jsArg(registro.id)}, ${jsArg(mesRef)}, ${valorOriginal}, event, ${jsArg(contexto)})">${textoBotao}</button><span>${label}</span><span class="valor">R$ ${formatMoedaContracheque(valorOriginal)}</span></div>`;
     }
 
-    function renderBoxAdiantamentosContracheque(f, mesRef, dados, editavel = true, contexto = 'contracheque', totalAntesAdiantamentos = null, totalAPagar = null) {
+    function renderBoxAdiantamentosContracheque(f, mesRef, dados, editavel = true, contexto = 'contracheque') {
         const linhas = [];
         dados.quinzenaRegs.forEach(r => {
             linhas.push(renderLinhaAdiantamentoContracheque(r, mesRef, 'Quinzena', editavel, true, contexto));
@@ -3095,11 +3180,23 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(linhas.length === 0 && !fixo) return '';
         const botaoNovo = editavel && fixo ? `<button class="btn-adiant-plus" onclick="abrirAdiantamentoDocumento(${jsArg(f.id)}, ${jsArg(contexto)}, event)" title="Novo adiantamento">+</button>` : '';
         const vazio = linhas.length === 0 ? '<div class="contra-adiant-empty">Nenhum adiantamento para este mês.</div>' : '';
-        const totalFinal = Number.isFinite(Number(totalAntesAdiantamentos)) && Number.isFinite(Number(totalAPagar)) ? `<div class="contra-total-receber">
-            <div class="contra-linha"><span>Depois dos descontos e VT</span><strong class="valor">R$ ${formatMoedaContracheque(totalAntesAdiantamentos)}</strong></div>
-            <div class="contra-linha contra-total"><span>Valor a receber</span><strong class="valor">R$ ${formatMoedaContracheque(totalAPagar)}</strong></div>
-        </div>` : '';
-        return `<div class="contra-adiantamentos-box"><div class="contra-adiant-head"><b style="color:#D32F2F;">Adiantamentos</b>${botaoNovo}</div>${vazio}${linhas.join('')}<div class="contra-linha contra-total"><span>Total adiantamentos</span><strong class="valor">R$ ${formatMoedaContracheque(dados.total)}</strong></div>${totalFinal}</div>`;
+        return `<div class="contra-adiantamentos-box"><div class="contra-adiant-head"><b style="color:#D32F2F;">Adiantamentos</b>${botaoNovo}</div>${vazio}${linhas.join('')}<div class="contra-linha contra-total"><span>Total adiantamentos</span><strong class="valor">R$ ${formatMoedaContracheque(dados.total)}</strong></div></div>`;
+    }
+
+    function renderBoxValorDocumento(label, valor) {
+        return `<div class="contra-valor-doc-box">${linhaContracheque(label, valor, { total: true })}</div>`;
+    }
+
+    function renderBoxDescontosExtras(d) {
+        if(!d || !d.descontosExtras) return '';
+        return `<div class="contra-box contra-box-extras"><b style="color:#BF360C;">Descontos extras</b>
+            ${linhaContracheque('Unidentis', d.unidentis)}
+            ${linhaContracheque('Total', d.descontosExtras, { total: true })}
+        </div>`;
+    }
+
+    function renderBoxValorReceber(valor) {
+        return `<div class="contra-receber-box">${linhaContracheque('Valor a receber', valor, { total: true })}</div>`;
     }
 
     function renderBoxVTContracheque(d) {
@@ -3184,7 +3281,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let html = '';
         funcs.forEach((f) => {
             const d = calcularDadosContrachequeFuncionario(f, mesRef, vtMesRef);
-            const { salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontos, liquido, liquidoAPagar } = d;
+            const { salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, vales, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontosNormais, valorContracheque, liquido, liquidoAPagar } = d;
             totalLiquido += liquido;
             const key = chaveContracheque(f.id, mesRef);
             const fechado = !!obterFechamentoContracheque(f.id, mesRef);
@@ -3209,11 +3306,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                         ${linhaContracheque(`Falta (${faltas.diasFalta})`, faltas.valorFaltas)}
                         ${linhaContracheque(`DSR (${faltas.dsr})`, faltas.valorDSR)}
                         ${linhaContracheque(inssLabel, inss)}
-                        ${linhaContracheque('Unidentis', unidentis)}
-                        ${linhaContracheque('Total', descontos, { total: true })}
+                        ${linhaContracheque('Total', descontosNormais, { total: true })}
                     </div>
+                    ${renderBoxValorDocumento('Valor do contracheque', valorContracheque)}
+                    ${renderBoxDescontosExtras(d)}
                     ${renderBoxVTContracheque(d)}
-                    ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel, 'contracheque', liquido, liquidoAPagar)}
+                    ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel, 'contracheque')}
+                    ${renderBoxValorReceber(liquidoAPagar)}
                 </div>
                 <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">📝 WhatsApp</button>${acaoPagamento}</div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
             </div>` : '';
