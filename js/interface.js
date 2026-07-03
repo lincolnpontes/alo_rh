@@ -234,7 +234,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         ocultarSemPermissao('btnAcaoAtraso', 'registrarAtraso');
         ocultarSemPermissao('btnAcaoFerias', 'lancarFerias');
         ocultarSemPermissao('btnPagarExtra', 'registrarPresencaSemanal');
+        const btnEditar = document.getElementById('btnEditarFuncAcoes');
+        if(btnEditar) btnEditar.style.display = temPermissaoAtual('dadosPessoais') ? 'inline-flex' : 'none';
         document.getElementById('modalAcoesFunc').style.display = 'flex';
+    }
+
+    function abrirEdicaoFuncionarioAcoes() {
+        if(!temPermissaoAtual('dadosPessoais')) return;
+        const funcId = document.getElementById('acoesFuncId').value;
+        if(!funcId) return;
+        fecharModal('modalAcoesFunc');
+        abrirFormFunc(funcId, 'acoes');
     }
 
     function toggleSelecaoFuncionario(event, id) {
@@ -1060,6 +1070,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         atualizarCamposValoresBeneficios();
         toggleQtdQuinqueniosFuncionario();
         aplicarPermissoesFormularioFuncionario();
+        const btnHistorico = document.getElementById('btnHistoricoSalarioFuncionario');
+        if(btnHistorico) btnHistorico.style.display = id ? 'inline-flex' : 'none';
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
     function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config pix-list-row"><div class="pix-text"><b style="color:#0277BD;">${escapeHTML(p.tipo || 'PIX')}</b> - ${escapeHTML(p.chave || '')}</div><button onclick="removerPix(${i})">X</button></div>`).join(''); }
@@ -1069,7 +1081,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(chv) { tempPix.push({ tipo: tipo, chave: chv }); document.getElementById('novoPixInput').value = ''; renderListaPix(); } 
     }
     function removerPix(idx) { tempPix.splice(idx, 1); renderListaPix(); }
-    function voltarDepoisFormFuncionario() { if(origemFormFuncionario === 'inicio') { origemFormFuncionario = 'gerenciar'; renderizarLista(); return; } abrirGerenciar('funcionarios'); }
+    function voltarDepoisFormFuncionario() {
+        if(origemFormFuncionario === 'inicio') { origemFormFuncionario = 'gerenciar'; renderizarLista(); return; }
+        if(origemFormFuncionario === 'acoes') {
+            const funcId = document.getElementById('funcId').value;
+            origemFormFuncionario = 'gerenciar';
+            renderizarLista();
+            if(funcId) cliqueItem(funcId);
+            return;
+        }
+        abrirGerenciar('funcionarios');
+    }
     function cancelarFormFuncionario() { fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); }
     function salvarFuncionario() { 
         const id = document.getElementById('funcId').value || 'f_'+Date.now(); 
@@ -1179,6 +1201,19 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const vigencia = item.vigencia === '0000-01' ? 'Base anterior' : item.vigencia.split('-').reverse().join('/');
             return `<div class="historico-salario-item"><span>${escapeHTML(vigencia)}</span><strong>R$ ${escapeHTML(item.valor)}</strong></div>`;
         }).join('');
+    }
+
+    function abrirHistoricoSalarioFuncionario() {
+        const funcId = document.getElementById('funcId').value;
+        const f = db.funcionarios.find(item => item.id === funcId);
+        if(!f) return;
+        const historico = [...(f.historicoSalarios || [])].sort((a, b) => String(b.vigencia).localeCompare(String(a.vigencia)));
+        document.getElementById('historicoSalarioFuncionarioNome').innerText = f.nome || getNomeUsoFuncionario(f);
+        document.getElementById('listaHistoricoSalarioFuncionario').innerHTML = historico.length ? historico.map(item => {
+            const periodo = item.vigencia === '0000-01' ? 'Valor base anterior ao histórico' : `A partir de ${item.vigencia.split('-').reverse().join('/')}`;
+            return `<div class="historico-salario-linha"><span>${escapeHTML(periodo)}</span><strong>R$ ${formatMoeda(parseMoeda(item.valor))}</strong></div>`;
+        }).join('') : '<div style="color:#999; text-align:center; padding:12px;">Nenhuma alteração salarial registrada.</div>';
+        document.getElementById('modalHistoricoSalarioFuncionario').style.display = 'flex';
     }
 
     function salvarConfigGerais() {
@@ -1313,7 +1348,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             });
             semanas.push({ atual: i === 0, segunda: dataISO(segunda), domingo: dataISO(domingo), dias });
         }
-        return semanas;
+        return semanas.reverse();
     }
 
     function renderSeletorSemanasPresenca(boxId, acao, selecionado = '', funcIds = []) {
@@ -1324,10 +1359,15 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const botoes = semana.dias.map((dia) => {
                 const registrado = funcIds.length > 0 && funcIds.every(funcId => db.registros.some(r => r.type === 'presenca' && r.funcId === funcId && r.data === dia.data));
                 const classe = dia.data === selecionado ? 'selecionado' : (registrado ? 'registrado' : '');
-                return `<button type="button" class="btn-dia-rapido ${classe}" onclick="${acao}(${jsArg(dia.data)})">${dia.nome}<br><small>${formatDataBR(dia.data).substring(0, 5)}</small></button>`;
+                return `<button type="button" class="btn-dia-rapido ${classe}" data-presenca-data="${safeAttr(dia.data)}" onclick="${acao}(${jsArg(dia.data)})">${dia.nome}<br><small>${formatDataBR(dia.data).substring(0, 5)}</small></button>`;
             }).join('');
             return `<div class="presenca-semana"><div class="presenca-semana-head"><span>${semana.atual ? 'Semana atual' : 'Semana anterior'}</span><small>${periodo}</small></div><div class="presenca-dias-grid">${botoes}</div></div>`;
         }).join('');
+        requestAnimationFrame(() => {
+            const selecionadoEl = selecionado ? box.querySelector(`[data-presenca-data="${selecionado}"]`) : null;
+            if(selecionadoEl) selecionadoEl.closest('.presenca-semana').scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+            else box.scrollLeft = box.scrollWidth;
+        });
     }
     
     function abrirModalPresencaSemana() {
