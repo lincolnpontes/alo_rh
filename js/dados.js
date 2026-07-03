@@ -19,14 +19,14 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.48';
+    const APP_VERSION = 'v1.0.49';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
     const REGISTROS_SYNC_INTERVAL_MS = 10000;
 
     let db = carregarBanco();
-    let categoriaAtual = null; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
+    let categoriaAtual = null; let modoNomeLista = 'social'; let modoSelecaoAtivo = false; let itensSelecionados = new Set(); let filtroAptosHoje = false; let diaFiltroAptos = null;
     let isSyncingFundo = false; let syncPendente = false; let timerSincronizacao = null; let timerSyncRegistros = null; let isPuxandoNuvem = false;
     let tempVT = []; let tempMotivos = []; let tempINSS = []; let tempPix = []; let tempSalariosClasse = []; let dataTempPresenca = ''; let motivoToDelete = null; let overridesContracheque = {}; let resumoContrachequeVisivel = false; let contrachequesAbertos = new Set(); let recibosMensaisAbertos = new Set(); let resumoReciboMensalVisivel = false; let contextoDescontoAtual = 'contracheque'; let adminSessaoId = sessionStorage.getItem('alorh_admin_sessao') || '';
     let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar'; let origemModalFerias = 'acoes'; let origemModalAdiantamento = 'acoes';
@@ -41,7 +41,7 @@
             funcionarios: [],
             administradores: [],
             auditoria: [],
-            configGerais: { salarioMinimo: "1621,00", adiantamentoQuinzena: "500,00", diasAquisitivoFerias: 360, tema: "verde", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [], inssFaixas: criarTabelaINSSPadrao(), folgasGerais: [] },
+            configGerais: { salarioMinimo: "1621,00", historicoSalarioMinimo: [{ vigencia: "0000-01", valor: "1621,00" }], adiantamentoQuinzena: "500,00", diasAquisitivoFerias: 360, tema: "verde", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [], inssFaixas: criarTabelaINSSPadrao(), folgasGerais: [] },
             registros: [],
             configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, ultimaSincronizacao: 0, registrosExcluidos: {}, senhaAdminHash: "", senhaAdminSalt: "", segurancaVersao: 2 }
         };
@@ -101,6 +101,9 @@
         normalizado.configGerais.motivosAdiantamento = Array.isArray(normalizado.configGerais.motivosAdiantamento) ? normalizado.configGerais.motivosAdiantamento : [];
         normalizado.configGerais.inssFaixas = Array.isArray(normalizado.configGerais.inssFaixas) && normalizado.configGerais.inssFaixas.length ? normalizado.configGerais.inssFaixas : criarTabelaINSSPadrao();
         normalizado.configGerais.folgasGerais = Array.isArray(normalizado.configGerais.folgasGerais) ? normalizado.configGerais.folgasGerais : [];
+        normalizado.configGerais.historicoSalarioMinimo = Array.isArray(normalizado.configGerais.historicoSalarioMinimo) ? normalizado.configGerais.historicoSalarioMinimo.filter(item => item && item.vigencia && item.valor) : [];
+        if(normalizado.configGerais.historicoSalarioMinimo.length === 0) normalizado.configGerais.historicoSalarioMinimo.push({ vigencia: '0000-01', valor: normalizado.configGerais.salarioMinimo || base.configGerais.salarioMinimo });
+        normalizado.configGerais.historicoSalarioMinimo.sort((a, b) => String(a.vigencia).localeCompare(String(b.vigencia)));
         normalizado.configGerais.diasAquisitivoFerias = Math.max(1, Math.min(370, Number(normalizado.configGerais.diasAquisitivoFerias || 360)));
         normalizado.configs.ultimaMudancaLocal = Number(normalizado.configs.ultimaMudancaLocal || 0);
         normalizado.configs.ultimaSincronizacao = Number(normalizado.configs.ultimaSincronizacao || 0);
@@ -126,6 +129,9 @@
         normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => {
             const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, recebeContracheque: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, recebeINSSProvento: true, temControlePonto: true, temFerias: true, ...funcionario };
             f.qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
+            f.historicoSalarios = Array.isArray(f.historicoSalarios) ? f.historicoSalarios.filter(item => item && item.vigencia && item.valor) : [];
+            if(f.historicoSalarios.length === 0) f.historicoSalarios.push({ vigencia: '0000-01', valor: f.salario || normalizado.configGerais.salarioMinimo });
+            f.historicoSalarios.sort((a, b) => String(a.vigencia).localeCompare(String(b.vigencia)));
             return f;
         });
         normalizado.registros = normalizado.registros.map((registro) => {

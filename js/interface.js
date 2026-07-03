@@ -134,9 +134,34 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function renderizarFiltros() { 
         let classTodos = categoriaAtual === null ? "active" : "";
-        let html = `<div class="chip ${classTodos}" onclick="filtrarCat(null)">TODOS</div>`; 
+        let html = `<div class="chip ${classTodos}" onclick="alternarNomesTodos()" title="Alternar nome completo e nome social">TODOS</div>`; 
         db.categorias.forEach(cat => { html += `<div class="chip ${categoriaAtual === cat.id ? 'active' : ''}" style="background-color: ${safeColor(cat.cor)}; color: ${safeColor(cat.corTexto, '#ffffff')};" onclick="filtrarCat(${jsArg(cat.id)})">${escapeHTML(cat.nome)}</div>`; }); 
         document.getElementById('containerFiltros').innerHTML = html; 
+    }
+
+    function alternarNomesTodos() {
+        categoriaAtual = null;
+        modoNomeLista = modoNomeLista === 'social' ? 'completo' : 'social';
+        renderizarFiltros();
+        renderizarLista();
+    }
+
+    function getNomeListaFuncionario(f) {
+        if(!f) return 'Funcionário';
+        return modoNomeLista === 'completo' ? (f.nome || f.nomeSocial || 'Funcionário') : (f.nomeSocial || f.nome || 'Funcionário');
+    }
+
+    function getAvisoAniversarioFuncionario(f) {
+        if(!f || !f.dataNasc) return '';
+        const partes = String(f.dataNasc).split('-').map(Number);
+        if(partes.length !== 3 || !partes[1] || !partes[2]) return '';
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        let aniversario = new Date(hoje.getFullYear(), partes[1] - 1, partes[2]);
+        if(aniversario < hoje) aniversario = new Date(hoje.getFullYear() + 1, partes[1] - 1, partes[2]);
+        const dias = Math.round((aniversario - hoje) / 86400000);
+        if(dias < 0 || dias > 7) return '';
+        const titulo = dias === 0 ? 'Aniversário hoje' : `Aniversário em ${dias} dia(s)`;
+        return `<span class="aniversario-proximo" title="${titulo}">🍰🥳</span>`;
     }
     
     function filtrarCat(id) { 
@@ -155,7 +180,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let funcs = db.funcionarios.filter(f => !f.arquivado);
         if (categoriaAtual) funcs = funcs.filter(f => f.categoria === categoriaAtual);
         if(diaFiltroAptos) funcs = funcs.filter(f => isAptoNoDia(f, diaFiltroAptos));
-        funcs.sort((a,b) => String(getNomeUsoFuncionario(a) || '').localeCompare(String(getNomeUsoFuncionario(b) || '')));
+        funcs.sort((a,b) => String(getNomeListaFuncionario(a) || '').localeCompare(String(getNomeListaFuncionario(b) || '')));
         return funcs;
     }
 
@@ -167,8 +192,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         funcs.forEach(f => {
             let catObj = db.categorias.find(c => c.id === f.categoria) || { cor: '#999', nome: 'Sem vínculo', semanal: false };
             let isSelected = itensSelecionados.has(f.id);
-            let nomeBase = getNomeUsoFuncionario(f);
-            let nomeFunc = escapeHTML(nomeBase || 'Sem nome');
+            let nomeBase = getNomeListaFuncionario(f);
+            let nomeFunc = escapeHTML(nomeBase || 'Sem nome') + getAvisoAniversarioFuncionario(f);
             let inicialFunc = escapeHTML(String(nomeBase || '?').charAt(0).toUpperCase());
             
             let feriasMsg = '';
@@ -635,7 +660,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const permissoesGerenciar = { empresa: 'dadosEmpresa', configGerais: 'configGerais', administradores: 'gerenciarAdministradores', categorias: 'vinculoHorarios', funcoes: 'vinculoHorarios' };
         if(permissoesGerenciar[tipo] && !garantirPermissao(permissoesGerenciar[tipo], () => abrirGerenciar(tipo), 'abrir esta área')) return;
         fecharModal('modalPainelUnificado');
-        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; document.getElementById('confDiasAquisitivoFerias').value = db.configGerais.diasAquisitivoFerias || 360; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderTemasConfig(); renderListasConfig(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
+        if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; document.getElementById('confDiasAquisitivoFerias').value = db.configGerais.diasAquisitivoFerias || 360; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderTemasConfig(); renderListasConfig(); renderHistoricoSalarioMinimo(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
         if(tipo === 'empresa') { document.getElementById('empLogoBase64').value = db.empresa.logo || ''; document.getElementById('previewLogo').innerHTML = db.empresa.logo ? `<img src="${db.empresa.logo}" style="max-height:50px;">` : ''; document.getElementById('empMostrarLogoTopo').checked = !!db.empresa.mostrarLogoTopo; document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
         
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
@@ -804,6 +829,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(titulo) titulo.style.display = semanal ? 'none' : '';
         if(box) box.style.display = semanal ? 'none' : '';
         if(linhaContracheque) linhaContracheque.style.display = 'none';
+        const boxValoresPresenca = document.getElementById('boxValoresPresencaVinculo');
+        if(boxValoresPresenca) boxValoresPresenca.style.display = semanal ? 'block' : 'none';
         const chkINSSProvento = document.getElementById('classePedirINSSProvento');
         if(chkINSSProvento && tipo === 'mensal_sem_carteira' && !document.getElementById('classeId').value) chkINSSProvento.checked = true;
     }
@@ -869,7 +896,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 intSai: document.getElementById('classeHoraIntSai').value,
                 semIntervalo: document.getElementById('classeSemIntervalo').checked
             },
-            salarios: tempSalariosClasse
+            salarios: semanal ? tempSalariosClasse : []
         };
         const idx = db.categorias.findIndex(x => x.id === id);
         if(idx >= 0) db.categorias[idx] = novo;
@@ -988,7 +1015,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 document.getElementById('funcHoraEntrada').value = c.horarios.entrada || ''; document.getElementById('funcHoraSaida').value = c.horarios.saida || '';
                 if(c.horarios.semIntervalo) { document.getElementById('funcHoraIntEnt').value = ''; document.getElementById('funcHoraIntSai').value = ''; document.getElementById('funcHoraIntEnt').disabled = true; document.getElementById('funcHoraIntSai').disabled = true; } else { document.getElementById('funcHoraIntEnt').value = c.horarios.intEnt || ''; document.getElementById('funcHoraIntSai').value = c.horarios.intSai || ''; document.getElementById('funcHoraIntEnt').disabled = false; document.getElementById('funcHoraIntSai').disabled = false; }
             }
-            if(c.salarios && c.salarios.length > 0) { document.getElementById('funcSalario').value = formatMoeda(c.salarios[0]); }
+            if(c.semanal && c.salarios && c.salarios.length > 0) document.getElementById('funcSalario').value = formatMoeda(c.salarios[0]);
+            else if(!c.semanal) document.getElementById('funcSalario').value = db.configGerais.salarioMinimo;
             document.getElementById('boxPermissoesSemanais').style.display = c.semanal ? 'block' : 'none';
         } else {
             document.getElementById('boxPermissoesSemanais').style.display = 'none';
@@ -1061,7 +1089,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             Object.assign(novo, { funcao: document.getElementById('funcFuncao').value, categoria: document.getElementById('funcCategoria').value, habFaltas: document.getElementById('funcHabFaltas').checked, habFerias: document.getElementById('funcHabFerias').checked, habAtrasos: document.getElementById('funcHabAtrasos').checked, horarios: { entrada: document.getElementById('funcHoraEntrada').value, saida: document.getElementById('funcHoraSaida').value, intEnt: document.getElementById('funcHoraIntEnt').value, intSai: document.getElementById('funcHoraIntSai').value, folgas: folgas } });
         }
         if(temPermissaoAtual('financeiro')) {
-            Object.assign(novo, { vtRota: linhaVisivel('linhaFuncVT') && document.getElementById('funcTemVT').checked ? document.getElementById('funcVTRota').value : '', pixList: tempPix, salario: document.getElementById('funcSalario').value, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, temGratificacao: linhaVisivel('linhaFuncGratificacao') && document.getElementById('funcTemGratificacao').checked, temSalFamilia: linhaVisivel('linhaFuncSalFamilia') && document.getElementById('funcTemSalFamilia').checked, temUnidentis: linhaVisivel('linhaFuncUnidentis') && document.getElementById('funcTemUnidentis').checked, descontaPassagem: linhaVisivel('linhaFuncPassagem') && document.getElementById('funcDescontaPassagem').checked, descontaINSS: linhaVisivel('linhaFuncINSS') && document.getElementById('funcDescontaINSS').checked, recebeINSSProvento: linhaVisivel('linhaFuncINSSProvento') && document.getElementById('funcRecebeINSSProvento').checked, recebeQuinquenio: linhaVisivel('linhaFuncQuinquenio') && document.getElementById('funcRecebeQuinquenio').checked, qtdQuinquenios: qtdQuinquenios, recebeQuinzena: linhaVisivel('linhaFuncQuinzena') && document.getElementById('funcRecebeQuinzena').checked, recebeContracheque: linhaVisivel('linhaFuncContracheque') && document.getElementById('funcRecebeContracheque').checked, temControlePonto: linhaVisivel('linhaFuncControlePonto') && document.getElementById('funcTemControlePonto').checked, temFerias: linhaVisivel('linhaFuncFerias') && document.getElementById('funcTemFerias').checked });
+            const salarioAnterior = existente ? existente.salario : '';
+            const salarioNovo = document.getElementById('funcSalario').value;
+            Object.assign(novo, { vtRota: linhaVisivel('linhaFuncVT') && document.getElementById('funcTemVT').checked ? document.getElementById('funcVTRota').value : '', pixList: tempPix, salario: salarioNovo, gratificacao: document.getElementById('funcGratificacao').value, salFamilia: document.getElementById('funcSalFamilia').value, unidentis: document.getElementById('funcUnidentis').value, temGratificacao: linhaVisivel('linhaFuncGratificacao') && document.getElementById('funcTemGratificacao').checked, temSalFamilia: linhaVisivel('linhaFuncSalFamilia') && document.getElementById('funcTemSalFamilia').checked, temUnidentis: linhaVisivel('linhaFuncUnidentis') && document.getElementById('funcTemUnidentis').checked, descontaPassagem: linhaVisivel('linhaFuncPassagem') && document.getElementById('funcDescontaPassagem').checked, descontaINSS: linhaVisivel('linhaFuncINSS') && document.getElementById('funcDescontaINSS').checked, recebeINSSProvento: linhaVisivel('linhaFuncINSSProvento') && document.getElementById('funcRecebeINSSProvento').checked, recebeQuinquenio: linhaVisivel('linhaFuncQuinquenio') && document.getElementById('funcRecebeQuinquenio').checked, qtdQuinquenios: qtdQuinquenios, recebeQuinzena: linhaVisivel('linhaFuncQuinzena') && document.getElementById('funcRecebeQuinzena').checked, recebeContracheque: linhaVisivel('linhaFuncContracheque') && document.getElementById('funcRecebeContracheque').checked, temControlePonto: linhaVisivel('linhaFuncControlePonto') && document.getElementById('funcTemControlePonto').checked, temFerias: linhaVisivel('linhaFuncFerias') && document.getElementById('funcTemFerias').checked });
+            if(!existente || Math.abs(parseMoeda(salarioAnterior) - parseMoeda(salarioNovo)) > 0.001) registrarValorHistorico(novo, getHojeSTR().substring(0, 7), salarioNovo);
         }
         const idx = db.funcionarios.findIndex(x => x.id === id); if(idx >= 0) db.funcionarios[idx] = novo; else db.funcionarios.push(novo); registrarAuditoria(idx >= 0 ? 'Funcionário editado' : 'Funcionário cadastrado', novo.nome || 'Funcionário sem nome', 'funcionario', id); salvarBanco(); fecharModal('modalFormFuncionario'); voltarDepoisFormFuncionario(); 
     }
@@ -1115,7 +1146,69 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function moverMotivo(idx, dir) { if(dir === -1 && idx > 0) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx-1]; tempMotivos[idx-1] = t; } if(dir === 1 && idx < tempMotivos.length-1) { let t = tempMotivos[idx]; tempMotivos[idx] = tempMotivos[idx+1]; tempMotivos[idx+1] = t; } renderListasConfig(); }
     function confirmarRemoverMotivo(idx) { motivoToDelete = idx; document.getElementById('modalConfirmExclusaoMotivo').style.display = 'flex'; }
     function executarRemocaoMotivo() { if(motivoToDelete !== null) { tempMotivos.splice(motivoToDelete, 1); renderListasConfig(); } fecharModal('modalConfirmExclusaoMotivo'); }
-    function salvarConfigGerais() { db.configGerais.salarioMinimo = document.getElementById('confSalario').value; db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value; db.configGerais.diasAquisitivoFerias = Math.max(1, Math.min(370, Number(document.getElementById('confDiasAquisitivoFerias').value || 360))); db.configGerais.tema = db.configGerais.tema || 'verde'; db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value); db.configGerais.valesTransporte = tempVT; db.configGerais.motivosAdiantamento = tempMotivos; db.configGerais.inssFaixas = ordenarINSS(tempINSS).length ? ordenarINSS(tempINSS) : criarTabelaINSSPadrao(); registrarAuditoria('Configurações gerais salvas', `Salário mínimo, quinzena, INSS, VT, motivos, férias e tema atualizados. Dias aquisitivos: ${db.configGerais.diasAquisitivoFerias}.`, 'configuracoes', 'gerais'); salvarBanco(); aplicarTemaApp(); fecharModal('modalConfigGerais'); document.getElementById('modalPainelUnificado').style.display='flex'; }
+    function registrarValorHistorico(alvo, vigencia, valor) {
+        if(!alvo || !vigencia || !valor) return;
+        const campo = alvo === db.configGerais ? 'historicoSalarioMinimo' : 'historicoSalarios';
+        if(!Array.isArray(alvo[campo])) alvo[campo] = [];
+        const existente = alvo[campo].find(item => item.vigencia === vigencia);
+        if(existente) existente.valor = valor;
+        else alvo[campo].push({ vigencia, valor });
+        alvo[campo].sort((a, b) => String(a.vigencia).localeCompare(String(b.vigencia)));
+    }
+
+    function obterValorHistorico(lista, mesRef, fallback = '') {
+        const ref = mesRef || getHojeSTR().substring(0, 7);
+        const ordenada = [...(lista || [])].filter(item => item && item.vigencia && item.valor && item.vigencia <= ref).sort((a, b) => String(a.vigencia).localeCompare(String(b.vigencia)));
+        return ordenada.length ? ordenada[ordenada.length - 1].valor : fallback;
+    }
+
+    function obterSalarioMinimoPorMes(mesRef) {
+        return parseMoeda(obterValorHistorico(db.configGerais.historicoSalarioMinimo, mesRef, db.configGerais.salarioMinimo));
+    }
+
+    function obterSalarioFuncionarioPorMes(f, mesRef) {
+        if(!f) return obterSalarioMinimoPorMes(mesRef);
+        return parseMoeda(obterValorHistorico(f.historicoSalarios, mesRef, f.salario || db.configGerais.salarioMinimo));
+    }
+
+    function renderHistoricoSalarioMinimo() {
+        const box = document.getElementById('listaHistoricoSalarioMinimo');
+        if(!box) return;
+        const historico = [...(db.configGerais.historicoSalarioMinimo || [])].sort((a, b) => String(b.vigencia).localeCompare(String(a.vigencia)));
+        box.innerHTML = historico.map(item => {
+            const vigencia = item.vigencia === '0000-01' ? 'Base anterior' : item.vigencia.split('-').reverse().join('/');
+            return `<div class="historico-salario-item"><span>${escapeHTML(vigencia)}</span><strong>R$ ${escapeHTML(item.valor)}</strong></div>`;
+        }).join('');
+    }
+
+    function salvarConfigGerais() {
+        const novoSalarioMinimo = document.getElementById('confSalario').value;
+        const salarioAnterior = db.configGerais.salarioMinimo;
+        const mudouSalario = Math.abs(parseMoeda(novoSalarioMinimo) - parseMoeda(salarioAnterior)) > 0.001;
+        if(mudouSalario) {
+            const vigencia = getHojeSTR().substring(0, 7);
+            registrarValorHistorico(db.configGerais, vigencia, novoSalarioMinimo);
+            db.funcionarios.forEach((f) => {
+                const tipo = getTipoPagamentoFuncionario(f);
+                if(tipo !== 'contracheque' && tipo !== 'mensal_sem_carteira') return;
+                registrarValorHistorico(f, vigencia, novoSalarioMinimo);
+                f.salario = novoSalarioMinimo;
+            });
+        }
+        db.configGerais.salarioMinimo = novoSalarioMinimo;
+        db.configGerais.adiantamentoQuinzena = document.getElementById('confAdiantamento').value;
+        db.configGerais.diasAquisitivoFerias = Math.max(1, Math.min(370, Number(document.getElementById('confDiasAquisitivoFerias').value || 360)));
+        db.configGerais.tema = db.configGerais.tema || 'verde';
+        db.configGerais.diasFuncionamento = Array.from(document.querySelectorAll('.chk-dias-func:checked')).map(el => el.value);
+        db.configGerais.valesTransporte = tempVT;
+        db.configGerais.motivosAdiantamento = tempMotivos;
+        db.configGerais.inssFaixas = ordenarINSS(tempINSS).length ? ordenarINSS(tempINSS) : criarTabelaINSSPadrao();
+        registrarAuditoria('Configurações gerais salvas', `Salário mínimo${mudouSalario ? ` com vigência ${getHojeSTR().substring(0, 7)}` : ''}, quinzena, INSS, VT, motivos, férias e tema atualizados. Dias aquisitivos: ${db.configGerais.diasAquisitivoFerias}.`, 'configuracoes', 'gerais');
+        salvarBanco();
+        aplicarTemaApp();
+        fecharModal('modalConfigGerais');
+        document.getElementById('modalPainelUnificado').style.display='flex';
+    }
 
     // POPULAR ADMIN SELECT
     function getAdminOptions(selectedId = '') { let html = optionHTML('', '-- Selecione --'); db.administradores.forEach(a => { html += optionHTML(a.id, a.nome, selectedId === a.id); }); return html; }
@@ -1203,18 +1296,45 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     function abrirWhatsappTexto(texto) {
         window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
     }
+
+    function obterSemanasPresenca(qtdSemanas = 8) {
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        const dia = hoje.getDay() || 7;
+        const segundaAtual = new Date(hoje); segundaAtual.setDate(hoje.getDate() - dia + 1);
+        const nomes = ['Qui', 'Sex', 'Sáb', 'Dom'];
+        const offsets = [3, 4, 5, 6];
+        const semanas = [];
+        for(let i = 0; i < qtdSemanas; i++) {
+            const segunda = new Date(segundaAtual); segunda.setDate(segundaAtual.getDate() - (i * 7));
+            const domingo = new Date(segunda); domingo.setDate(segunda.getDate() + 6);
+            const dias = offsets.map((offset, idx) => {
+                const data = new Date(segunda); data.setDate(segunda.getDate() + offset);
+                return { nome: nomes[idx], data: dataISO(data) };
+            });
+            semanas.push({ atual: i === 0, segunda: dataISO(segunda), domingo: dataISO(domingo), dias });
+        }
+        return semanas;
+    }
+
+    function renderSeletorSemanasPresenca(boxId, acao, selecionado = '', funcIds = []) {
+        const box = document.getElementById(boxId);
+        if(!box) return;
+        box.innerHTML = obterSemanasPresenca().map((semana) => {
+            const periodo = `${formatDataBR(semana.segunda).substring(0, 5)} a ${formatDataBR(semana.domingo).substring(0, 5)}`;
+            const botoes = semana.dias.map((dia) => {
+                const registrado = funcIds.length > 0 && funcIds.every(funcId => db.registros.some(r => r.type === 'presenca' && r.funcId === funcId && r.data === dia.data));
+                const classe = dia.data === selecionado ? 'selecionado' : (registrado ? 'registrado' : '');
+                return `<button type="button" class="btn-dia-rapido ${classe}" onclick="${acao}(${jsArg(dia.data)})">${dia.nome}<br><small>${formatDataBR(dia.data).substring(0, 5)}</small></button>`;
+            }).join('');
+            return `<div class="presenca-semana"><div class="presenca-semana-head"><span>${semana.atual ? 'Semana atual' : 'Semana anterior'}</span><small>${periodo}</small></div><div class="presenca-dias-grid">${botoes}</div></div>`;
+        }).join('');
+    }
     
     function abrirModalPresencaSemana() {
         if(!garantirPermissao('registrarPresencaSemanal', () => abrirModalPresencaSemana(), 'registrar presença semanal')) return;
         fecharModal('modalAcoesFunc'); const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId); if(!f) return;
         document.getElementById('dataPresencaManual').value = getHojeSTR();
-        
-        let dates = getDatesDaSemana();
-        let boxRapido = document.getElementById('boxBotoesDiasRapidos'); boxRapido.innerHTML = '';
-        let m = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-        let diasArr = [ {n:'Qui', dt:dates.qui.dt}, {n:'Sex', dt:dates.sex.dt}, {n:'Sáb', dt:dates.sab.dt}, {n:'Dom', dt:dates.dom.dt} ];
-        diasArr.forEach(d => { let dtStr = `${d.dt.getFullYear()}-${String(d.dt.getMonth()+1).padStart(2,'0')}-${String(d.dt.getDate()).padStart(2,'0')}`; boxRapido.innerHTML += `<button class="btn-dia-rapido" onclick="addPresencaManual('${dtStr}')">${d.n}<br>(${d.dt.getDate()}/${m[d.dt.getMonth()]})</button>`; });
-        
+        renderSeletorSemanasPresenca('boxBotoesDiasRapidos', 'addPresencaManual', '', [funcId]);
         renderizarPresencasPendentes(funcId); document.getElementById('modalPresencaSemana').style.display = 'flex';
     }
     
@@ -1223,7 +1343,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const funcId = document.getElementById('acoesFuncId').value; let f = db.funcionarios.find(x => x.id === funcId);
         let dt = dtForced || document.getElementById('dataPresencaManual').value; if(!dt) return; dataTempPresenca = dt;
         
-        if(db.registros.some(r => r.type==='presenca' && r.funcId===funcId && r.status==='pendente' && r.data===dt)) return alert("Dia já adicionado na lista pendente.");
+        if(db.registros.some(r => r.type==='presenca' && r.funcId===funcId && r.data===dt)) return alert("Esse dia já foi registrado para o funcionário.");
         
         let c = db.categorias.find(x => x.id === f.categoria);
         if(c && c.salarios && c.salarios.length > 1) {
@@ -1235,7 +1355,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
     }
     function confirmarSalarioPresenca(val) { fecharModal('modalEscolhaSalario'); registrarPresenca(val); }
-    function registrarPresenca(val) { const funcId = document.getElementById('acoesFuncId').value; const f = db.funcionarios.find(x => x.id === funcId); const reg = { id: 'reg_'+Date.now(), type: 'presenca', funcId: funcId, data: dataTempPresenca, valor: val, status: 'pendente', adminId: (getAdminAtual() || {}).id || '' }; db.registros.push(reg); registrarAuditoria('Presença semanal registrada', `${getNomeUsoFuncionario(f)} em ${formatDataBR(dataTempPresenca)} - R$ ${formatMoeda(val)}.`, 'presenca', reg.id); salvarBanco(); renderizarPresencasPendentes(funcId); }
+    function registrarPresenca(val) { const funcId = document.getElementById('acoesFuncId').value; const f = db.funcionarios.find(x => x.id === funcId); const reg = { id: 'reg_'+Date.now(), type: 'presenca', funcId: funcId, data: dataTempPresenca, valor: val, status: 'pendente', adminId: (getAdminAtual() || {}).id || '' }; db.registros.push(reg); registrarAuditoria('Presença semanal registrada', `${getNomeUsoFuncionario(f)} em ${formatDataBR(dataTempPresenca)} - R$ ${formatMoeda(val)}.`, 'presenca', reg.id); salvarBanco(); renderSeletorSemanasPresenca('boxBotoesDiasRapidos', 'addPresencaManual', '', [funcId]); renderizarPresencasPendentes(funcId); }
     
     function renderizarPresencasPendentes(funcId) {
         let box = document.getElementById('listaPresencasPendentes'); let hPagos = document.getElementById('listaHistoricoPagosSemana');
@@ -1244,7 +1364,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         
         let totalPend = 0; let html = '';
         pendentes.forEach(r => { totalPend += r.valor; html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:5px 0;"><span>📅 ${formatDataBR(r.data)}</span><span><b style="color:#00695C;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; color:#d32f2f; cursor:pointer;" onclick="excluirRegistro('${r.id}', 'presenca')">X</button></span></div>`; });
-        document.getElementById('totalPresencasPendentes').innerText = `R$ ${formatMoeda(totalPend)}`; box.innerHTML = html || '<div style="color:#999; text-align:center;">Nenhum dia lançado na semana atual.</div>';
+        document.getElementById('totalPresencasPendentes').innerText = `R$ ${formatMoeda(totalPend)}`; box.innerHTML = html || '<div style="color:#999; text-align:center;">Nenhum dia pendente.</div>';
         
         let htmlP = ''; pagos.forEach(r => { htmlP += `<div style="border-bottom:1px solid #ddd; padding:5px 0;"><b>Pagamento em ${formatDataBR(r.data)}</b><br><span style="color:#E65100; font-weight:bold;">Total: R$ ${formatMoeda(r.valorTotal)} (${r.dias.length} dias)</span></div>`; });
         hPagos.innerHTML = htmlP || '<div style="color:#999; text-align:center;">Nenhum histórico.</div>';
@@ -1274,6 +1394,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('massaPresencaData').value = diaFiltroAptos || getHojeSTR();
         document.getElementById('massaPresencaValor').value = '';
         document.getElementById('textoPresencaMassaSemana').innerText = `${funcs.length} funcionário(s) selecionado(s). O valor escolhido será lançado para todos nesse dia.`;
+        renderSeletorSemanasPresenca('boxBotoesDiasMassa', 'selecionarDiaPresencaMassa', document.getElementById('massaPresencaData').value, funcs.map(f => f.id));
         const valores = [];
         funcs.forEach((f) => {
             const cat = getCategoriaFuncionario(f);
@@ -1292,6 +1413,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('massaPresencaValor').value = formatMoeda(valor);
     }
 
+    function selecionarDiaPresencaMassa(data) {
+        document.getElementById('massaPresencaData').value = data;
+        renderSeletorSemanasPresenca('boxBotoesDiasMassa', 'selecionarDiaPresencaMassa', data, obterSelecionadosSemanais().map(f => f.id));
+    }
+
     function registrarPresencaMassaSemana() {
         if(!garantirPermissao('registrarPresencaSemanal', () => registrarPresencaMassaSemana(), 'registrar presença semanal')) return;
         const data = document.getElementById('massaPresencaData').value;
@@ -1303,16 +1429,16 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let criados = 0;
         let pulados = 0;
         funcs.forEach((f, idx) => {
-            const jaExiste = db.registros.some(r => r.type === 'presenca' && r.funcId === f.id && r.status === 'pendente' && r.data === data);
+            const jaExiste = db.registros.some(r => r.type === 'presenca' && r.funcId === f.id && r.data === data);
             if(jaExiste) { pulados++; return; }
             db.registros.push({ id: `reg_${agora}_${idx}`, type: 'presenca', funcId: f.id, data, valor, status: 'pendente', adminId: (getAdminAtual() || {}).id || '', criadoEm: agora, editadoEm: agora, _syncAtualizadoEm: agora });
             criados++;
         });
         registrarAuditoria('Presença semanal em massa', `${criados} funcionário(s) em ${formatDataBR(data)} - R$ ${formatMoeda(valor)}.${pulados ? ` ${pulados} já tinham esse dia pendente.` : ''}`, 'presenca_massa', data);
         salvarBanco();
-        fecharModal('modalPresencaMassaSemana');
+        renderSeletorSemanasPresenca('boxBotoesDiasMassa', 'selecionarDiaPresencaMassa', data, funcs.map(f => f.id));
+        document.getElementById('textoPresencaMassaSemana').innerText = `Registrado para ${criados} funcionário(s).${pulados ? ` ${pulados} já tinham esse dia.` : ''} Escolha outro dia para continuar.`;
         renderizarLista();
-        alert(`Presença registrada para ${criados} funcionário(s).${pulados ? ` ${pulados} já tinham esse dia pendente.` : ''}`);
     }
 
     // ADIANTAMENTOS
@@ -1484,7 +1610,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1;
             let diasUteisFalta = 0;
             for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) {
-                if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; if(registroDescontaDSR(r)) groups[mY].dsrSemanas.add(getWeekNumber(d)); }
+                if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) { diasUteisFalta++; if(registroDescontaDSR(r)) groups[mY].dsrSemanas.add(chaveSemanaAno(d)); }
             }
             if(r.descontarDia) { groups[mY].diasDesc += diasUteisFalta; }
             if(r.descontarPassagem) groups[mY].passDesc += diasUteisFalta;
@@ -1808,7 +1934,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const categoria = db.categorias.find(c => c.id === f.categoria);
         const campos = getCamposFuncionarioClasse(categoria || {});
         const beneficios = getBeneficiosVinculo(categoria || {});
-        const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
+        const salario = obterSalarioFuncionarioPorMes(f, getHojeSTR().substring(0, 7));
         const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
         const qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
         const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 * qtdQuinquenios : 0;
@@ -2356,7 +2482,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const categoria = db.categorias.find(c => c.id === f.categoria);
         const campos = getCamposFuncionarioClasse(categoria || {});
         const beneficios = getBeneficiosVinculo(categoria || {});
-        const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
+        const salario = obterSalarioFuncionarioPorMes(f, mesRef);
         const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
         const qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
         const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 * qtdQuinquenios : 0;
@@ -2558,7 +2684,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const [anoVT, mesVT] = vtMesRef.split('-').map(Number);
         const categoria = db.categorias.find(c => c.id === f.categoria);
         const campos = getCamposFuncionarioClasse(categoria || {});
-        const salario = parseMoeda(f.salario || db.configGerais.salarioMinimo);
+        const salario = obterSalarioFuncionarioPorMes(f, mesRef);
         const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
         const vales = calcularValesCombustivelMes(f, anoVT, mesVT);
         const valesPassagem = calcularValesCombustivelMes(f, ano, mes);
@@ -2891,10 +3017,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function chaveSemanaAno(data) {
-        const inicioAno = new Date(data.getFullYear(), 0, 1);
-        const diaAno = Math.floor((data - inicioAno) / 86400000) + 1;
-        const semana = Math.ceil((diaAno + inicioAno.getDay()) / 7);
-        return `${data.getFullYear()}-${semana}`;
+        const dia = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+        const diaSemana = dia.getDay() || 7;
+        dia.setDate(dia.getDate() - diaSemana + 1);
+        return dataISO(dia);
     }
 
     function calcularDescontosFaltasContracheque(f, ano, mes, salario) {

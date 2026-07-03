@@ -8,17 +8,17 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.48</title>
+    <title>Alô RH v1.0.49</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.48">
+    <link rel="stylesheet" href="css/styles.css?v=1.0.49">
 </head>
 <body>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.48</div>
+    <div class="splash-versao">v1.0.49</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
 </div>
 
@@ -64,7 +64,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.48</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.49</small>
         </h2>
         <div id="perfilAdminBox" class="perfil-admin-box"></div>
         <button class="btn-outline menu-perm" data-perm="dadosEmpresa" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
@@ -249,14 +249,16 @@
             </div>
         </div>
 
-        <div class="section-title">Salários Base do Vínculo</div>
-        <div class="form-group" style="margin-bottom: 5px;">
-            <div style="display: flex; gap: 5px;">
-                <input type="text" id="novoSalarioClasse" placeholder="R$ 0,00" inputmode="numeric" oninput="maskMoeda(this)" style="flex: 1;">
-                <button class="btn-action" onclick="addSalarioClasse()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">+</button>
+        <div id="boxValoresPresencaVinculo">
+            <div class="section-title">Valores por Presença</div>
+            <div class="form-group" style="margin-bottom: 5px;">
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="novoSalarioClasse" placeholder="R$ 0,00" inputmode="numeric" oninput="maskMoeda(this)" style="flex: 1;">
+                    <button class="btn-action" onclick="addSalarioClasse()" style="flex: none; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">+</button>
+                </div>
             </div>
+            <div id="listaSalariosClasse" style="background: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 100px; overflow-y: auto;"></div>
         </div>
-        <div id="listaSalariosClasse" style="background: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 100px; overflow-y: auto;"></div>
 
         <div class="modal-actions"><button class="btn-cancel" onclick="cancelarFormClasse()">Cancelar</button><button class="btn-action" onclick="salvarClasse()">Salvar</button></div>
     </div>
@@ -411,6 +413,7 @@
             <div class="form-group" style="flex:1;"><label>Salário Mínimo:</label><input type="text" id="confSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
             <div class="form-group" style="flex:1;"><label>Adiant. Quinzena:</label><input type="text" id="confAdiantamento" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
         </div>
+        <div id="listaHistoricoSalarioMinimo" class="historico-salario-minimo"></div>
         <div style="display: flex; gap: 10px;">
             <div class="form-group" style="flex:1;"><label>Dias para adquirir férias:</label><input type="number" id="confDiasAquisitivoFerias" inputmode="numeric" min="1" max="370" placeholder="360"></div>
             <div class="form-group" style="flex:1;"><label>Tema do app:</label><div id="confTemasApp" class="theme-picker"></div></div>
@@ -510,7 +513,7 @@
         <div class="modal-title" style="color:#E65100; border-color:#E65100;">Presença na Semana</div>
         <p style="font-size:12px; color:#666; margin-top:0;">Adicione os dias trabalhados. Depois clique em Confirmar Pagamento para zerar o acumulado e gerar o recibo.</p>
         
-        <div style="display:flex; gap:5px; margin-bottom:10px;" id="boxBotoesDiasRapidos"></div>
+        <div class="presenca-semanas-scroll" id="boxBotoesDiasRapidos"></div>
         <div style="display:flex; gap:5px; align-items:center; margin-bottom:15px; background:#fff3e0; padding:8px; border-radius:5px;">
             <input type="date" id="dataPresencaManual" style="flex:1;">
             <button class="btn-action" style="background:#E65100; padding:10px;" onclick="addPresencaManual()">+ Dia</button>
@@ -549,7 +552,8 @@
     <div class="modal">
         <div class="modal-title" style="color:#E65100; border-color:#E65100;">Registrar Presença</div>
         <p id="textoPresencaMassaSemana" style="font-size:12px; color:#666; margin-top:0;"></p>
-        <div class="form-group"><label>Data da presença:</label><input type="date" id="massaPresencaData"></div>
+        <div class="presenca-semanas-scroll" id="boxBotoesDiasMassa"></div>
+        <div class="form-group"><label>Data da presença:</label><input type="date" id="massaPresencaData" onchange="selecionarDiaPresencaMassa(this.value)"></div>
         <div class="form-group"><label>Valor para cada funcionário:</label><input type="text" id="massaPresencaValor" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
         <div id="botoesValoresPresencaMassa" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPresencaMassaSemana')">Cancelar</button><button class="btn-action" style="background:#E65100;" onclick="registrarPresencaMassaSemana()">Registrar</button></div>
@@ -705,7 +709,7 @@
         <div id="textoInformesContador" class="resumo-texto-preview" style="max-height:45vh;"></div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="fecharModal('modalInformesContador')">Fechar</button>
-            <button class="btn-outline" style="text-align:center;" onclick="copiarInformesContador()">Copiar texto</button>
+            <button class="btn-outline" style="text-align:center; margin-bottom:0;" onclick="copiarInformesContador()">Copiar texto</button>
             <button class="btn-action" style="background:#2E7D32;" onclick="enviarInformesContadorWhatsapp()">WhatsApp</button>
         </div>
     </div>
@@ -887,11 +891,11 @@
         </div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.48"></script>
-<script src="js/calculos.js?v=1.0.48"></script>
-<script src="js/interface.js?v=1.0.48"></script>
-<script src="js/impressao.js?v=1.0.48"></script>
-<script src="js/sincronizacao.js?v=1.0.48"></script>
+<script src="js/dados.js?v=1.0.49"></script>
+<script src="js/calculos.js?v=1.0.49"></script>
+<script src="js/interface.js?v=1.0.49"></script>
+<script src="js/impressao.js?v=1.0.49"></script>
+<script src="js/sincronizacao.js?v=1.0.49"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

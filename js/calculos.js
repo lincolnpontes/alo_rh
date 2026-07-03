@@ -1,6 +1,4 @@
 function getHojeSTR() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-    function getWeekNumber(d) { let date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7)); let yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1)); return Math.ceil((((date - yearStart) / 86400000) + 1)/7); }
-    
     function getDatesDaSemana() {
         let hj = new Date(); hj.setHours(0,0,0,0);
         let day = hj.getDay(); let isoDay = day === 0 ? 7 : day; 
