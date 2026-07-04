@@ -2503,6 +2503,62 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return mes ? `${nome} (${mes})` : nome;
     }
 
+    function arredondarCentavos(valor) {
+        const numero = Number(valor) || 0;
+        const sinal = numero < 0 ? -1 : 1;
+        return sinal * (Math.round((Math.abs(numero) + 1e-9) * 100) / 100);
+    }
+
+    function truncarCentavos(valor) {
+        const numero = Number(valor) || 0;
+        const sinal = numero < 0 ? -1 : 1;
+        return sinal * (Math.floor((Math.abs(numero) + 1e-9) * 100) / 100);
+    }
+
+    function somarParcelasMonetarias(...valores) {
+        return arredondarCentavos(valores.reduce((total, valor) => total + arredondarCentavos(valor), 0));
+    }
+
+    function subtrairParcelasMonetarias(base, ...descontos) {
+        return somarParcelasMonetarias(base, ...descontos.map(valor => -arredondarCentavos(valor)));
+    }
+
+    function calcularCompensacaoFeriasContracheque(f, ano, mes, salarioIntegral, gratificacaoIntegral) {
+        const primeiroDia = `${ano}-${String(mes).padStart(2, '0')}-01`;
+        const ultimoDia = dataISO(new Date(ano, mes, 0));
+        const diasFerias = new Set();
+        db.registros
+            .filter(r => (r.type === 'ferias' || r.type === 'ferias_pagamento') && r.funcId === f.id)
+            .forEach((registro) => {
+                const inicioRegistro = registro.type === 'ferias_pagamento' ? registro.gozoInicio : registro.data;
+                const fimRegistro = registro.type === 'ferias_pagamento' ? (registro.gozoFim || registro.gozoInicio) : (registro.dataFim || registro.data);
+                if(!inicioRegistro || !fimRegistro || fimRegistro < primeiroDia || inicioRegistro > ultimoDia) return;
+                const inicio = inicioRegistro < primeiroDia ? primeiroDia : inicioRegistro;
+                const fim = fimRegistro > ultimoDia ? ultimoDia : fimRegistro;
+                const atual = new Date(inicio + 'T00:00:00');
+                const limite = new Date(fim + 'T00:00:00');
+                for(; atual <= limite; atual.setDate(atual.getDate() + 1)) diasFerias.add(dataISO(atual));
+            });
+
+        const quantidadeFerias = Math.min(30, diasFerias.size);
+        const diasSalario = Math.max(0, 30 - quantidadeFerias);
+        const fatorSalario = diasSalario / 30;
+        const salario = arredondarCentavos(salarioIntegral * fatorSalario);
+        const gratificacao = arredondarCentavos(gratificacaoIntegral * fatorSalario);
+        return {
+            diasFerias: quantidadeFerias,
+            diasSalario,
+            salario,
+            gratificacao,
+            salarioCompensado: subtrairParcelasMonetarias(salarioIntegral, salario),
+            gratificacaoCompensada: subtrairParcelasMonetarias(gratificacaoIntegral, gratificacao)
+        };
+    }
+
+    function labelParcelaComFerias(nome, ferias) {
+        return ferias && ferias.diasFerias ? `${nome} (${ferias.diasSalario} dias)` : nome;
+    }
+
     function funcionarioRecebeContracheque(f) {
         if(!f || f.arquivado) return false;
         const categoria = db.categorias.find(c => c.id === f.categoria);
@@ -2522,32 +2578,38 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const categoria = db.categorias.find(c => c.id === f.categoria);
         const campos = getCamposFuncionarioClasse(categoria || {});
         const beneficios = getBeneficiosVinculo(categoria || {});
-        const salario = obterSalarioFuncionarioPorMes(f, mesRef);
-        const gratificacao = campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0;
+        const salarioIntegral = arredondarCentavos(obterSalarioFuncionarioPorMes(f, mesRef));
+        const gratificacaoIntegral = arredondarCentavos(campos.pedirGratificacao && f.temGratificacao !== false ? parseMoeda(f.gratificacao) : 0);
+        const ferias = calcularCompensacaoFeriasContracheque(f, ano, mes, salarioIntegral, gratificacaoIntegral);
+        const salario = ferias.salario;
+        const gratificacao = ferias.gratificacao;
         const qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
-        const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? salario * 0.05 * qtdQuinquenios : 0;
-        const salarioFamilia = campos.pedirSalFamilia && f.temSalFamilia !== false ? parseMoeda(f.salFamilia) : 0;
-        const unidentis = campos.pedirUnidentis && f.temUnidentis !== false ? parseMoeda(f.unidentis) : 0;
-        const vales = calcularValesCombustivelPagamento(f, anoVT, mesVT);
-        const valesPassagem = calcularValesCombustivelMes(f, ano, mes);
-        const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salario);
+        const salarioFamilia = arredondarCentavos(campos.pedirSalFamilia && f.temSalFamilia !== false ? parseMoeda(f.salFamilia) : 0);
+        const unidentis = arredondarCentavos(campos.pedirUnidentis && f.temUnidentis !== false ? parseMoeda(f.unidentis) : 0);
+        const valesCalculados = calcularValesCombustivelPagamento(f, anoVT, mesVT);
+        const vales = { ...valesCalculados, total: arredondarCentavos(valesCalculados.total) };
+        const valesPassagemCalculados = calcularValesCombustivelMes(f, ano, mes);
+        const valesPassagem = { ...valesPassagemCalculados, total: arredondarCentavos(valesPassagemCalculados.total) };
+        const faltas = calcularDescontosFaltasContracheque(f, ano, mes, salarioIntegral);
+        const baseQuinquenio = Math.max(0, subtrairParcelasMonetarias(salario, faltas.valorFaltas, faltas.valorDSR));
+        const quinquenio = beneficios.temQuinquenio && f.recebeQuinquenio === true ? arredondarCentavos(baseQuinquenio * 0.05 * qtdQuinquenios) : 0;
         const adiantamentosContra = obterAdiantamentosContracheque(f, mesRef);
         const podeDescontarINSS = campos.pedirINSS && f.descontaINSS !== false;
-        const baseInss = Math.max(0, salario + gratificacao + quinquenio - faltas.valorFaltas - faltas.valorDSR);
+        const baseInss = Math.max(0, subtrairParcelasMonetarias(somarParcelasMonetarias(salario, gratificacao, quinquenio), faltas.valorFaltas, faltas.valorDSR));
         const inssCalc = podeDescontarINSS ? calcularINSSPrevia(baseInss) : { valor: 0, aliquotaEfetiva: 0 };
         const overrideInss = overridesContracheque[f.id];
-        const inss = podeDescontarINSS ? (overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
+        const inss = podeDescontarINSS ? arredondarCentavos(overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
         const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
-        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? Math.min(salario * 0.06, valesPassagem.total) : 0;
-        const proventos = salario + gratificacao + quinquenio + salarioFamilia;
-        const descontosNormais = descontoPassagem + faltas.valorFaltas + faltas.valorDSR + inss;
-        const valorContracheque = proventos - descontosNormais;
+        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? arredondarCentavos(Math.min(salarioIntegral * 0.06, valesPassagem.total)) : 0;
+        const proventos = somarParcelasMonetarias(salario, gratificacao, quinquenio, salarioFamilia);
+        const descontosNormais = somarParcelasMonetarias(descontoPassagem, faltas.valorFaltas, faltas.valorDSR, inss);
+        const valorContracheque = subtrairParcelasMonetarias(proventos, descontosNormais);
         const descontosExtras = unidentis;
-        const descontos = descontosNormais + descontosExtras;
-        const subtotalSalario = valorContracheque - descontosExtras;
-        const liquido = subtotalSalario + vales.total;
-        const liquidoAPagar = liquido - adiantamentosContra.total;
-        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salario, gratificacao, qtdQuinquenios, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontosNormais, valorContracheque, descontosExtras, descontos, subtotalSalario, liquido, liquidoAPagar };
+        const descontos = somarParcelasMonetarias(descontosNormais, descontosExtras);
+        const subtotalSalario = subtrairParcelasMonetarias(valorContracheque, descontosExtras);
+        const liquido = somarParcelasMonetarias(subtotalSalario, vales.total);
+        const liquidoAPagar = subtrairParcelasMonetarias(liquido, adiantamentosContra.total);
+        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salarioIntegral, gratificacaoIntegral, salario, gratificacao, ferias, qtdQuinquenios, baseQuinquenio, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontosNormais, valorContracheque, descontosExtras, descontos, subtotalSalario, liquido, liquidoAPagar };
     }
 
     function montarLinhaAdiantamentosMensagem(d) {
@@ -2574,9 +2636,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             `*${f.nome || 'Funcionário'}*`,
             '',
             '> *Proventos:*',
-            `- Salário: R$ ${formatMoedaContracheque(d.salario)}`
+            `- ${labelParcelaComFerias('Salário', d.ferias)}: R$ ${formatMoedaContracheque(d.salario)}`
         ];
-        if(d.gratificacao) linhas.push(`- Gratificação: R$ ${formatMoedaContracheque(d.gratificacao)}`);
+        if(d.gratificacao) linhas.push(`- ${labelParcelaComFerias('Gratificação', d.ferias)}: R$ ${formatMoedaContracheque(d.gratificacao)}`);
         if(d.quinquenio) linhas.push(`- Quinquênio (${d.qtdQuinquenios}): R$ ${formatMoedaContracheque(d.quinquenio)}`);
         if(d.salarioFamilia) linhas.push(`- Salário Família: R$ ${formatMoedaContracheque(d.salarioFamilia)}`);
         linhas.push(`*- Total proventos:* R$ ${formatMoedaContracheque(d.proventos)}`);
@@ -3085,8 +3147,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return {
             diasFalta,
             dsr: semanasDSR.size,
-            valorFaltas: diasFalta * salarioDia,
-            valorDSR: semanasDSR.size * salarioDia
+            valorFaltas: arredondarCentavos(diasFalta * salarioDia),
+            valorDSR: arredondarCentavos(semanasDSR.size * salarioDia)
         };
     }
 
@@ -3384,20 +3446,26 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             .map(f => ({ limite: parseMoeda(f.limite), aliquota: parsePercentual(f.aliquota) }))
             .filter(f => f.limite > 0 && f.aliquota > 0);
         let anterior = 0;
+        let acumulado = 0;
         let total = 0;
         for(const faixa of faixas) {
-            const limiteAplicado = Math.min(base, faixa.limite);
-            if(limiteAplicado > anterior) total += (limiteAplicado - anterior) * (faixa.aliquota / 100);
+            const taxa = faixa.aliquota / 100;
+            if(base <= faixa.limite) {
+                const deducaoFaixa = arredondarCentavos((anterior * taxa) - acumulado);
+                total = (base * taxa) - deducaoFaixa;
+                break;
+            }
+            acumulado += (faixa.limite - anterior) * taxa;
             anterior = faixa.limite;
-            if(base <= faixa.limite) break;
+            total = acumulado;
         }
-        return { valor: total, aliquotaEfetiva: base ? (total / base) * 100 : 0 };
+        // A folha usa a dedução da faixa fechada em centavos e só então compõe os totais.
+        const valor = truncarCentavos(total);
+        return { valor, aliquotaEfetiva: base ? (valor / base) * 100 : 0 };
     }
 
     function formatMoedaContracheque(valor) {
-        const numero = Number(valor) || 0;
-        const ajuste = Number.EPSILON;
-        const duasCasas = numero < 0 ? Math.ceil((numero - ajuste) * 100) / 100 : Math.floor((numero + ajuste) * 100) / 100;
+        const duasCasas = arredondarCentavos(valor);
         return duasCasas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
@@ -3458,11 +3526,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const status = pagamentoDoc ? 'Pago' : (fechado ? 'Fechado' : (aberto ? 'Aberto' : 'Tocar para abrir'));
             const acaoPagamento = pagamentoDoc ? `<span class="contra-status">Pago em ${formatDataBR(pagamentoDoc.data)}</span>` : `<button class="btn-fechar-contra" style="background:#F57F17;" onclick="informarPagamentoDocumento('contracheque', ${jsArg(f.id)}, ${jsArg(mesRef)}, event)">Informar pagamento</button>`;
             const detalhes = aberto ? `<div class="contra-detalhes">
-                <div style="font-size:11px; color:#777; margin-bottom:8px;">Salário ${escapeHTML(getExtensoMes(mes))} de ${ano} • VT ${escapeHTML(getExtensoMes(mesVT))} de ${anoVT} • ${vales.passagens} passagens${faltas.diasFalta ? ` • ${faltas.diasFalta} falta(s)` : ''}</div>
+                <div style="font-size:11px; color:#777; margin-bottom:8px;">Salário ${escapeHTML(getExtensoMes(mes))} de ${ano} • VT ${escapeHTML(getExtensoMes(mesVT))} de ${anoVT} • ${vales.passagens} passagens${faltas.diasFalta ? ` • ${faltas.diasFalta} falta(s)` : ''}${d.ferias.diasFerias ? ` • ${d.ferias.diasFerias} dia(s) de férias compensados` : ''}</div>
                 <div class="contra-grid">
                     <div class="contra-box contra-box-proventos"><b style="color:#2E7D32;">Proventos</b>
-                        ${linhaContracheque('Salário', salario)}
-                        ${linhaContracheque('Gratificação', gratificacao)}
+                        ${linhaContracheque(labelParcelaComFerias('Salário', d.ferias), salario)}
+                        ${linhaContracheque(labelParcelaComFerias('Gratificação', d.ferias), gratificacao)}
                         ${linhaContracheque(`Quinquênio (${quinquenio ? qtdQuinquenios : 0})`, quinquenio)}
                         ${linhaContracheque('Salário Família', salarioFamilia)}
                         ${linhaContracheque('Total', proventos, { total: true })}
