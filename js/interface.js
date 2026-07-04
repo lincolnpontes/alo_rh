@@ -2600,7 +2600,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const overrideInss = overridesContracheque[f.id];
         const inss = podeDescontarINSS ? arredondarCentavos(overrideInss ? overrideInss.valor : inssCalc.valor) : 0;
         const inssAliquota = podeDescontarINSS ? (overrideInss ? overrideInss.aliquota : inssCalc.aliquotaEfetiva) : 0;
-        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? arredondarCentavos(Math.min(salarioIntegral * 0.06, valesPassagem.total)) : 0;
+        const baseDescontoPassagem = Math.max(0, subtrairParcelasMonetarias(salario, faltas.valorFaltas, faltas.valorDSR));
+        const descontoPassagem = (campos.pedirDescontoPassagem && f.descontaPassagem !== false) ? arredondarCentavos(Math.min(baseDescontoPassagem * 0.06, valesPassagem.total)) : 0;
         const proventos = somarParcelasMonetarias(salario, gratificacao, quinquenio, salarioFamilia);
         const descontosNormais = somarParcelasMonetarias(descontoPassagem, faltas.valorFaltas, faltas.valorDSR, inss);
         const valorContracheque = subtrairParcelasMonetarias(proventos, descontosNormais);
@@ -2609,7 +2610,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const subtotalSalario = subtrairParcelasMonetarias(valorContracheque, descontosExtras);
         const liquido = somarParcelasMonetarias(subtotalSalario, vales.total);
         const liquidoAPagar = subtrairParcelasMonetarias(liquido, adiantamentosContra.total);
-        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salarioIntegral, gratificacaoIntegral, salario, gratificacao, ferias, qtdQuinquenios, baseQuinquenio, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, descontoPassagem, proventos, descontosNormais, valorContracheque, descontosExtras, descontos, subtotalSalario, liquido, liquidoAPagar };
+        return { ano, mes, anoVT, mesVT, mesRef, vtMesRef, campos, beneficios, salarioIntegral, gratificacaoIntegral, salario, gratificacao, ferias, qtdQuinquenios, baseQuinquenio, quinquenio, salarioFamilia, unidentis, vales, valesPassagem, faltas, adiantamentosContra, inss, inssAliquota, baseDescontoPassagem, descontoPassagem, proventos, descontosNormais, valorContracheque, descontosExtras, descontos, subtotalSalario, liquido, liquidoAPagar };
     }
 
     function montarLinhaAdiantamentosMensagem(d) {
