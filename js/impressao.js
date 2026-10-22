@@ -21,17 +21,10 @@
             const id = f.id;
             let rotaObj = (db.configGerais.valesTransporte || []).find(v => v.rota === f.vtRota); if(!rotaObj) return;
             
-            let passagensPorDia = 2; let passagensMes = diasUteis * passagensPorDia;
-            
-            // Abater Faltas em DIAS UTEIS do mes anterior
-            let faltasAnt = db.registros.filter(r => r.type === 'falta' && r.funcId === id && r.descontarPassagem && r.data.startsWith(mesAntStr)).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasUteisFalta = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasUteisFalta++; } return acc + diasUteisFalta; }, 0);
-            
-            // Abater Ferias em DIAS UTEIS do mes atual
-            let feriasMesAt = db.registros.filter(r => r.type === 'ferias' && r.funcId === id).reduce((acc, r) => { let d1 = new Date(r.data + "T00:00:00"); let d2 = r.dataFim ? new Date(r.dataFim + "T00:00:00") : d1; let diasFeriasUteis = 0; for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)) { if(d.getFullYear()===ano && (d.getMonth()+1)===mes && db.configGerais.diasFuncionamento.includes(d.getDay().toString())) diasFeriasUteis++; } return acc + diasFeriasUteis; }, 0);
-
-            let descontoColetivo = diasFechados * passagensPorDia;
-            let descontoPassagens = ((faltasAnt + feriasMesAt) * passagensPorDia) + descontoColetivo; let passagensFinais = Math.max(0, passagensMes - descontoPassagens);
-            let valorUnit = parseMoeda(rotaObj.valor); let valTotal = passagensFinais * valorUnit;
+            const calculo = calcularValesCombustivelPagamento(f, ano, mes);
+            const passagensMes = calculo.passagensBase, descontoPassagens = calculo.passagensDescontadas;
+            const descontoColetivo = calculo.folgasGerais * 2;
+            const passagensFinais = calculo.passagens, valorUnit = calculo.valorUnit, valTotal = calculo.total;
             arrVTParaImprimir.push({ id: f.id, codigo: f.codigo || '', nome: f.nome, rota: rotaObj.rota, valorUnit: valorUnit, passagens: passagensFinais, valTotal: valTotal });
             const detalheFechado = descontoColetivo ? ` | Folga geral: -${descontoColetivo}` : '';
             
@@ -184,7 +177,7 @@
         itensQuinzena.forEach((item, idx) => {
             const existente = db.registros.find(r => r.type === 'desconto_quinzena' && r.funcId === item.funcId && r.mesRef === mesRef);
             const registro = existente || {
-                id: `dq_${item.funcId}_${mesRef.replace('-', '')}_${agora}_${idx}`
+                id: `dq_${item.funcId}_${mesRef.replace('-', '')}`
             };
             Object.assign(registro, {
                 type: 'desconto_quinzena',

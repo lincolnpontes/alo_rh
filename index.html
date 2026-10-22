@@ -2,24 +2,27 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.0.52</title>
+    <title>Alô RH v1.1.0</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.0.52">
+    <link rel="stylesheet" href="css/styles.css?v=1.1.0">
+<link rel="stylesheet" href="css/seguranca.css?v=1.1.0">
+<link rel="stylesheet" href="css/icones.css?v=1.1.0">
 </head>
-<body>
+<body class="rh-locked">
+<main id="rhAccess" aria-label="Acesso ao Alô RH"></main>
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.0.52</div>
-    <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;">🔄 Forçar Atualização</button>
+    <div class="splash-versao">v1.1.0</div>
+    <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;"><span class="rh-icon" data-icon="refresh" aria-hidden="true"></span> Forçar Atualização</button>
 </div>
 
 <div id="syncIndicador"></div>
@@ -33,13 +36,14 @@
         <div class="header-title">Alô RH</div>
         <img id="headerLogoEmpresa" class="header-logo-empresa" alt="Logo da empresa">
         <div class="header-actions">
-            <button id="btnHeaderAniversarios" onclick="abrirModalAniversarios()">🎂</button>
-            <button id="btnHeaderFerias" onclick="abrirCalendarioFerias()" title="Férias" aria-label="Férias">🏖️</button>
-            <button id="btnHeaderResumo" class="btn-resumo-header" onclick="abrirModalResumo()" title="Resumo" aria-label="Resumo">📝</button>
-            <button onclick="abrirMenuPrincipal()">⚙️</button>
+            <button id="btnHeaderAniversarios" aria-label="Aniversários" onclick="abrirModalAniversarios()"><span class="rh-icon" data-icon="cake" aria-hidden="true"></span></button>
+            <button id="btnHeaderFerias" onclick="abrirCalendarioFerias()" title="Férias" aria-label="Férias"><span class="rh-icon" data-icon="umbrella" aria-hidden="true"></span></button>
+            <button id="btnHeaderResumo" class="btn-resumo-header" onclick="abrirModalResumo()" title="Resumo" aria-label="Resumo"><span class="rh-icon" data-icon="list" aria-hidden="true"></span></button>
+            <button onclick="abrirMenuPrincipal()" aria-label="Menu principal"><span class="rh-icon" data-icon="settings" aria-hidden="true"></span></button>
         </div>
     </div>
     
+    <button id="rhSyncStatus" type="button" aria-live="polite">Conectando…</button>
     <div class="area-conteudo">
         <div id="actionBar" class="action-bar">
             <div class="selecao-lista-toolbar">
@@ -48,11 +52,11 @@
             <div id="boxFiltrosDias" class="dias-filtro-toolbar"></div>
             <div class="acoes-massa-toolbar" id="boxBarraAcoes">
                 <button class="btn-action-bar btn-folga-geral" id="btnFolgaGeral" onclick="abrirMenuAdicionar()" title="Adicionar" aria-label="Adicionar">+</button>
-                <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()">📄 Ponto</button>
-                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()">💰 Quinzena</button>
-                <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()">🚌 VT</button>
-                <button class="btn-action-bar" id="btnAcaoMassa4" style="display:none; background:#6A1B9A;" onclick="abrirDocumentosPagamento()">🧾 Contracheque</button>
-                <button class="btn-action-bar" id="btnAcaoMassaSemana" style="display:none; background:#E65100;" onclick="abrirModalPresencaMassaSemana()">✅ Registrar Presença</button>
+                <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()"><span class="rh-icon" data-icon="files" aria-hidden="true"></span> Ponto</button>
+                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()"><span class="rh-icon" data-icon="wallet" aria-hidden="true"></span> Quinzena</button>
+                <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()"><span class="rh-icon" data-icon="bus" aria-hidden="true"></span> VT</button>
+                <button class="btn-action-bar" id="btnAcaoMassa4" style="display:none; background:#6A1B9A;" onclick="abrirDocumentosPagamento()"><span class="rh-icon" data-icon="receipt" aria-hidden="true"></span> Contracheque</button>
+                <button class="btn-action-bar" id="btnAcaoMassaSemana" style="display:none; background:#E65100;" onclick="abrirModalPresencaMassaSemana()"><span class="rh-icon" data-icon="clipboard-check" aria-hidden="true"></span> Registrar Presença</button>
             </div>
         </div>
         
@@ -64,85 +68,54 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.0.52</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.1.0</small>
         </h2>
         <div id="perfilAdminBox" class="perfil-admin-box"></div>
-        <button class="btn-outline menu-perm" data-perm="dadosEmpresa" onclick="abrirGerenciar('empresa')">🏢 Dados da Empresa</button>
-        <button class="btn-outline" onclick="abrirGerenciar('funcionarios')">👥 Gerenciar Funcionários</button>
-        <button class="btn-outline menu-perm" data-perm="configGerais" onclick="abrirGerenciar('configGerais')">⚙️ Configurações Gerais</button>
-        <button class="btn-outline menu-perm" data-perm="gerenciarAdministradores" onclick="abrirGerenciar('administradores')">🛡️ Gerenciar Administradores</button>
-        <button class="btn-outline menu-perm" data-perm="auditoria" onclick="abrirAuditoria()">📋 Auditoria do Sistema</button>
+        <button class="btn-outline menu-perm" data-perm="dadosEmpresa" onclick="abrirGerenciar('empresa')"><span class="rh-icon" data-icon="building" aria-hidden="true"></span> Dados da Empresa</button>
+        <button class="btn-outline" onclick="abrirGerenciar('funcionarios')"><span class="rh-icon" data-icon="people" aria-hidden="true"></span> Gerenciar Funcionários</button>
+        <button class="btn-outline menu-perm" data-perm="configGerais" onclick="abrirGerenciar('configGerais')"><span class="rh-icon" data-icon="settings" aria-hidden="true"></span> Configurações Gerais</button>
+        <button class="btn-outline menu-perm" data-perm="gerenciarAdministradores" onclick="abrirGerenciar('administradores')"><span class="rh-icon" data-icon="shield" aria-hidden="true"></span> Gerenciar Administradores</button>
+        <button class="btn-outline menu-perm" data-perm="auditoria" onclick="abrirAuditoria()"><span class="rh-icon" data-icon="list" aria-hidden="true"></span> Auditoria do Sistema</button>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
         <h3 style="font-size: 16px; color: #d32f2f; margin-top: 15px; margin-bottom: 10px;">Avançado</h3>
-        <button class="btn-danger" style="width: 100%; margin-bottom: 10px;" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
+        <button class="btn-danger" style="width: 100%; margin-bottom: 10px;" onclick="solicitarAcessoAvancado()"><span class="rh-icon" data-icon="alert" aria-hidden="true"></span> Configurações Avançadas</button>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalPainelUnificado')">Fechar</button></div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="modalTrocarPerfilAdmin" style="z-index:1500;">
-    <div class="modal modal-login-perfil">
-        <div class="modal-title" style="color:#00695C; border-color:#00695C;"><span id="tituloTrocaPerfilAdmin">Entrar no Alô RH</span><button class="modal-x" id="btnFecharTrocaPerfil" onclick="fecharModal('modalTrocarPerfilAdmin')">X</button></div>
-        <div class="login-perfil-intro">Digite a senha numérica do seu perfil. O acesso e os botões do app seguem as permissões desse administrador.</div>
-        <div id="listaPerfisAdmin" class="perfil-admin-lista login-perfis"></div>
-        <div class="form-group login-senha-box"><label>Senha do perfil:</label><input type="password" id="senhaTrocaPerfilAdmin" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" oninput="aoDigitarSenhaPerfilAdmin(this)" onkeydown="if(event.key==='Enter') validarTrocaPerfilAdmin()" placeholder="••••"></div>
-        <div id="trocaPerfilErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;">Senha não encontrada.</div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalTrocarPerfilAdmin')">Cancelar</button><button class="btn-action" onclick="validarTrocaPerfilAdmin()">Entrar</button></div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="modalSenhaAvancada">
-    <div class="modal">
-        <div class="modal-title" style="color:#d32f2f;">Zona de Risco</div>
-        <p style="font-size:12px; color:#666; margin-top:0;">Digite a senha avancada para alterar sincronizacao, backups e historico.</p>
-        <div class="form-group"><label>Senha Avancada:</label><input type="password" id="senhaAvancada" inputmode="numeric" oninput="aoDigitarSenhaAvancada(this)"></div>
-        <div id="senhaAvancadaErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;">Senha incorreta.</div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalSenhaAvancada')">Cancelar</button><button class="btn-danger" onclick="validarAcessoAvancado()">Entrar</button></div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="modalCriarSenhaAvancada">
-    <div class="modal">
-        <div class="modal-title" style="color:#00695C;" id="tituloCriarSenhaAvancada">Criar Senha Avancada</div>
-        <p id="textoCriarSenhaAvancada" style="font-size:12px; color:#666; margin-top:0;">Crie uma senha numerica para proteger a area de sincronizacao, backup e exclusao de historico neste aparelho.</p>
-        <div class="form-group"><label>Nova Senha:</label><input type="password" id="novaSenhaAvancada" inputmode="numeric" maxlength="12" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
-        <div class="form-group"><label>Confirmar Senha:</label><input type="password" id="confirmaSenhaAvancada" inputmode="numeric" maxlength="12" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
-        <div id="novaSenhaAvancadaErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;"></div>
-        <div class="modal-actions"><button class="btn-cancel" onclick="cancelarCriacaoSenhaAvancada()">Cancelar</button><button class="btn-action" onclick="salvarNovaSenhaAvancada()">Salvar Senha</button></div>
     </div>
 </div>
 
 <div class="modal-overlay" id="modalConfigAvancadas">
     <div class="modal" style="max-height: 90vh; overflow-y: auto;">
-        <div class="modal-title" style="color:#d32f2f;">Zona de Risco</div>
+        <div class="modal-title" style="color:#d32f2f;">Dados e recuperação</div>
         <div class="section-title">Seguranca dos Dados</div>
-        <p style="font-size:12px; color:#555; margin-top:0;">CPF, PIX, salarios e historico ficam salvos neste aparelho e podem ir para a nuvem quando a sincronizacao estiver ativa. O arquivo da nuvem fica em Meu Drive &gt; Apps &gt; Alô RH. A senha avancada fica so neste aparelho e nao vai para o Google Script nem para os backups exportados.</p>
-        <button class="btn-outline" style="width: 100%; text-align: center; margin-bottom: 12px;" onclick="abrirTrocaSenhaAvancada()">Trocar Senha Avancada</button>
+        <p style="font-size:12px; color:#555; margin-top:0;">Os dados ficam neste aparelho e no banco do Google Apps Script. A barra superior informa o que está pendente e o que foi confirmado. Backups exportados não incluem senhas nem sessões.</p>
+        <button class="btn-outline" style="width: 100%; text-align: center; margin-bottom: 12px;" onclick="abrirHistoricoAcessos()">Histórico de acessos</button>
         <div class="form-group">
-            <label>URL Google Script com token:</label>
-            <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/.../exec?token=SEU_TOKEN">
-            <button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarURL()">💾 Salvar URL e Puxar Dados</button>
+            <label>Servidor Google Apps Script:</label>
+            <input type="text" id="configUrlApp" readonly placeholder="https://script.google.com/macros/s/.../exec">
             <div id="syncStatusTexto" style="font-size:11px; color:#666; margin-top:8px;">Ao abrir o app, a sincronizacao confere a nuvem automaticamente.</div>
         </div>
         <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
-            <button class="btn-outline" style="margin: 0; width: 100%; font-size: 15px; border-color:#0277BD; color:#0277BD; text-align:center;" onclick="forcarSincronizacaoManual()">🔁 Sincronizar Agora</button>
-            <button class="btn-outline" style="margin: 0; width: 100%; font-size: 15px; border-color:#00695C; color:#00695C; text-align:center;" onclick="testarSincronizacao()">🧪 Testar Sincronização</button>
-            <button class="btn-action" style="margin: 0; width: 100%; font-size: 15px; margin-bottom: 10px;" onclick="forcarEnvioNuvemCompleto()">☁️ Forçar Envio Completo pra Nuvem</button>
+            <button class="btn-outline" style="margin: 0; width: 100%; font-size: 15px; border-color:#0277BD; color:#0277BD; text-align:center;" onclick="forcarSincronizacaoManual()"><span class="rh-icon" data-icon="refresh" aria-hidden="true"></span> Sincronizar Agora</button>
+            <button class="btn-outline" style="margin: 0; width: 100%; font-size: 15px; border-color:#00695C; color:#00695C; text-align:center;" onclick="testarSincronizacao()"><span class="rh-icon" data-icon="connection" aria-hidden="true"></span> Testar Sincronização</button>
+            <button class="btn-action" style="margin: 0; width: 100%; font-size: 15px; margin-bottom: 10px;" onclick="forcarEnvioNuvemCompleto()"><span class="rh-icon" data-icon="cloud" aria-hidden="true"></span> Criar backup no servidor</button>
             <div style="display: flex; gap: 8px; width: 100%;">
-                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#00695C; color:#00695C; text-align: center;" onclick="exportarDados()">⬇️ Exportar Dados</button>
-                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#d32f2f; color:#d32f2f; text-align: center;" onclick="document.getElementById('fileImport').click()">⬆️ Importar Dados</button>
+                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#00695C; color:#00695C; text-align: center;" onclick="exportarDados()"><span class="rh-icon" data-icon="arrow-down" aria-hidden="true"></span> Exportar Dados</button>
+                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#d32f2f; color:#d32f2f; text-align: center;" onclick="document.getElementById('fileImport').click()"><span class="rh-icon" data-icon="arrow-up" aria-hidden="true"></span> Importar Dados</button>
                 <input type="file" id="fileImport" style="display:none;" accept=".json" onchange="importarDados(event)">
             </div>
             <div style="display: flex; gap: 8px; width: 100%; margin-top: 8px;">
-                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#0277BD; color:#0277BD; text-align: center;" onclick="baixarModeloFuncionariosXLSX()">📄 Modelo Funcionários</button>
-                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#2E7D32; color:#2E7D32; text-align: center;" onclick="document.getElementById('fileImportFuncionariosXLSX').click()">📥 Importar Funcionários</button>
-                <input type="file" id="fileImportFuncionariosXLSX" style="display:none;" accept=".xlsx,.xls" onchange="importarFuncionariosXLSX(event)">
+                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#0277BD; color:#0277BD; text-align: center;" onclick="baixarModeloFuncionariosXLSX()"><span class="rh-icon" data-icon="files" aria-hidden="true"></span> Modelo Funcionários</button>
+                <button class="btn-outline" style="margin: 0; flex: 1; font-size: 13px; border-color:#2E7D32; color:#2E7D32; text-align: center;" onclick="document.getElementById('fileImportFuncionariosXLSX').click()"><span class="rh-icon" data-icon="import" aria-hidden="true"></span> Importar Funcionários</button>
+                <input type="file" id="fileImportFuncionariosXLSX" style="display:none;" accept=".xlsx" onchange="importarFuncionariosXLSX(event)">
             </div>
         </div>
+        <button class="btn-outline" onclick="RHSync.localBackups()">Cópias locais anteriores</button>
+        <button class="btn-outline" onclick="RHSync.integrity()">Verificar vínculos do histórico</button>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 13px; color: #555; margin-bottom: 5px;">Atenção: A ação abaixo é irreversível.</p>
-        <div class="form-group"><label>Para apagar todo o histórico de lançamentos, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()">🗑️ Apagar Todo o Histórico</button></div>
+        <p style="font-size: 13px; color: #555; margin-bottom: 5px;">Uma cópia local será preservada antes de excluir o histórico.</p>
+        <div class="form-group"><label>Para apagar todo o histórico de lançamentos, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()"><span class="rh-icon" data-icon="trash-2" aria-hidden="true"></span> Apagar Todo o Histórico</button></div>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <div class="form-group"><label>App travou ou quer puxar versão nova?</label><button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; width: 100%; text-align: center;" onclick="forcarAtualizacao()">🔄 Forçar Atualização do App</button></div>
+        <div class="form-group"><label>App travou ou quer puxar versão nova?</label><button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; width: 100%; text-align: center;" onclick="forcarAtualizacao()"><span class="rh-icon" data-icon="refresh" aria-hidden="true"></span> Forçar Atualização do App</button></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalConfigAvancadas'); document.getElementById('modalPainelUnificado').style.display='flex';">Voltar</button></div>
     </div>
 </div>
@@ -165,8 +138,8 @@
             <button class="btn-action" id="btnNovoListagem" style="flex: 2; padding: 10px; font-size: 14px; border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 8px;">
                 <span style="font-size: 18px; font-weight: bold; line-height: 1;">+</span> Novo
             </button>
-            <button class="btn-outline" id="btnClassesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('categorias')">🏷️ Vínculos</button>
-            <button class="btn-outline" id="btnFuncoesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('funcoes')">💼 Funções</button>
+            <button class="btn-outline" id="btnClassesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('categorias')"><span class="rh-icon" data-icon="tag" aria-hidden="true"></span> Vínculos</button>
+            <button class="btn-outline" id="btnFuncoesListagem" style="margin: 0; flex: 1; border-radius: 8px; display: none; padding: 10px; text-align: center;" onclick="abrirGerenciar('funcoes')"><span class="rh-icon" data-icon="briefcase" aria-hidden="true"></span> Funções</button>
         </div>
 
         <div id="conteudoListagem" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
@@ -279,7 +252,7 @@
         <div class="modal-title">Administrador</div>
         <input type="hidden" id="adminId">
         <div class="form-group"><label>Nome do Perfil:</label><input type="text" id="adminNome"></div>
-        <div class="form-group"><label>Senha do Perfil:</label><input type="password" id="adminSenha" placeholder="Senha numérica" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+        <div class="form-group"><label>PIN da pessoa:</label><input type="password" id="adminSenha" placeholder="4 a 12 dígitos" maxlength="12" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
         <div class="section-title">Permissões</div>
         <div id="adminPermissoesBox" class="switch-panel permissoes-admin-grid"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormAdmin'); abrirGerenciar('administradores');">Cancelar</button><button class="btn-action" onclick="salvarAdmin()">Salvar</button></div>
@@ -361,7 +334,7 @@
         
         <div class="salario-base-row">
             <div class="form-group"><label>Salário Base (Padrão):</label><input type="text" id="funcSalario" inputmode="numeric" oninput="maskMoeda(this)" placeholder="0,00"></div>
-            <button type="button" id="btnHistoricoSalarioFuncionario" class="btn-historico-salario" onclick="abrirHistoricoSalarioFuncionario()" title="Histórico de salários">🕘 Histórico</button>
+            <button type="button" id="btnHistoricoSalarioFuncionario" class="btn-historico-salario" onclick="abrirHistoricoSalarioFuncionario()" title="Histórico de salários"><span class="rh-icon" data-icon="history" aria-hidden="true"></span> Histórico</button>
         </div>
 
         <div id="boxBeneficiosVinculo" class="switch-panel" style="display:none;">
@@ -480,7 +453,7 @@
 
 <div class="modal-overlay" id="modalConfirmExclusaoMotivo" style="z-index:2000;">
     <div class="modal" style="text-align:center;">
-        <div style="font-size:40px; margin-bottom:10px;">⚠️</div>
+        <div style="font-size:40px; margin-bottom:10px;"><span class="rh-icon" data-icon="alert" aria-hidden="true"></span></div>
         <div class="modal-title" style="justify-content:center; color:#d32f2f; border:none; margin-bottom:5px;">Excluir Motivo?</div>
         <p style="font-size:14px; color:#555; margin-bottom:20px;">Tem certeza que deseja remover este motivo da lista?</p>
         <div style="display:flex; gap:10px;">
@@ -492,20 +465,20 @@
 
 <div class="modal-overlay" id="modalAcoesFunc">
     <div class="modal">
-        <div class="modal-title modal-title-funcionario"><span id="tituloAcoesFunc">Nome do Funcionário</span><button type="button" id="btnEditarFuncAcoes" class="btn-editar-func-acoes" onclick="abrirEdicaoFuncionarioAcoes()" title="Editar funcionário">✏️</button></div>
+        <div class="modal-title modal-title-funcionario"><span id="tituloAcoesFunc">Nome do Funcionário</span><button type="button" id="btnEditarFuncAcoes" class="btn-editar-func-acoes" onclick="abrirEdicaoFuncionarioAcoes()" title="Editar funcionário" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button></div>
         <input type="hidden" id="acoesFuncId">
         
-        <button class="btn-outline" id="btnAcaoAdiantamento" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento(null, 'acoes')">💸 Adiantamentos</button>
-        <button class="btn-outline" id="btnAcaoFalta" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()">❌ Registrar Ausência</button>
-        <button class="btn-outline" id="btnAcaoAtraso" style="border-color:#795548; color:#795548;" onclick="abrirModalAtraso()">⏱️ Registrar Atraso</button>
-        <button class="btn-outline" id="btnAcaoFerias" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()">🏖️ Ver Férias</button>
+        <button class="btn-outline" id="btnAcaoAdiantamento" style="border-color:#1565C0; color:#1565C0;" onclick="abrirModalAdiantamento(null, 'acoes')"><span class="rh-icon" data-icon="wallet" aria-hidden="true"></span> Adiantamentos</button>
+        <button class="btn-outline" id="btnAcaoFalta" style="border-color:#D32F2F; color:#D32F2F;" onclick="abrirModalFalta()"><span class="rh-icon" data-icon="absence" aria-hidden="true"></span> Registrar Ausência</button>
+        <button class="btn-outline" id="btnAcaoAtraso" style="border-color:#795548; color:#795548;" onclick="abrirModalAtraso()"><span class="rh-icon" data-icon="clock" aria-hidden="true"></span> Registrar Atraso</button>
+        <button class="btn-outline" id="btnAcaoFerias" style="border-color:#F57F17; color:#F57F17;" onclick="abrirModalFerias()"><span class="rh-icon" data-icon="umbrella" aria-hidden="true"></span> Ver Férias</button>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
-            <button class="btn-outline btn-pix-app" style="border-color:#0277BD; color:#0277BD; margin-bottom:0; text-align:center;" onclick="abrirEscolhaPixFuncionario()"><span class="emoji-pix">🔑</span> Pix</button>
-            <button class="btn-outline" style="border-color:#2E7D32; color:#2E7D32; margin-bottom:0; text-align:center;" onclick="abrirWhatsappFuncionario()">💬 WhatsApp</button>
+            <button class="btn-outline btn-pix-app" style="border-color:#0277BD; color:#0277BD; margin-bottom:0; text-align:center;" onclick="abrirEscolhaPixFuncionario()"><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span> Pix</button>
+            <button class="btn-outline" style="border-color:#2E7D32; color:#2E7D32; margin-bottom:0; text-align:center;" onclick="abrirWhatsappFuncionario()"><span class="rh-icon" data-icon="chat" aria-hidden="true"></span> WhatsApp</button>
         </div>
         
         <div id="btnPagarExtra" style="display:none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
-            <button class="btn-action" style="width: 100%; background:#E65100;" onclick="abrirModalPresencaSemana()">✅ Presença na Semana</button>
+            <button class="btn-action" style="width: 100%; background:#E65100;" onclick="abrirModalPresencaSemana()"><span class="rh-icon" data-icon="clipboard-check" aria-hidden="true"></span> Presença na Semana</button>
         </div>
 
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalAcoesFunc')">Voltar</button></div>
@@ -538,8 +511,8 @@
             <span id="totalPresencasPendentes" style="color:#E65100;">R$ 0,00</span>
         </div>
 
-        <button class="btn-outline btn-pix-app" style="width: 100%; margin-bottom: 10px; border-color:#0277BD; color:#0277BD; font-size:14px;" onclick="copiarPixFuncionario()"><span class="emoji-pix">🔑</span> Copiar Chave PIX</button>
-        <button class="btn-action" style="width: 100%; margin-bottom: 15px; background-color:#E65100; font-size:16px;" onclick="confirmarPagamentoSemana()">💰 Confirmar Pagamento</button>
+        <button class="btn-outline btn-pix-app" style="width: 100%; margin-bottom: 10px; border-color:#0277BD; color:#0277BD; font-size:14px;" onclick="copiarPixFuncionario()"><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span> Copiar Chave PIX</button>
+        <button class="btn-action" style="width: 100%; margin-bottom: 15px; background-color:#E65100; font-size:16px;" onclick="confirmarPagamentoSemana()"><span class="rh-icon" data-icon="wallet" aria-hidden="true"></span> Confirmar Pagamento</button>
         
         <button class="btn-outline" style="border:none; color:#777; padding:0; font-size:12px; text-decoration:underline;" onclick="toggleDiv('areaHistPagosSemana')">Ver Histórico de Pagamentos</button>
         <div id="areaHistPagosSemana" style="display:none; margin-top:10px;">
@@ -606,7 +579,7 @@
             <div id="listaHistoricoAdiantDescontados" style="background:#f9f9f9; padding:8px; border-radius:4px; max-height:120px; overflow-y:auto; font-size:12px;"></div>
         </div>
 
-        <button class="btn-outline" style="width:100%; margin-top:12px; border-color:#2E7D32; color:#2E7D32; text-align:center;" onclick="enviarResumoDividaWhatsapp()">💬 Enviar resumo da dívida</button>
+        <button class="btn-outline" style="width:100%; margin-top:12px; border-color:#2E7D32; color:#2E7D32; text-align:center;" onclick="enviarResumoDividaWhatsapp()"><span class="rh-icon" data-icon="chat" aria-hidden="true"></span> Enviar resumo da dívida</button>
         <div class="modal-actions"><button class="btn-cancel" onclick="voltarModalAdiantamento()" style="width: 100%;">Voltar</button></div>
     </div>
 </div>
@@ -708,8 +681,8 @@
     <div class="modal">
         <div class="modal-title">Adicionar</div>
         <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirModalFolgaGeral()"><span style="font-size:20px;">+</span><span>Folga Geral</span></button>
-        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirPagamentosPendentes()"><span style="font-size:20px;">💳</span><span>Pagamentos Pendentes</span></button>
-        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirInformesContador()"><span style="font-size:20px;">📋</span><span>Informes Contador</span></button>
+        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirPagamentosPendentes()"><span style="font-size:20px;"><span class="rh-icon" data-icon="card" aria-hidden="true"></span></span><span>Pagamentos Pendentes</span></button>
+        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirInformesContador()"><span style="font-size:20px;"><span class="rh-icon" data-icon="list" aria-hidden="true"></span></span><span>Informes Contador</span></button>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalMenuAdicionar')" style="width: 100%;">Fechar</button></div>
     </div>
 </div>
@@ -810,9 +783,9 @@
         <input type="hidden" id="contraSenhaFuncId">
         <input type="hidden" id="contraSenhaContexto" value="contracheque">
         <input type="hidden" id="contraSenhaMesRef">
-        <p id="contraSenhaTexto" style="font-size:12px; color:#666; margin-top:0;">Digite a senha de um administrador para reabrir e permitir ajustes neste contracheque.</p>
-        <div class="form-group"><label>Senha do ADM:</label><input type="password" id="contraSenhaAdmin" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
-        <div id="contraSenhaErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;">Senha incorreta.</div>
+        <p id="contraSenhaTexto" style="font-size:12px; color:#666; margin-top:0;">Confirme seu PIN para reabrir e permitir ajustes neste contracheque.</p>
+        <div class="form-group"><label>Seu PIN:</label><input type="password" id="contraSenhaAdmin" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+        <div id="contraSenhaErro" style="display:none; color:#d32f2f; font-size:12px; font-weight:bold; margin-bottom:10px;">PIN incorreto.</div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalSenhaAdminContracheque')">Cancelar</button><button class="btn-action" style="background:#2E7D32;" onclick="validarSenhaContracheque()">Reabrir</button></div>
     </div>
 </div>
@@ -842,7 +815,7 @@
 
 <div class="modal-overlay" id="modalAniversarios">
     <div class="modal">
-        <div class="modal-title">🎂 Aniversariantes</div>
+        <div class="modal-title"><span class="rh-icon" data-icon="cake" aria-hidden="true"></span> Aniversariantes</div>
         <div id="listaAniversarios" style="max-height: 60vh; overflow-y: auto;"></div>
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalAniversarios')">Fechar</button></div>
     </div>
@@ -903,11 +876,19 @@
         </div>
     </div>
 </div>
-<script src="js/dados.js?v=1.0.52"></script>
-<script src="js/calculos.js?v=1.0.52"></script>
-<script src="js/interface.js?v=1.0.52"></script>
-<script src="js/impressao.js?v=1.0.52"></script>
-<script src="js/sincronizacao.js?v=1.0.52"></script>
+<script src="js/config.js"></script>
+<script src="js/protocolo.js"></script>
+<script src="js/modelo.js"></script>
+<script src="js/dados.js?v=1.1.0"></script>
+<script src="js/calculos.js?v=1.1.0"></script>
+<script src="js/interface.js?v=1.1.0"></script>
+<script src="js/impressao.js?v=1.1.0"></script>
+<script src="js/sincronizacao.js?v=1.1.0"></script>
+<script src="js/armazenamento.js"></script>
+<script src="js/autenticacao.js"></script>
+<script src="js/sync-seguro.js"></script>
+<script src="js/app-seguro.js"></script>
+<script src="js/acessibilidade.js"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {

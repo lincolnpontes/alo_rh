@@ -1,0 +1,35 @@
+.rh-icon{display:inline-block;width:1.2em;height:1.2em;vertical-align:-.22em;flex-shrink:0;background:currentColor;mask:var(--rh-icon) center/contain no-repeat;-webkit-mask:var(--rh-icon) center/contain no-repeat;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.header-actions .rh-icon{width:24px;height:24px}.btn-outline>.rh-icon{margin-right:7px}
+[data-icon="absence"]{--rh-icon:url("../icons/ui/absence.svg")}
+[data-icon="alert"]{--rh-icon:url("../icons/ui/alert.svg")}
+[data-icon="arrow-down"]{--rh-icon:url("../icons/ui/arrow-down.svg")}
+[data-icon="arrow-up"]{--rh-icon:url("../icons/ui/arrow-up.svg")}
+[data-icon="briefcase"]{--rh-icon:url("../icons/ui/briefcase.svg")}
+[data-icon="building"]{--rh-icon:url("../icons/ui/building.svg")}
+[data-icon="bus"]{--rh-icon:url("../icons/ui/bus.svg")}
+[data-icon="cake"]{--rh-icon:url("../icons/ui/cake.svg")}
+[data-icon="calendar"]{--rh-icon:url("../icons/ui/calendar.svg")}
+[data-icon="card"]{--rh-icon:url("../icons/ui/card.svg")}
+[data-icon="chat"]{--rh-icon:url("../icons/ui/chat.svg")}
+[data-icon="clipboard-check"]{--rh-icon:url("../icons/ui/clipboard-check.svg")}
+[data-icon="clock"]{--rh-icon:url("../icons/ui/clock.svg")}
+[data-icon="cloud"]{--rh-icon:url("../icons/ui/cloud.svg")}
+[data-icon="connection"]{--rh-icon:url("../icons/ui/connection.svg")}
+[data-icon="eye"]{--rh-icon:url("../icons/ui/eye.svg")}
+[data-icon="files"]{--rh-icon:url("../icons/ui/files.svg")}
+[data-icon="history"]{--rh-icon:url("../icons/ui/history.svg")}
+[data-icon="import"]{--rh-icon:url("../icons/ui/import.svg")}
+[data-icon="list"]{--rh-icon:url("../icons/ui/list.svg")}
+[data-icon="manager-key"]{--rh-icon:url("../icons/ui/manager-key.svg")}
+[data-icon="package"]{--rh-icon:url("../icons/ui/package.svg")}
+[data-icon="pencil"]{--rh-icon:url("../icons/ui/pencil.svg")}
+[data-icon="people"]{--rh-icon:url("../icons/ui/people.svg")}
+[data-icon="receipt"]{--rh-icon:url("../icons/ui/receipt.svg")}
+[data-icon="refresh"]{--rh-icon:url("../icons/ui/refresh.svg")}
+[data-icon="restore"]{--rh-icon:url("../icons/ui/restore.svg")}
+[data-icon="settings"]{--rh-icon:url("../icons/ui/settings.svg")}
+[data-icon="shield"]{--rh-icon:url("../icons/ui/shield.svg")}
+[data-icon="tag"]{--rh-icon:url("../icons/ui/tag.svg")}
+[data-icon="trash-2"]{--rh-icon:url("../icons/ui/trash-2.svg")}
+[data-icon="umbrella"]{--rh-icon:url("../icons/ui/umbrella.svg")}
+[data-icon="wallet"]{--rh-icon:url("../icons/ui/wallet.svg")}

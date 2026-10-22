@@ -1,387 +1,25 @@
-// AVANCADO, SEGURANCA E SINCRONIZACAO
-    let modoSenhaAvancada = 'criar';
-    let validandoSenhaAvancadaAuto = false;
-
-    function abrirModalSenhaAvancada(modo = 'criar') {
-        modoSenhaAvancada = modo;
-        document.getElementById('novaSenhaAvancada').value = '';
-        document.getElementById('confirmaSenhaAvancada').value = '';
-        document.getElementById('novaSenhaAvancadaErro').style.display = 'none';
-        document.getElementById('tituloCriarSenhaAvancada').innerText = modo === 'trocar' ? 'Trocar Senha Avancada' : 'Criar Senha Avancada';
-        document.getElementById('textoCriarSenhaAvancada').innerText = modo === 'trocar'
-            ? 'Defina uma nova senha numerica para a area avancada deste aparelho.'
-            : 'Crie uma senha numerica para proteger a area de sincronizacao, backup e exclusao de historico neste aparelho.';
-        document.getElementById('modalCriarSenhaAvancada').style.display = 'flex';
-        setTimeout(() => document.getElementById('novaSenhaAvancada').focus(), 100);
-    }
-
-    function solicitarAcessoAvancado() {
+// Transporte autenticado e fila persistente em sync-seguro.js.
+    async function solicitarAcessoAvancado() {
+        if(!await RHAuth.settings()) return;
         fecharModal('modalPainelUnificado');
-        if(!senhaAvancadaConfigurada()) {
-            abrirModalSenhaAvancada('criar');
-            return;
-        }
-        document.getElementById('senhaAvancada').value = '';
-        document.getElementById('senhaAvancadaErro').style.display = 'none';
-        document.getElementById('modalSenhaAvancada').style.display = 'flex';
-        setTimeout(() => document.getElementById('senhaAvancada').focus(), 100);
+        document.getElementById('configUrlApp').value = RH_CONFIG.endpoint;
+        document.getElementById('modalConfigAvancadas').style.display = 'flex';
     }
-
-    async function validarAcessoAvancado() {
-        const input = document.getElementById('senhaAvancada');
-        const erro = document.getElementById('senhaAvancadaErro');
-        try {
-            if(await validarSenhaAvancada(input.value)) {
-                input.blur();
-                input.value = '';
-                erro.style.display = 'none';
-                fecharModal('modalSenhaAvancada');
-                document.getElementById('configUrlApp').value = db.configs.url || '';
-                document.getElementById('modalConfigAvancadas').style.display = 'flex';
-            } else {
-                erro.style.display = 'block';
-                input.select();
-            }
-        } catch(e) {
-            erro.innerText = e.message || 'Falha ao validar senha.';
-            erro.style.display = 'block';
-        }
-    }
-
-    async function aoDigitarSenhaAvancada(input) {
-        input.value = input.value.replace(/[^0-9]/g, '');
-        const erro = document.getElementById('senhaAvancadaErro');
-        erro.style.display = 'none';
-        if(validandoSenhaAvancadaAuto || input.value.length < 4) return;
-        validandoSenhaAvancadaAuto = true;
-        try {
-            if(await validarSenhaAvancada(input.value)) await validarAcessoAvancado();
-        } finally {
-            validandoSenhaAvancadaAuto = false;
-        }
-    }
-
-    function abrirTrocaSenhaAvancada() { abrirModalSenhaAvancada('trocar'); }
-
-    function cancelarCriacaoSenhaAvancada() {
-        fecharModal('modalCriarSenhaAvancada');
-        if(modoSenhaAvancada === 'criar') document.getElementById('modalPainelUnificado').style.display = 'flex';
-    }
-
-    async function salvarNovaSenhaAvancada() {
-        const senha = document.getElementById('novaSenhaAvancada').value;
-        const confirma = document.getElementById('confirmaSenhaAvancada').value;
-        const erro = document.getElementById('novaSenhaAvancadaErro');
-        erro.style.display = 'none';
-
-        if(senha !== confirma) {
-            erro.innerText = 'As senhas nao conferem.';
-            erro.style.display = 'block';
-            return;
-        }
-
-        try {
-            await definirSenhaAvancada(senha, { sincronizar: false });
-            fecharModal('modalCriarSenhaAvancada');
-            if(modoSenhaAvancada === 'criar') {
-                document.getElementById('configUrlApp').value = db.configs.url || '';
-                document.getElementById('modalConfigAvancadas').style.display = 'flex';
-            } else {
-                alert('Senha avancada atualizada.');
-            }
-        } catch(e) {
-            erro.innerText = e.message || 'Nao foi possivel salvar a senha.';
-            erro.style.display = 'block';
-        }
-    }
-
-    document.getElementById('senhaAvancada').addEventListener('keydown', function(e) {
-        if(e.key === 'Enter') validarAcessoAvancado();
-    });
-
-    function adicionarParametroURL(url, chave, valor) {
-        return url + (url.includes('?') ? '&' : '?') + encodeURIComponent(chave) + '=' + encodeURIComponent(valor);
-    }
-
-    function atualizarTextoSincronizacao(texto) {
-        const el = document.getElementById('syncStatusTexto');
-        if(el) el.innerText = texto;
-    }
-
-    function textoHorarioSync() {
-        return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
-
-    async function puxarBancoNuvem(url = db.configs.url) {
-        const fetchUrl = adicionarParametroURL(url, 'nocache', Date.now());
-        const erros = [];
-        try {
-            const res = await fetch(fetchUrl, { redirect: "follow", cache: "no-store" });
-            const dados = await res.json();
-            if(dados && dados.ok === false) throw new Error(dados.erro || 'Falha na nuvem.');
-            return dados;
-        } catch(e) {
-            erros.push(e.message || 'Falha ao ler resposta direta.');
-        }
-
-        try {
-            return await puxarBancoNuvemJSONP(url);
-        } catch(e) {
-            const detalhe = e.message || erros[0] || 'Falha ao puxar dados.';
-            throw new Error(detalhe);
-        }
-    }
-
-    function puxarBancoNuvemJSONP(url) {
-        return new Promise((resolve, reject) => {
-            const callback = `alorhSync_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            const script = document.createElement('script');
-            const limpar = () => {
-                delete window[callback];
-                if(script.parentNode) script.parentNode.removeChild(script);
-            };
-            const timer = setTimeout(() => {
-                limpar();
-                reject(new Error('O Google Script nao respondeu como app do Alo RH. Confira se o Code.gs completo foi colado e se a implantacao esta atualizada.'));
-            }, 15000);
-            window[callback] = (dados) => {
-                clearTimeout(timer);
-                limpar();
-                if(dados && dados.ok === false) reject(new Error(dados.erro || 'Falha na nuvem.'));
-                else resolve(dados);
-            };
-            script.onerror = () => {
-                clearTimeout(timer);
-                limpar();
-                reject(new Error('Falha ao carregar a URL do Google Script. Confira a implantacao e o acesso como Qualquer pessoa.'));
-            };
-            script.src = adicionarParametroURL(adicionarParametroURL(url, 'callback', callback), 'nocache', Date.now());
-            document.head.appendChild(script);
-        });
-    }
-
-    async function enviarBancoNuvem() {
-        const payload = JSON.stringify({ action: 'salvar_banco', dados: prepararBancoCompartilhado(db) });
-        const opcoes = {
-            method: 'POST',
-            redirect: "follow",
-            headers: { 'Content-Type': 'text/plain' },
-            body: payload
-        };
-        try {
-            const res = await fetch(db.configs.url, opcoes);
-            try {
-                const retorno = await res.json();
-                if(retorno && retorno.ok === false) throw new Error(retorno.erro || 'Falha ao salvar na nuvem.');
-            } catch(parseErr) {
-                if(parseErr && /Falha/.test(parseErr.message || '')) throw parseErr;
-            }
-        } catch(e) {
-            await fetch(db.configs.url, { ...opcoes, mode: 'no-cors' });
-        }
-    }
-
-    function preservarConfigsLocais(novoBanco, bancoLocal = db) {
-        const preservado = normalizarBanco(novoBanco);
-        const configsLocais = bancoLocal.configs || {};
-        preservado.configs.url = configsLocais.url || preservado.configs.url || '';
-        preservado.configs.dadosBaixados = true;
-        preservado.configs.ultimaSincronizacao = Date.now();
-        if(configsLocais.senhaAdminHash) {
-            preservado.configs.senhaAdminHash = configsLocais.senhaAdminHash;
-            preservado.configs.senhaAdminSalt = configsLocais.senhaAdminSalt;
-            preservado.configs.segurancaVersao = configsLocais.segurancaVersao || 2;
-        }
-        return preservado;
-    }
-
-    function temDadosNegocio(banco) {
-        const b = normalizarBanco(banco);
-        const empresaPreenchida = ['logo','razao','fantasia','cnpj','rua','numero','bairro','cidade']
-            .some(campo => String((b.empresa || {})[campo] || '').trim());
-        return empresaPreenchida
-            || b.categorias.length > 0
-            || b.funcoes.length > 0
-            || b.funcionarios.length > 0
-            || b.administradores.length > 0
-            || b.registros.length > 0
-            || b.configGerais.valesTransporte.length > 0
-            || b.configGerais.motivosAdiantamento.length > 0;
-    }
-
-    function resumoBancoSync(banco) {
-        const b = normalizarBanco(banco);
-        return [
-            `funcionários: ${b.funcionarios.length}`,
-            `vínculos: ${b.categorias.length}`,
-            `funções: ${b.funcoes.length}`,
-            `lançamentos: ${b.registros.length}`
-        ].join(', ');
-    }
-
-    function aplicarBancoNuvem(nuvemDB, modo = 'completo') {
-        if(!nuvemDB || nuvemDB.app_id !== APP_ID) throw new Error('Banco invalido.');
-        const localAtual = normalizarBanco(db);
-        const nuvem = normalizarBanco(nuvemDB);
-        const localTs = Number(localAtual.configs.ultimaMudancaLocal || 0);
-        const nuvemTs = Number(nuvem.configs.ultimaMudancaLocal || 0);
-        const localTemDados = temDadosNegocio(localAtual);
-        const nuvemTemDados = temDadosNegocio(nuvem);
-        let base = localAtual;
-        if(modo === 'completo') {
-            if(!localTemDados && nuvemTemDados) base = nuvem;
-            else if(localTemDados && !nuvemTemDados) base = localAtual;
-            else base = nuvemTs > localTs ? nuvem : localAtual;
-        }
-        const outro = base === nuvem ? localAtual : nuvem;
-        const mergeRegistros = mesclarRegistrosBancos(base, outro);
-        const mergeAuditoria = typeof mesclarAuditoriaBancos === 'function' ? mesclarAuditoriaBancos(base, outro) : { auditoria: base.auditoria || [], mudouLocal: false, precisaEnviar: false };
-        const novoBanco = normalizarBanco(base);
-
-        novoBanco.registros = mergeRegistros.registros;
-        novoBanco.auditoria = mergeAuditoria.auditoria;
-        novoBanco.configs.registrosExcluidos = mergeRegistros.registrosExcluidos;
-        db = preservarConfigsLocais(novoBanco, localAtual);
-
-        const mudouLocal = JSON.stringify(prepararBancoCompartilhado(localAtual)) !== JSON.stringify(prepararBancoCompartilhado(db));
-        salvarBanco({ sincronizar: false, atualizarMudanca: false });
-        return { mudouLocal: mudouLocal || mergeAuditoria.mudouLocal, precisaEnviar: (modo === 'completo' && localTs > nuvemTs) || mergeRegistros.precisaEnviar || mergeAuditoria.precisaEnviar };
-    }
-
-    async function sincronizarAoEntrar(manual = false) {
-        if(!db.configs.url) return;
-        if(isPuxandoNuvem) return;
-        isPuxandoNuvem = true;
-        if(manual) atualizarTextoSincronizacao('Sincronizando agora...');
-        try {
-            const nuvemDB = await puxarBancoNuvem();
-            const resultado = aplicarBancoNuvem(nuvemDB, 'completo');
-            if(resultado.mudouLocal) {
-                renderizarFiltros();
-                renderizarLista();
-                if(typeof aplicarTemaApp === 'function') aplicarTemaApp();
-                if(typeof atualizarLogoTopo === 'function') atualizarLogoTopo();
-            }
-            if(resultado.precisaEnviar) await sincronizarFundo(false, true);
-            atualizarTextoSincronizacao(`Ultima sincronizacao: ${textoHorarioSync()}`);
-            return true;
-        } catch(e) {
-            atualizarTextoSincronizacao('Nao foi possivel sincronizar agora. O app continua com os dados deste aparelho.');
-            if(manual) alert(`Nao foi possivel sincronizar agora.\n\nDetalhe: ${e.message || 'Confira a URL e o token.'}`);
-            return false;
-        } finally {
-            isPuxandoNuvem = false;
-            iniciarSyncRegistrosTempoReal();
-        }
-    }
-
-    function iniciarSyncRegistrosTempoReal() {
-        clearInterval(timerSyncRegistros);
-        if(!db.configs.url) return;
-        timerSyncRegistros = setInterval(() => sincronizarRegistrosTempoReal(), REGISTROS_SYNC_INTERVAL_MS);
-    }
-
-    async function sincronizarRegistrosTempoReal() {
-        if(!db.configs.url || isPuxandoNuvem || isSyncingFundo) return;
-        isPuxandoNuvem = true;
-        try {
-            const nuvemDB = await puxarBancoNuvem();
-            const resultado = aplicarBancoNuvem(nuvemDB, 'registros');
-            if(resultado.mudouLocal) { renderizarLista(); if(typeof aplicarTemaApp === 'function') aplicarTemaApp(); if(typeof atualizarLogoTopo === 'function') atualizarLogoTopo(); }
-            if(resultado.precisaEnviar) agendarSincronizacao(300);
-            atualizarTextoSincronizacao(`Lancamentos conferidos: ${textoHorarioSync()}`);
-        } catch(e) {
-            atualizarTextoSincronizacao('Sincronizacao de lancamentos pendente.');
-        } finally {
-            isPuxandoNuvem = false;
-        }
-    }
-
-    async function forcarSincronizacaoManual() {
-        if(!db.configs.url) return alert("Configure a URL!");
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        try {
-            const ok = await sincronizarAoEntrar(true);
-            if(ok) alert('Sincronizacao concluida.');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-    }
-
-    async function testarSincronizacao() {
-        if(!db.configs.url) return alert("Configure a URL!");
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        try {
-            const nuvemDB = await puxarBancoNuvem();
-            alert(`Conexao com a nuvem OK.\n\nNeste aparelho: ${resumoBancoSync(db)}\nNa nuvem: ${resumoBancoSync(nuvemDB)}`);
-        } catch(e) {
-            alert(`Teste falhou.\n\nDetalhe: ${e.message || 'Confira a URL, token e implantacao do Apps Script.'}`);
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-    }
-
-    async function salvarURL() {
-        const inputUrl = document.getElementById('configUrlApp').value.trim();
-        if(!inputUrl) return alert("Digite a URL!");
-        if(!/^https:\/\/script\.google\.com\/macros\/s\//.test(inputUrl) || !/[?&]token=/.test(inputUrl)) {
-            return alert("Cole a URL completa do Google Script com o token no final.");
-        }
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        try {
-            db.configs.url = inputUrl;
-            let nuvemDB = await puxarBancoNuvem(inputUrl);
-            const resultado = aplicarBancoNuvem(nuvemDB, 'completo');
-            db.configs.url = inputUrl;
-            await migrarSenhaAvancadaLegada();
-            salvarBanco({ sincronizar: false, atualizarMudanca: false });
-            if(resultado.precisaEnviar) await sincronizarFundo(true, true);
-            iniciarSyncRegistrosTempoReal();
-            alert("Concluido! Dados puxados.");
-            location.reload();
-        } catch(e) {
-            alert(`Falha ao puxar dados.\n\nDetalhe: ${e.message || 'Confira a URL do Google Script e o token.'}`);
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-    }
-
-    async function sincronizarFundo(forcado = false, apenasEmpurrar = false) {
-        if(!db.configs.url) return;
-        if(isSyncingFundo) { syncPendente = true; return; }
-        isSyncingFundo = true;
-        let indicador = document.getElementById('syncIndicador');
-        if(indicador) indicador.style.opacity = '1';
-        try {
-            await enviarBancoNuvem();
-            db.configs.ultimaSincronizacao = Date.now();
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-            atualizarTextoSincronizacao(`Enviado para a nuvem: ${textoHorarioSync()}`);
-        } catch(e) {
-            if(forcado) throw e;
-        } finally {
-            isSyncingFundo = false;
-            if(indicador) indicador.style.opacity = '0';
-            if(syncPendente) {
-                syncPendente = false;
-                agendarSincronizacao(300);
-            }
-        }
-    }
-
+    function abrirHistoricoAcessos() { return RHAuth.accessHistory(); }
+    function atualizarTextoSincronizacao(texto) { RHSync.status(texto); }
+    function sincronizarAoEntrar() { return RHSync.sync(); }
+    function sincronizarFundo() { return RHSync.sync(); }
+    function sincronizarRegistrosTempoReal() { return RHSync.sync(); }
+    function iniciarSyncRegistrosTempoReal() { /* Agendamento centralizado em RHSync. */ }
+    async function forcarSincronizacaoManual() { if(await RHSync.sync()) alert('Sincronização confirmada.'); }
+    async function testarSincronizacao() { try { const r=await RHAuth.request('status'); alert('Conexão autenticada. Revisão: '+r.revision); } catch(e) { alert(e.message); } }
+    function salvarURL() { alert('A URL é definida em js/config.js para evitar conectar esta cópia ao banco errado.'); }
     async function forcarEnvioNuvemCompleto() {
-        if(!db.configs.url) return alert("Configure a URL!");
-        clearTimeout(timerSincronizacao);
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        try {
-            await sincronizarFundo(true, true);
-            alert("Backup salvo!");
-        } catch(e) {
-            alert("Falha ao salvar backup.");
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
+        if(!await RHAuth.settings()) return;
+        if(!await RHSync.sync()) return alert('Resolva as pendências antes de criar o backup remoto.');
+        try { await RHAuth.request('backup'); alert('Cópia independente criada na pasta de backups do servidor.'); } catch(e) { alert(e.message); }
     }
+    function resumoBancoSync(banco) { return `${banco.funcionarios.length} funcionários e ${banco.registros.length} lançamentos`; }
 
     const COLUNAS_MODELO_FUNCIONARIOS = [
         'Código', 'Nome', 'Nome Social', 'Data Nasc.', 'Admissão', 'CPF', 'RG', 'RG UF', 'CTPS', 'WhatsApp',
@@ -630,7 +268,7 @@
         const v = celula.getElementsByTagName('v')[0];
         if(!v) return '';
         if(tipo === 's') return compartilhadas[Number(v.textContent)] || '';
-        return v.textContent || '';
+        return (!tipo || tipo === 'n') && v.textContent !== '' ? Number(v.textContent) : (v.textContent || '');
     }
 
     function indiceColunaRef(ref) {
@@ -664,36 +302,39 @@
             Array.from(row.getElementsByTagName('c')).forEach(celula => {
                 linha[indiceColunaRef(celula.getAttribute('r'))] = textoCelulaXLSX(celula, compartilhadas);
             });
-            return linha.map(v => v || '');
+            return linha.map(v => v ?? '');
         });
     }
 
     function valorDaLinha(row, mapa, nomes) {
         for(const nome of nomes) {
             const idx = mapa[normalizarCabecalhoPlanilha(nome)];
-            if(idx !== undefined) return String(row[idx] || '').trim();
+            if(idx !== undefined) return String(row[idx] ?? '').trim();
         }
         return '';
     }
 
-    async function importarFuncionariosXLSX(event) {
-        const file = event.target.files[0];
-        if(!file) return;
-        document.getElementById('loadingOverlay').style.display = 'flex';
+    function prepararImportacaoFuncionarios(linhas, original, vigencia) {
+        if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(vigencia)) throw new Error('Informe a competência no formato AAAA-MM.');
+        const anterior=db; db=normalizarBanco(RHProtocol.clone(original));
         try {
-            const linhas = await lerLinhasFuncionariosXLSX(file);
-            if(linhas.length < 2) throw new Error('A planilha nao tem linhas de funcionarios.');
             const mapa = {};
             linhas[0].forEach((cab, idx) => { mapa[normalizarCabecalhoPlanilha(cab)] = idx; });
-            let criados = 0, atualizados = 0, ignorados = 0;
+            if(mapa[normalizarCabecalhoPlanilha('Nome')]===undefined)throw new Error('A planilha precisa da coluna Nome.');
+            let criados = 0, atualizados = 0, ignorados = 0; const vistos = new Set();
             linhas.slice(1).forEach((row) => {
                 const nome = valorDaLinha(row, mapa, ['Nome']);
                 if(!nome) { ignorados++; return; }
                 const codigo = valorDaLinha(row, mapa, ['Código', 'Codigo']);
                 const cpf = valorDaLinha(row, mapa, ['CPF']);
-                const existente = db.funcionarios.find(f => (codigo && String(f.codigo || '') === codigo) || (cpf && String(f.cpf || '') === cpf));
-                const vinculoId = obterOuCriarVinculoImportado(valorDaLinha(row, mapa, ['Vínculo', 'Vinculo']));
-                const funcaoId = obterOuCriarFuncaoImportada(valorDaLinha(row, mapa, ['Função', 'Funcao']), valorDaLinha(row, mapa, ['Função Nº', 'Funcao Nº', 'Funcao N', 'Função N']));
+                const matches = db.funcionarios.filter(f => (codigo && String(f.codigo || '') === codigo) || (cpf && String(f.cpf || '').replace(/\D/g,'') === cpf.replace(/\D/g,'')));
+                if(matches.length>1) throw new Error('Código e CPF apontam para cadastros diferentes: '+nome);
+                const existente=matches[0];
+                const nomeVinculo=valorDaLinha(row,mapa,['Vínculo','Vinculo']);
+                const vinculoId = existente && !nomeVinculo ? existente.categoria : obterOuCriarVinculoImportado(nomeVinculo);
+                const nomeFuncao=valorDaLinha(row,mapa,['Função','Funcao']), numeroFuncao=valorDaLinha(row,mapa,['Função Nº','Funcao Nº','Funcao N','Função N']);
+                const funcaoId = existente && !nomeFuncao && !numeroFuncao ? existente.funcao : obterOuCriarFuncaoImportada(nomeFuncao,numeroFuncao);
+                const chaveLinha=existente?.id||codigo||cpf||nome; if(vistos.has(chaveLinha)) throw new Error('Funcionário repetido na planilha: '+nome); vistos.add(chaveLinha);
                 const pixChave = valorDaLinha(row, mapa, ['PIX Chave']);
                 const pixTipo = valorDaLinha(row, mapa, ['PIX Tipo']) || 'CPF';
                 const pixList = pixChave ? [{ tipo: pixTipo, chave: pixChave, principal: true }] : (existente && existente.pixList ? existente.pixList : []);
@@ -707,7 +348,7 @@
                     admissao: normalizarDataImportada(valorDaLinha(row, mapa, ['Admissão', 'Admissao'])),
                     cpf,
                     rg: valorDaLinha(row, mapa, ['RG']),
-                    rgUF: valorDaLinha(row, mapa, ['RG UF']) || 'PB',
+                    rgUF: valorDaLinha(row, mapa, ['RG UF']) || existente?.rgUF || 'PB',
                     ctps: valorDaLinha(row, mapa, ['CTPS']),
                     telefone: valorDaLinha(row, mapa, ['WhatsApp', 'Telefone']),
                     categoria: vinculoId,
@@ -728,9 +369,9 @@
                     temControlePonto: valorBooleanoImportado(valorDaLinha(row, mapa, ['Controle Ponto', 'Controle de Ponto']), existente ? existente.temControlePonto !== false : true),
                     vtRota: valorDaLinha(row, mapa, ['Vale-Transporte', 'Rota VT', 'VT']),
                     pixList,
-                    habFaltas: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Faltas']), true),
-                    habFerias: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Férias', 'Habilitar Ferias']), true),
-                    habAtrasos: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Atrasos', 'Habilitar Atraso']), true),
+                    habFaltas: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Faltas']), existente ? existente.habFaltas !== false : true),
+                    habFerias: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Férias', 'Habilitar Ferias']), existente ? existente.habFerias !== false : true),
+                    habAtrasos: valorBooleanoImportado(valorDaLinha(row, mapa, ['Habilitar Atrasos', 'Habilitar Atraso']), existente ? existente.habAtrasos !== false : true),
                     arquivado: existente ? !!existente.arquivado : false,
                     horarios: {
                         entrada: valorDaLinha(row, mapa, ['Entrada']),
@@ -741,6 +382,21 @@
                     }
                 };
                 if(existente) {
+                    // Empty cells preserve existing information; erasure belongs to the explicit editor.
+                    for(const key of Object.keys(funcionario)) if(funcionario[key] === '' || funcionario[key] === undefined) funcionario[key]=existente[key]??'';
+                    for(const key of Object.keys(funcionario.horarios)) if(!funcionario.horarios[key]?.length) funcionario.horarios[key]=existente.horarios?.[key]??funcionario.horarios[key];
+                    if(!valorDaLinha(row,mapa,['Vínculo','Vinculo'])) funcionario.categoria=existente.categoria;
+                    if(!valorDaLinha(row,mapa,['Função','Funcao','Função Nº','Funcao Nº'])) funcionario.funcao=existente.funcao;
+                }
+                for(const [field,headers] of [['salario',['Salário','Salario']],['gratificacao',['Gratificação','Gratificacao']],['salFamilia',['Salário Família','Salario Familia','Sal. Família','Sal Familia']],['unidentis',['Desc. Unidentis','Unidentis']]]) {
+                    const idx=headers.map(h=>mapa[normalizarCabecalhoPlanilha(h)]).find(i=>i!==undefined);
+                    if(idx!==undefined && row[idx]!=='' && row[idx]!==undefined) {
+                        const value=parseMoeda(row[idx]); if(value<0) throw new Error('Valor negativo para '+nome);
+                        funcionario[field]=formatMoeda(value);
+                    }
+                }
+                if(!existente || parseMoeda(funcionario.salario)!==parseMoeda(existente.salario)) registrarValorHistorico(funcionario, existente ? vigencia : '0000-01', funcionario.salario || db.configGerais.salarioMinimo);
+                if(existente) {
                     db.funcionarios[db.funcionarios.findIndex(f => f.id === existente.id)] = funcionario;
                     atualizados++;
                 } else {
@@ -748,18 +404,28 @@
                     criados++;
                 }
             });
-            salvarBanco();
-            renderizarFiltros();
-            renderizarLista();
-            if(typeof aplicarTemaApp === 'function') aplicarTemaApp();
-            if(typeof atualizarLogoTopo === 'function') atualizarLogoTopo();
-            alert(`Importacao concluida.\n\nCriados: ${criados}\nAtualizados: ${atualizados}\nIgnorados: ${ignorados}`);
-        } catch(e) {
-            alert(`Nao foi possivel importar a planilha.\n\nDetalhe: ${e.message || 'Verifique o modelo XLSX.'}`);
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            event.target.value = '';
-        }
+            RHProtocol.validate(db);
+            return {banco:db,criados,atualizados,ignorados};
+        } finally { db=anterior; }
+    }
+
+    async function importarFuncionariosXLSX(event) {
+        const file=event.target.files[0]; if(!file) return;
+        if(!['dadosPessoais','vinculoHorarios','financeiro','configGerais'].every(temPermissaoAtual)) return alert('Este perfil não pode importar funcionários.');
+        try {
+            if(file.size>8*1024*1024) throw new Error('Planilha muito grande.');
+            const linhas=await lerLinhasFuncionariosXLSX(file);
+            if(linhas.length<2) throw new Error('Planilha sem funcionários.');
+            const vigencia=prompt('Competência de vigência dos salários atualizados (AAAA-MM):',getHojeSTR().slice(0,7)); if(!vigencia)return;
+            const preview=prepararImportacaoFuncionarios(linhas,db,vigencia);
+            const mudancas=RHProtocol.diff(RHProtocol.clean(db),RHProtocol.clean(preview.banco));
+            const detalhes=mudancas.filter(o=>o.entity==='funcionarios').map(o=>{const f=preview.banco.funcionarios.find(f=>f.id===o.id);return `${f?.nome||o.id} · ${o.field==='*'?'novo cadastro':o.field}: ${o.field==='*'?'salário '+(o.after?.salario||''):JSON.stringify(o.before)+' → '+JSON.stringify(o.after)}`;}).join('\n');
+            if(!confirm(`Prévia: ${preview.criados} novos, ${preview.atualizados} atualizados. Vigência salarial: ${vigencia}.\n\n${detalhes}\n\nAplicar importação?`))return;
+            await RHSync.backup('antes-de-importar-planilha');
+            db=preview.banco;salvarBanco();await RHSync.flush();renderizarFiltros();renderizarLista();
+            alert('Importação salva neste aparelho. Acompanhe a confirmação na barra de sincronização.');
+        } catch(e) { alert('Não foi possível importar: '+e.message); }
+        finally { event.target.value=''; }
     }
 
     function exportarDados() {
@@ -773,46 +439,23 @@
         downloadAnchorNode.remove();
     }
 
-    function importarDados(event) {
-        const file = event.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            try {
-                const importedDb = JSON.parse(e.target.result);
-                if(importedDb && importedDb.app_id === APP_ID) {
-                    const urlSalva = db.configs.url;
-                    const segurancaLocal = {
-                        senhaAdminHash: db.configs.senhaAdminHash,
-                        senhaAdminSalt: db.configs.senhaAdminSalt,
-                        segurancaVersao: db.configs.segurancaVersao
-                    };
-                    db = normalizarBanco(importedDb);
-                    if(urlSalva) db.configs.url = urlSalva;
-                    if(segurancaLocal.senhaAdminHash && !db.configs.senhaAdminHash) {
-                        db.configs.senhaAdminHash = segurancaLocal.senhaAdminHash;
-                        db.configs.senhaAdminSalt = segurancaLocal.senhaAdminSalt;
-                        db.configs.segurancaVersao = segurancaLocal.segurancaVersao || 2;
-                    }
-                    await migrarSenhaAvancadaLegada();
-                    salvarBanco();
-                    alert("Restaurado!");
-                    location.reload();
-                } else {
-                    alert("Arquivo invalido.");
-                }
-            } catch(err) {
-                alert("Erro ao ler arquivo.");
-            }
-        };
-        reader.readAsText(file);
-        event.target.value = '';
+    async function importarDados(event) {
+        const file=event.target.files[0]; if(!file) return;
+        try {
+            if(file.size > 8 * 1024 * 1024) throw new Error('O backup excede o limite de 8 MB.');
+            const imported=JSON.parse(await file.text()); RHProtocol.validate(imported);
+            if(!await RHAuth.settings()) return;
+            await RHSync.restore(imported);
+        } catch(e) { alert('Não foi possível restaurar: '+e.message); }
+        finally { event.target.value=''; }
     }
 
     async function excluirTodoHistorico() {
         let frase = document.getElementById('inputExcluirTudo').value.trim().toLowerCase();
         if(frase === "quero excluir todo o histórico") {
             if(!confirm("TEM CERTEZA? Essa acao apaga todos os lancamentos.")) return;
+            if(!await RHAuth.settings()) return;
+            await RHSync.backup('antes-de-excluir-historico');
             db.registros = [];
             marcarMudancaEstrutural();
             document.getElementById('inputExcluirTudo').value = '';

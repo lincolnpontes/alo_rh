@@ -1,7 +1,7 @@
 function toggleDiv(id) { let el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
     function converterLogo(input) { if (input.files && input.files[0]) { let reader = new FileReader(); reader.onload = function(e) { document.getElementById('empLogoBase64').value = e.target.result; document.getElementById('previewLogo').innerHTML = `<img src="${e.target.result}" style="max-height:50px;">`; }; reader.readAsDataURL(input.files[0]); } }
     
-    window.onload = async () => { await migrarSenhaAvancadaLegada(); prepararModaisNoTopo(); if(db.administradores.length) { adminSessaoId = ''; sessionStorage.removeItem('alorh_admin_sessao'); } aplicarTemaApp(); atualizarLogoTopo(); setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(()=>{document.getElementById('splashScreen').style.display = 'none'; if(db.administradores.length) trocarPerfilAdmin(true);}, 500); }, 1000); document.getElementById('actionBar').style.display = 'grid'; initDiasFiltro(); atualizarAcoesMassa(); renderizarFiltros(); renderizarLista(); if(typeof sincronizarAoEntrar === 'function') sincronizarAoEntrar(); };
+    window.onload = () => RHApp.start();
 
     const TEMAS_APP = [
         { id: 'verde', nome: 'Verde', cor: '#00695C' },
@@ -93,7 +93,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(btnDocPagamento) {
             const temMensalSemCarteira = selecionados.some(isFuncionarioMensalSemCarteira);
             const temContracheque = selecionados.some(funcionarioRecebeContracheque);
-            btnDocPagamento.innerHTML = temMensalSemCarteira && !temContracheque ? '🧾 Recibo' : (temMensalSemCarteira && temContracheque ? '🧾 Docs' : '🧾 Contracheque');
+            btnDocPagamento.innerHTML = temMensalSemCarteira && !temContracheque ? '<span class="rh-icon" data-icon="receipt" aria-hidden="true"></span> Recibo' : (temMensalSemCarteira && temContracheque ? '<span class="rh-icon" data-icon="receipt" aria-hidden="true"></span> Docs' : '<span class="rh-icon" data-icon="receipt" aria-hidden="true"></span> Contracheque');
             btnDocPagamento.onclick = abrirDocumentosPagamento;
         }
         const btnSemana = document.getElementById('btnAcaoMassaSemana');
@@ -161,7 +161,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const dias = Math.round((aniversario - hoje) / 86400000);
         if(dias < 0 || dias > 7) return '';
         const titulo = dias === 0 ? 'Aniversário hoje' : `Aniversário em ${dias} dia(s)`;
-        return `<span class="aniversario-proximo" title="${titulo}">🍰🥳</span>`;
+        return `<span class="aniversario-proximo" title="${titulo}"><span class="rh-icon" data-icon="cake" aria-hidden="true"></span></span>`;
     }
     
     function filtrarCat(id) { 
@@ -433,7 +433,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function adminTemPermissao(admin, chave) {
-        if(db.administradores.length === 0) return true;
+        if(db.administradores.length === 0) return false;
         if(!admin) return false;
         const permissoes = admin.permissoes || criarPermissoesAdminPadrao();
         return permissoes[chave] !== false;
@@ -447,27 +447,16 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function temPermissaoAtual(chave) {
-        if(db.administradores.length === 0) return true;
+        if(db.administradores.length === 0) return false;
         return adminTemPermissao(getAdminAtual(), chave);
     }
 
     function garantirAlgumaPermissao(chaves, aoAutorizar, texto = 'continuar') {
-        if(db.administradores.length === 0) return true;
-        const listaChaves = Array.isArray(chaves) ? chaves : [chaves];
+        const lista = Array.isArray(chaves) ? chaves : [chaves];
         const atual = getAdminAtual();
-        if(atual && listaChaves.some(chave => adminTemPermissao(atual, chave))) return true;
-        if(atual) {
-            alert('Este perfil não tem permissão para esta ferramenta.');
-            return false;
-        }
-        const senha = prompt(`Digite a senha do administrador para ${texto}:`);
-        if(senha === null) return false;
-        const admin = db.administradores.find(a => String(a.senha || '') === String(senha || ''));
-        if(!admin) { alert('Senha de administrador não encontrada.'); return false; }
-        if(!listaChaves.some(chave => adminTemPermissao(admin, chave))) { alert('Este administrador não tem permissão para esta ação.'); return false; }
-        adminSessaoId = admin.id;
-        sessionStorage.setItem('alorh_admin_sessao', adminSessaoId);
-        if(typeof aoAutorizar === 'function') aoAutorizar();
+        if(atual && lista.some(chave => adminTemPermissao(atual, chave))) return true;
+        if(!atual) RHApp.switchProfile();
+        else alert('Este perfil não tem permissão para esta ferramenta.');
         return false;
     }
 
@@ -563,39 +552,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
     }
 
-    function trocarPerfilAdmin(obrigatorio = false) {
-        if(db.administradores.length === 0) return alert('Cadastre um administrador primeiro.');
-        const lista = document.getElementById('listaPerfisAdmin');
-        lista.innerHTML = db.administradores.map(admin => `<div class="perfil-admin-card"><strong>${escapeHTML(admin.nome || 'Administrador')}</strong></div>`).join('');
-        const input = document.getElementById('senhaTrocaPerfilAdmin');
-        input.value = '';
-        const titulo = document.getElementById('tituloTrocaPerfilAdmin');
-        if(titulo) titulo.innerText = obrigatorio ? 'Entrar no Alô RH' : 'Trocar Perfil';
-        const btnFechar = document.getElementById('btnFecharTrocaPerfil');
-        if(btnFechar) btnFechar.style.display = obrigatorio ? 'none' : 'inline-flex';
-        const btnCancelar = document.querySelector('#modalTrocarPerfilAdmin .btn-cancel');
-        if(btnCancelar) btnCancelar.style.display = obrigatorio ? 'none' : '';
-        document.getElementById('trocaPerfilErro').style.display = 'none';
-        document.getElementById('modalTrocarPerfilAdmin').style.display = 'flex';
-        setTimeout(() => { input.focus(); input.select(); }, 120);
-    }
+    function trocarPerfilAdmin() { return RHApp.switchProfile(); }
 
-    function aoDigitarSenhaPerfilAdmin(input) {
-        input.value = input.value.replace(/[^0-9]/g, '');
-        document.getElementById('trocaPerfilErro').style.display = 'none';
-        const admin = getAdminPorSenha(input.value);
-        if(admin) entrarComPerfilAdmin(admin);
-    }
+    function aoDigitarSenhaPerfilAdmin(input) { input.value = input.value.replace(/[^0-9]/g, ''); }
 
-    function validarTrocaPerfilAdmin() {
-        const senha = document.getElementById('senhaTrocaPerfilAdmin').value;
-        const admin = getAdminPorSenha(senha);
-        if(!admin) {
-            document.getElementById('trocaPerfilErro').style.display = 'block';
-            return;
-        }
-        entrarComPerfilAdmin(admin);
-    }
+    function validarTrocaPerfilAdmin() { return RHApp.switchProfile(); }
 
     function entrarComPerfilAdmin(admin) {
         adminSessaoId = admin.id;
@@ -606,12 +567,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         renderizarLista();
     }
 
-    function sairPerfilAdmin() {
-        adminSessaoId = '';
-        sessionStorage.removeItem('alorh_admin_sessao');
-        atualizarBoxPerfilAdmin();
-        if(db.administradores.length) trocarPerfilAdmin(true);
-    }
+    function sairPerfilAdmin() { return RHApp.switchProfile(); }
 
     function registrarAuditoria(acao, detalhes = '', entidade = '', alvoId = '') {
         db.auditoria = Array.isArray(db.auditoria) ? db.auditoria : [];
@@ -626,7 +582,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             entidade,
             alvoId
         });
-        if(db.auditoria.length > 700) db.auditoria = db.auditoria.slice(0, 700);
+
     }
 
     function formatarDataHoraAuditoria(ts) {
@@ -684,9 +640,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                 let codStr = f.codigo ? `<strong style="color:#00695C;">[${escapeHTML(f.codigo)}]</strong> ` : '';
                 let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? formatarFuncaoLista(funName) : 'Sem função';
                 let acaoArquivo = !podeArquivar ? '' : (f.arquivado
-                    ? `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#2E7D32;" title="Restaurar" onclick="restaurarFuncionario(${jsArg(f.id)})">↩️</button>`
-                    : `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#F57F17;" title="Arquivar" onclick="arquivarFuncionario(${jsArg(f.id)})">📦</button>`);
-                return `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; opacity:${f.arquivado ? '0.65' : '1'};"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${escapeHTML(f.nome)}</strong>${f.arquivado ? ' <small style="color:#F57F17; font-weight:bold;">(Arquivado)</small>' : ''}<br><small style="color:#666;">${escapeHTML(funName)}</small></div><div style="flex-shrink:0; margin-left:10px; display:flex; gap:4px; align-items:center;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc(${jsArg(f.id)})">✏️</button>${acaoArquivo}</div></div>`;
+                    ? `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#2E7D32;" title="Restaurar" onclick="restaurarFuncionario(${jsArg(f.id)})" aria-label="Restaurar"><span class="rh-icon" data-icon="restore" aria-hidden="true"></span></button>`
+                    : `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#F57F17;" title="Arquivar" onclick="arquivarFuncionario(${jsArg(f.id)})" aria-label="Arquivar"><span class="rh-icon" data-icon="package" aria-hidden="true"></span></button>`);
+                return `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; opacity:${f.arquivado ? '0.65' : '1'};"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${escapeHTML(f.nome)}</strong>${f.arquivado ? ' <small style="color:#F57F17; font-weight:bold;">(Arquivado)</small>' : ''}<br><small style="color:#666;">${escapeHTML(funName)}</small></div><div style="flex-shrink:0; margin-left:10px; display:flex; gap:4px; align-items:center;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc(${jsArg(f.id)})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button>${acaoArquivo}</div></div>`;
             };
             const ativos = funcs.filter(f => !f.arquivado);
             const arquivados = funcs.filter(f => f.arquivado);
@@ -703,20 +659,34 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         } else if(tipo === 'categorias') {
             fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Vínculos"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormClasse(null);
             document.getElementById('btnVoltarListagem').onclick = () => { abrirGerenciar('funcionarios'); };
-            db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${safeColor(c.cor)}; color:${safeColor(c.corTexto, '#ffffff')}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${escapeHTML(c.nome)}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse(${jsArg(c.id)})">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias',${jsArg(c.id)})">🗑️</button></div></div>`; });
+            db.categorias.forEach((c) => { let bExtra = c.semanal ? `<span style="font-size:10px; color:#E65100;">(Semanal)</span>` : ''; htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><span style="background:${safeColor(c.cor)}; color:${safeColor(c.corTexto, '#ffffff')}; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:bold;">${escapeHTML(c.nome)}</span> ${bExtra}</div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormClasse(${jsArg(c.id)})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('categorias',${jsArg(c.id)})" aria-label="Excluir"><span class="rh-icon" data-icon="trash-2" aria-hidden="true"></span></button></div></div>`; });
         } else if(tipo === 'funcoes') {
             fecharModal('modalListagem'); document.getElementById('tituloListagem').innerText = "Funções/Cargos"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFuncao(null);
             document.getElementById('btnVoltarListagem').onclick = () => { abrirGerenciar('funcionarios'); };
-            db.funcoes.forEach((fn) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${escapeHTML(formatarFuncaoLista(fn))}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFuncao(${jsArg(fn.id)})">✏️</button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('funcoes',${jsArg(fn.id)})">🗑️</button></div></div>`; });
+            db.funcoes.forEach((fn) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${escapeHTML(formatarFuncaoLista(fn))}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFuncao(${jsArg(fn.id)})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button> <button style="background:none; border:none; font-size:20px; cursor:pointer; color:#d32f2f;" onclick="excluirItem('funcoes',${jsArg(fn.id)})" aria-label="Excluir"><span class="rh-icon" data-icon="trash-2" aria-hidden="true"></span></button></div></div>`; });
         } else if(tipo === 'administradores') {
             document.getElementById('tituloListagem').innerText = "Administradores"; document.getElementById('btnClassesListagem').style.display = 'none'; document.getElementById('btnFuncoesListagem').style.display = 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormAdmin(null);
             document.getElementById('btnVoltarListagem').onclick = () => { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex'; };
-            db.administradores.forEach((a) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${escapeHTML(a.nome)}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormAdmin(${jsArg(a.id)})">✏️</button></div></div>`; });
+            db.administradores.forEach((a) => { htmlLista += `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;"><div><strong>${escapeHTML(a.nome)}</strong></div><div><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormAdmin(${jsArg(a.id)})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button></div></div>`; });
         }
         lista.innerHTML = htmlLista; document.getElementById('modalListagem').style.display = 'flex';
     }
 
-    function excluirItem(tipo, id) { if(confirm("Deseja realmente excluir?")) { const item = (db[tipo] || []).find(x => x.id === id); db[tipo] = db[tipo].filter(x => x.id !== id); registrarAuditoria('Item excluído', `${tipo}: ${item ? (item.nome || item.razao || id) : id}.`, tipo, id); salvarBanco(); abrirGerenciar(tipo); if(tipo==='categorias') renderizarFiltros(); } }
+    async function excluirItem(tipo, id) {
+        if(tipo === 'administradores') {
+            if(!await RHAuth.settings()) return;
+            if(!confirm('Excluir este perfil?')) return;
+            try { await RHAuth.request('delete-profile', {profileId:id}); await RHSync.sync(); abrirGerenciar(tipo); } catch(e) { alert(e.message); }
+            return;
+        }
+        if(['categorias','funcoes'].includes(tipo) && db.funcionarios.some(f => f[tipo === 'categorias' ? 'categoria' : 'funcao'] === id)) return alert('Este cadastro está em uso. Altere os funcionários vinculados antes de excluir.');
+        if(tipo === 'funcionarios' && db.registros.some(r=>r.funcId===id)) return alert('Este funcionário possui histórico. Arquive o cadastro para preservá-lo.');
+        if(!confirm('Deseja realmente excluir?')) return;
+        const item=(db[tipo]||[]).find(x=>x.id===id); db[tipo]=db[tipo].filter(x=>x.id!==id);
+        registrarAuditoria('Item excluído', `${tipo}: ${item ? (item.nome || id) : id}.`, tipo,id);
+        salvarBanco(); abrirGerenciar(tipo); renderizarFiltros();
+    }
+
     function arquivarFuncionario(id) {
         if(!garantirPermissao('dadosPessoais', () => arquivarFuncionario(id), 'arquivar funcionário')) return;
         const f = db.funcionarios.find(x => x.id === id);
@@ -754,7 +724,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             let a = db.administradores.find(x => x.id === id);
             document.getElementById('adminId').value = a.id;
             document.getElementById('adminNome').value = a.nome;
-            document.getElementById('adminSenha').value = a.senha;
+            document.getElementById('adminSenha').value = ''; document.getElementById('adminSenha').placeholder = 'Deixe vazio para manter';
             renderizarPermissoesAdmin(a.permissoes);
         } else {
             document.getElementById('adminId').value = '';
@@ -764,20 +734,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
         document.getElementById('modalFormAdmin').style.display = 'flex';
     }
-    function salvarAdmin() {
+    async function salvarAdmin() {
         if(!garantirPermissao('gerenciarAdministradores', () => salvarAdmin(), 'salvar administrador')) return;
-        let id = document.getElementById('adminId').value || 'adm_' + Date.now();
-        let novo = { id: id, nome: document.getElementById('adminNome').value, senha: document.getElementById('adminSenha').value, permissoes: coletarPermissoesAdmin() };
-        const idx = db.administradores.findIndex(x => x.id === id);
-        if(idx >= 0) db.administradores[idx] = novo;
-        else db.administradores.push(novo);
-        registrarAuditoria(idx >= 0 ? 'Administrador editado' : 'Administrador cadastrado', novo.nome || 'Perfil sem nome', 'administrador', id);
-        salvarBanco();
-        fecharModal('modalFormAdmin');
-        abrirGerenciar('administradores');
+        if(!await RHAuth.settings()) return;
+        const profile = { id: document.getElementById('adminId').value || crypto.randomUUID(), nome: document.getElementById('adminNome').value.trim(), permissoes: coletarPermissoesAdmin() };
+        try {
+            await RHAuth.request('save-profile', {profile, pin: document.getElementById('adminSenha').value});
+            document.getElementById('adminSenha').value = '';
+            await RHSync.sync(); fecharModal('modalFormAdmin'); abrirGerenciar('administradores');
+        } catch(e) { alert(e.message); }
     }
 
-    // VINCULOS E SALARIOS
     function getCamposFuncionarioClasse(c = {}) {
         const campos = c.camposFuncionario || {};
         return {
@@ -1129,11 +1096,11 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const listVT = document.getElementById('listaVT');
         const listMot = document.getElementById('listaMotivos');
         const listINSS = document.getElementById('listaINSS');
-        listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${escapeHTML(v.rota)} - <b style="color:#00695C;">R$ ${escapeHTML(v.valor)}</b></span><div><button class="btn-edit-small" onclick="editarVT(${i})">✏️</button><button onclick="removerVT(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>';
-        listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${escapeHTML(m)}</span><div style="display:flex; gap:2px;"><button class="btn-edit-small" onclick="moverMotivo(${i}, -1)">⬆️</button><button class="btn-edit-small" onclick="moverMotivo(${i}, 1)">⬇️</button><button onclick="confirmarRemoverMotivo(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>';
+        listVT.innerHTML = tempVT.length ? tempVT.map((v, i) => `<div class="list-item-config"><span>${escapeHTML(v.rota)} - <b style="color:#00695C;">R$ ${escapeHTML(v.valor)}</b></span><div><button class="btn-edit-small" onclick="editarVT(${i})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button><button onclick="removerVT(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma rota.</div>';
+        listMot.innerHTML = tempMotivos.length ? tempMotivos.map((m, i) => `<div class="list-item-config"><span>${escapeHTML(m)}</span><div style="display:flex; gap:2px;"><button class="btn-edit-small" onclick="moverMotivo(${i}, -1)" aria-label="Mover para cima"><span class="rh-icon" data-icon="arrow-up" aria-hidden="true"></span></button><button class="btn-edit-small" onclick="moverMotivo(${i}, 1)" aria-label="Mover para baixo"><span class="rh-icon" data-icon="arrow-down" aria-hidden="true"></span></button><button onclick="confirmarRemoverMotivo(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhum motivo.</div>';
         if(listINSS) {
             const ordenadas = ordenarINSS(tempINSS);
-            listINSS.innerHTML = ordenadas.length ? ordenadas.map((faixa, i) => `<div class="list-item-config"><span>Até <b>R$ ${escapeHTML(formatMoeda(parseMoeda(faixa.limite)))}</b> - <b style="color:#6A1B9A;">${escapeHTML(formatPercentual(faixa.aliquota))}%</b></span><div><button class="btn-edit-small" onclick="editarINSS(${i})">✏️</button><button onclick="removerINSS(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma faixa de INSS.</div>';
+            listINSS.innerHTML = ordenadas.length ? ordenadas.map((faixa, i) => `<div class="list-item-config"><span>Até <b>R$ ${escapeHTML(formatMoeda(parseMoeda(faixa.limite)))}</b> - <b style="color:#6A1B9A;">${escapeHTML(formatPercentual(faixa.aliquota))}%</b></span><div><button class="btn-edit-small" onclick="editarINSS(${i})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button><button onclick="removerINSS(${i})">X</button></div></div>`).join('') : '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma faixa de INSS.</div>';
         }
     }
     function addVT() { let r = document.getElementById('novoVTRota').value.trim(); let v = document.getElementById('novoVTValor').value.trim(); let editIdx = document.getElementById('editIdxVT').value; if(r && v) { if(editIdx !== "") { tempVT[editIdx] = {rota: r, valor: v}; document.getElementById('editIdxVT').value = ""; document.getElementById('btnSalvarVT').innerText = "+"; } else { tempVT.push({rota: r, valor: v}); } document.getElementById('novoVTRota').value = ''; document.getElementById('novoVTValor').value = ''; renderListasConfig(); } }
@@ -1289,7 +1256,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const box = document.getElementById('listaEscolhaPix');
         box.innerHTML = lista.map((pix, i) => {
             const tipo = pix.tipo || 'PIX';
-            return `<button class="btn-outline btn-pix-app" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left; justify-content:flex-start;" onclick="copiarChavePixFuncionario(${i}, ${jsArg(funcId)})"><span><strong><span class="emoji-pix">🔑</span>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></span></button>`;
+            return `<button class="btn-outline btn-pix-app" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left; justify-content:flex-start;" onclick="copiarChavePixFuncionario(${i}, ${jsArg(funcId)})"><span><strong><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></span></button>`;
         }).join('');
         document.getElementById('modalEscolhaPix').style.display = 'flex';
     }
@@ -1395,7 +1362,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
     }
     function confirmarSalarioPresenca(val) { fecharModal('modalEscolhaSalario'); registrarPresenca(val); }
-    function registrarPresenca(val) { const funcId = document.getElementById('acoesFuncId').value; const f = db.funcionarios.find(x => x.id === funcId); const reg = { id: 'reg_'+Date.now(), type: 'presenca', funcId: funcId, data: dataTempPresenca, valor: val, status: 'pendente', adminId: (getAdminAtual() || {}).id || '' }; db.registros.push(reg); registrarAuditoria('Presença semanal registrada', `${getNomeUsoFuncionario(f)} em ${formatDataBR(dataTempPresenca)} - R$ ${formatMoeda(val)}.`, 'presenca', reg.id); salvarBanco(); renderSeletorSemanasPresenca('boxBotoesDiasRapidos', 'addPresencaManual', '', [funcId]); renderizarPresencasPendentes(funcId); }
+    function registrarPresenca(val) { const funcId = document.getElementById('acoesFuncId').value; const f = db.funcionarios.find(x => x.id === funcId); if(db.registros.some(r=>r.type==='presenca'&&r.funcId===funcId&&r.data===dataTempPresenca)) return alert('Esta presença já foi registrada.'); const reg = { id: 'pres_'+funcId+'_'+dataTempPresenca, type: 'presenca', funcId: funcId, data: dataTempPresenca, valor: val, status: 'pendente', adminId: (getAdminAtual() || {}).id || '' }; db.registros.push(reg); registrarAuditoria('Presença semanal registrada', `${getNomeUsoFuncionario(f)} em ${formatDataBR(dataTempPresenca)} - R$ ${formatMoeda(val)}.`, 'presenca', reg.id); salvarBanco(); renderSeletorSemanasPresenca('boxBotoesDiasRapidos', 'addPresencaManual', '', [funcId]); renderizarPresencasPendentes(funcId); }
     
     function renderizarPresencasPendentes(funcId) {
         let box = document.getElementById('listaPresencasPendentes'); let hPagos = document.getElementById('listaHistoricoPagosSemana');
@@ -1403,7 +1370,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         let pagos = db.registros.filter(r => r.type === 'pagamento_semana' && r.funcId === funcId).sort((a,b) => new Date(b.data) - new Date(a.data));
         
         let totalPend = 0; let html = '';
-        pendentes.forEach(r => { totalPend += r.valor; html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:5px 0;"><span>📅 ${formatDataBR(r.data)}</span><span><b style="color:#00695C;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; color:#d32f2f; cursor:pointer;" onclick="excluirRegistro('${r.id}', 'presenca')">X</button></span></div>`; });
+        pendentes.forEach(r => { totalPend += r.valor; html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:5px 0;"><span><span class="rh-icon" data-icon="calendar" aria-hidden="true"></span> ${formatDataBR(r.data)}</span><span><b style="color:#00695C;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; color:#d32f2f; cursor:pointer;" onclick="excluirRegistro('${r.id}', 'presenca')">X</button></span></div>`; });
         document.getElementById('totalPresencasPendentes').innerText = `R$ ${formatMoeda(totalPend)}`; box.innerHTML = html || '<div style="color:#999; text-align:center;">Nenhum dia pendente.</div>';
         
         let htmlP = ''; pagos.forEach(r => { htmlP += `<div style="border-bottom:1px solid #ddd; padding:5px 0;"><b>Pagamento em ${formatDataBR(r.data)}</b><br><span style="color:#E65100; font-weight:bold;">Total: R$ ${formatMoeda(r.valorTotal)} (${r.dias.length} dias)</span></div>`; });
@@ -1417,7 +1384,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(pendentes.length === 0) return alert("Não há dias trabalhados na lista.");
         if(!confirm("Confirmar pagamento dos dias pendentes? Isso vai zerar o acumulado.")) return;
         let total = 0; let diasIds = []; pendentes.forEach(r => { total += r.valor; r.status = 'pago'; diasIds.push(r.data); });
-        const pagamento = { id: 'reg_'+Date.now(), type: 'pagamento_semana', funcId: funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds, adminId: (getAdminAtual() || {}).id || '' };
+        const pagamento = { id: 'reg_'+crypto.randomUUID(), type: 'pagamento_semana', funcId: funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds, adminId: (getAdminAtual() || {}).id || '' };
         db.registros.push(pagamento);
         registrarAuditoria('Pagamento semanal confirmado', `${getNomeUsoFuncionario(db.funcionarios.find(f => f.id === funcId))}: R$ ${formatMoeda(total)} (${diasIds.length} dia(s)).`, 'pagamento_semana', pagamento.id);
         salvarBanco(); renderizarPresencasPendentes(funcId); alert("Pagamento Confirmado!");
@@ -1519,7 +1486,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('adiantEditId').value; const valorStr = document.getElementById('adiantValor').value; if(!valorStr) return alert("Digite um valor.");
         const novo = { type: 'adiantamento', funcId: funcId, data: document.getElementById('adiantData').value, valor: parseMoeda(valorStr), motivo: document.getElementById('adiantMotivo').value, observacao: document.getElementById('adiantObs').value.trim(), forma: document.getElementById('adiantForma').value, adminId: document.getElementById('adiantAdmin').value, descontado: false };
         const f = db.funcionarios.find(x => x.id === funcId);
-        if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Adiantamento editado', `${getNomeUsoFuncionario(f)}: R$ ${formatMoeda(novo.valor)} - ${novo.motivo}.`, 'adiantamento', editId); } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); registrarAuditoria('Adiantamento registrado', `${getNomeUsoFuncionario(f)}: R$ ${formatMoeda(novo.valor)} - ${novo.motivo}.`, 'adiantamento', novo.id); }
+        if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Adiantamento editado', `${getNomeUsoFuncionario(f)}: R$ ${formatMoeda(novo.valor)} - ${novo.motivo}.`, 'adiantamento', editId); } } else { novo.id = 'reg_'+crypto.randomUUID(); db.registros.push(novo); registrarAuditoria('Adiantamento registrado', `${getNomeUsoFuncionario(f)}: R$ ${formatMoeda(novo.valor)} - ${novo.motivo}.`, 'adiantamento', novo.id); }
         salvarBanco();
         if(origemModalAdiantamento === 'contracheque' || origemModalAdiantamento === 'recibo' || origemModalAdiantamento === 'ferias') voltarModalAdiantamento();
         else abrirModalAdiantamento(null, origemModalAdiantamento); // reseta tela
@@ -1544,7 +1511,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
             let obs = r.observacao ? `<br><span style="color:#777; font-size:10px;">Obs: ${escapeHTML(r.observacao)}</span>` : '';
             let btnAcao = r.aguardandoDesconto ? `<button style="background:#Fbc02d; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="desfazerDescontoTemp(${jsArg(r.id)})">Desfazer (10s)</button>` : `<button style="background:#2e7d32; color:#fff; font-weight:bold; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:11px;" onclick="marcarDesconto(${jsArg(r.id)})">Descontar</button>`;
-            return `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0; align-items:center; gap:8px;"><div><b>${formatDataBR(r.data)}</b> - ${escapeHTML(r.motivo)} ${msgEdit}${obs}<br><span style="color:#666; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center; flex-shrink:0;"><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAdiantamento(${jsArg(r.id)})">✏️</button> ${btnAcao} <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro(${jsArg(r.id)}, 'adiantamento')">🗑️</button></div></div>`;
+            return `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0; align-items:center; gap:8px;"><div><b>${formatDataBR(r.data)}</b> - ${escapeHTML(r.motivo)} ${msgEdit}${obs}<br><span style="color:#666; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="display:flex; gap:5px; align-items:center; flex-shrink:0;"><b style="color:#1565C0;">R$ ${formatMoeda(r.valor)}</b> <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAdiantamento(${jsArg(r.id)})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button> ${btnAcao} <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro(${jsArg(r.id)}, 'adiantamento')" aria-label="Excluir"><span class="rh-icon" data-icon="trash-2" aria-hidden="true"></span></button></div></div>`;
         };
         regs.forEach(r => { 
             let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
@@ -1636,7 +1603,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const novo = { type: 'falta', funcId: funcId, data: dataIni, dataFim: document.getElementById('faltaDataFim').value, tipo: document.getElementById('faltaTipo').value, descontarDia: document.getElementById('faltaDescontarDia').checked, descontarPassagem: document.getElementById('faltaDescontarPassagem').checked, adminId: document.getElementById('faltaAdmin').value };
         const f = db.funcionarios.find(x => x.id === funcId);
         const periodo = `${formatDataBR(dataIni)}${dataFim && dataFim !== dataIni ? ` a ${formatDataBR(dataFim)}` : ''}`;
-        if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Ausência editada', `${getNomeUsoFuncionario(f)}: ${periodo} - ${novo.tipo}.`, 'ausencia', editId); } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); registrarAuditoria('Ausência registrada', `${getNomeUsoFuncionario(f)}: ${periodo} - ${novo.tipo}.`, 'ausencia', novo.id); }
+        if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Ausência editada', `${getNomeUsoFuncionario(f)}: ${periodo} - ${novo.tipo}.`, 'ausencia', editId); } } else { novo.id = 'reg_'+crypto.randomUUID(); db.registros.push(novo); registrarAuditoria('Ausência registrada', `${getNomeUsoFuncionario(f)}: ${periodo} - ${novo.tipo}.`, 'ausencia', novo.id); }
         salvarBanco(); abrirModalFalta(null); // reseta
     }
     function renderizarHistFaltas(funcId) {
@@ -1659,7 +1626,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         for (const [mY, g] of Object.entries(groups)) {
             let mYStr = formatDataBR(mY+'-01').substring(3);
             html += `<div style="background:#e0e0e0; padding:4px 8px; font-weight:bold; margin-top:5px; border-radius:4px; display:flex; justify-content:space-between;"><span>Mês: ${mYStr}</span><span style="color:#D32F2F;">-${g.diasDesc} Dias | -${g.dsrSemanas.size} DSR | -${g.passDesc} Pass.</span></div>`;
-            g.records.forEach(r => { let dFim = r.dataFim ? ` a ${formatDataBR(r.dataFim)}` : ''; let descDia = r.descontarDia ? '<span style="color:#D32F2F;">-Dia</span>' : ''; let descPas = r.descontarPassagem ? '<span style="color:#00695C;">-Pass</span>' : ''; let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div><b>${formatDataBR(r.data)}${dFim}</b> - ${r.tipo}<br><div style="font-size:10px; gap:5px; display:flex;">${descDia} ${descPas}</div>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFalta('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'falta')">🗑️</button></div></div>`; });
+            g.records.forEach(r => { let dFim = r.dataFim ? ` a ${formatDataBR(r.dataFim)}` : ''; let descDia = r.descontarDia ? '<span style="color:#D32F2F;">-Dia</span>' : ''; let descPas = r.descontarPassagem ? '<span style="color:#00695C;">-Pass</span>' : ''; let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div><b>${formatDataBR(r.data)}${dFim}</b> - ${escapeHTML(r.tipo)}<br><div style="font-size:10px; gap:5px; display:flex;">${descDia} ${descPas}</div>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFalta('${r.id}')" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'falta')" aria-label="Excluir"><span class="rh-icon" data-icon="trash-2" aria-hidden="true"></span></button></div></div>`; });
         }
         box.innerHTML = html;
     }
@@ -1713,7 +1680,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const novo = { type: 'atraso', funcId: funcId, data: data, horaPrevista: horaPrevista, horaChegada: horaChegada, minutos: minutosEntreHorarios(horaPrevista, horaChegada), observacao: document.getElementById('atrasoObs').value, adminId: document.getElementById('atrasoAdmin').value };
         const f = db.funcionarios.find(x => x.id === funcId);
         const detalhe = `${getNomeUsoFuncionario(f)}: ${formatDataBR(data)}${horaChegada ? ` - chegou ${horaChegada}` : ''}${novo.minutos ? ` (${novo.minutos} min)` : ''}.`;
-        if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Atraso editado', detalhe, 'atraso', editId); } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); registrarAuditoria('Atraso registrado', detalhe, 'atraso', novo.id); }
+        if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Atraso editado', detalhe, 'atraso', editId); } } else { novo.id = 'reg_'+crypto.randomUUID(); db.registros.push(novo); registrarAuditoria('Atraso registrado', detalhe, 'atraso', novo.id); }
         salvarBanco(); abrirModalAtraso(null); renderizarLista();
     }
 
@@ -1726,7 +1693,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             let detalhe = [r.horaPrevista ? `Previsto: ${escapeHTML(r.horaPrevista)}` : '', r.horaChegada ? `Chegou: ${escapeHTML(r.horaChegada)}` : '', minutos ? `${minutos} min` : ''].filter(Boolean).join(' • ');
             let obs = r.observacao ? `<br><span style="color:#666;">${escapeHTML(r.observacao)}</span>` : '';
             let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado)</span>` : '';
-            html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:6px 0; gap:8px;"><div><b>${formatDataBR(r.data)}</b> ${msgEdit}<br><span style="color:#795548; font-size:11px; font-weight:bold;">${detalhe || 'Atraso registrado'}</span>${obs}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="flex-shrink:0;"><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAtraso(${jsArg(r.id)})">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro(${jsArg(r.id)}, 'atraso')">🗑️</button></div></div>`;
+            html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:6px 0; gap:8px;"><div><b>${formatDataBR(r.data)}</b> ${msgEdit}<br><span style="color:#795548; font-size:11px; font-weight:bold;">${detalhe || 'Atraso registrado'}</span>${obs}<br><span style="color:#999; font-size:10px;">Resp: ${getAdminNome(r.adminId)}</span></div><div style="flex-shrink:0;"><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalAtraso(${jsArg(r.id)})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro(${jsArg(r.id)}, 'atraso')" aria-label="Excluir"><span class="rh-icon" data-icon="trash-2" aria-hidden="true"></span></button></div></div>`;
         });
         box.innerHTML = html;
     }
@@ -1779,7 +1746,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         else { const periodo = sugerirPeriodoAquisitivoFuncionario(funcId); document.getElementById('feriasEditId').value = ''; document.getElementById('feriasData').value = getHojeSTR(); document.getElementById('feriasAquisitivoInicio').value = periodo.inicio; document.getElementById('feriasAquisitivoFim').value = periodo.fim; atualizarPeriodoFeriasPorInicio(); document.getElementById('btnSalvarFerias').innerText = "Gravar Férias"; document.getElementById('btnCancelEditFerias').style.display = 'none'; areaEdit.classList.remove('edit-highlight'); }
         renderizarHistFerias(funcId); document.getElementById('modalFormFerias').style.display = 'flex';
     }
-    function salvarFerias() { if(!adminSelecionadoTemPermissao('feriasAdmin', 'lancarFerias')) return; const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const aqInicio = document.getElementById('feriasAquisitivoInicio').value; const aqFim = document.getElementById('feriasAquisitivoFim').value; const dataInicio = document.getElementById('feriasData').value; const dataFim = document.getElementById('feriasDataFim').value; if(aqInicio && aqFim && aqInicio > aqFim) return alert('O período aquisitivo está invertido.'); if(dataInicio && dataFim && dataInicio > dataFim) return alert('A data final das férias está antes da data inicial.'); const novo = { type: 'ferias', funcId: funcId, data: dataInicio, dataFim: dataFim, periodoAquisitivoInicio: aqInicio, periodoAquisitivoFim: aqFim, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; const func = db.funcionarios.find(f => f.id === funcId); if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Férias editadas', `${getNomeUsoFuncionario(func)}: ${formatDataBR(dataInicio)} a ${formatDataBR(dataFim)}. Aquisitivo ${formatDataBR(aqInicio)} a ${formatDataBR(aqFim)}.`, 'ferias', editId); } } else { novo.id = 'reg_'+Date.now(); db.registros.push(novo); registrarAuditoria('Férias registradas', `${getNomeUsoFuncionario(func)}: ${formatDataBR(dataInicio)} a ${formatDataBR(dataFim)}. Aquisitivo ${formatDataBR(aqInicio)} a ${formatDataBR(aqFim)}.`, 'ferias', novo.id); } salvarBanco(); abrirModalFerias(null, origemModalFerias); renderizarLista(); if(origemModalFerias === 'calendario') renderCalendarioFerias(); }
+    function salvarFerias() { if(!adminSelecionadoTemPermissao('feriasAdmin', 'lancarFerias')) return; const funcId = document.getElementById('acoesFuncId').value; const editId = document.getElementById('feriasEditId').value; const aqInicio = document.getElementById('feriasAquisitivoInicio').value; const aqFim = document.getElementById('feriasAquisitivoFim').value; const dataInicio = document.getElementById('feriasData').value; const dataFim = document.getElementById('feriasDataFim').value; if(aqInicio && aqFim && aqInicio > aqFim) return alert('O período aquisitivo está invertido.'); if(dataInicio && dataFim && dataInicio > dataFim) return alert('A data final das férias está antes da data inicial.'); const novo = { type: 'ferias', funcId: funcId, data: dataInicio, dataFim: dataFim, periodoAquisitivoInicio: aqInicio, periodoAquisitivoFim: aqFim, retorno: document.getElementById('feriasRetorno').value, adminId: document.getElementById('feriasAdmin').value }; const func = db.funcionarios.find(f => f.id === funcId); if(editId) { let r = db.registros.find(x => x.id === editId); if(r) { Object.assign(r, novo); r.editadoEm = Date.now(); r.id = editId; registrarAuditoria('Férias editadas', `${getNomeUsoFuncionario(func)}: ${formatDataBR(dataInicio)} a ${formatDataBR(dataFim)}. Aquisitivo ${formatDataBR(aqInicio)} a ${formatDataBR(aqFim)}.`, 'ferias', editId); } } else { novo.id = 'reg_'+crypto.randomUUID(); db.registros.push(novo); registrarAuditoria('Férias registradas', `${getNomeUsoFuncionario(func)}: ${formatDataBR(dataInicio)} a ${formatDataBR(dataFim)}. Aquisitivo ${formatDataBR(aqInicio)} a ${formatDataBR(aqFim)}.`, 'ferias', novo.id); } salvarBanco(); abrirModalFerias(null, origemModalFerias); renderizarLista(); if(origemModalFerias === 'calendario') renderCalendarioFerias(); }
 
     function voltarModalFerias() {
         fecharModal('modalFormFerias');
@@ -1790,7 +1757,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         }
         document.getElementById('modalAcoesFunc').style.display = 'flex';
     }
-    function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = getRegistrosFeriasFuncionario(funcId); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; const periodo = r.periodoAquisitivoInicio || r.periodoAquisitivoFim ? `<br><span style="color:#795548; font-size:11px; font-weight:bold;">Aquisitivo: ${formatDataBR(r.periodoAquisitivoInicio)} a ${formatDataBR(r.periodoAquisitivoFim)}</span>` : ''; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b>${periodo}<br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')">✏️</button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')">🗑️</button></div></div>`; }); box.innerHTML = html; }
+    function renderizarHistFerias(funcId) { let box = document.getElementById('listaHistoricoFerias'); let html = ''; let regs = getRegistrosFeriasFuncionario(funcId); if(regs.length === 0) { box.innerHTML = '<div style="color:#999; text-align:center;">Nenhum registro.</div>'; return; } regs.forEach(r => { let msgEdit = r.editadoEm ? `<span style="color:#d32f2f; font-size:9px;">(Editado por ${getAdminNome(r.adminId)})</span>` : `<span style="color:#666; font-size:10px;">(Resp: ${getAdminNome(r.adminId)})</span>`; const periodo = r.periodoAquisitivoInicio || r.periodoAquisitivoFim ? `<br><span style="color:#795548; font-size:11px; font-weight:bold;">Aquisitivo: ${formatDataBR(r.periodoAquisitivoInicio)} a ${formatDataBR(r.periodoAquisitivoFim)}</span>` : ''; html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:5px 0;"><div>De <b>${formatDataBR(r.data)}</b> a <b>${formatDataBR(r.dataFim)}</b>${periodo}<br><span style="color:#F57F17; font-size:11px; font-weight:bold;">Volta: ${formatDataBR(r.retorno)}</span><br>${msgEdit}</div><div><button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="abrirModalFerias('${r.id}')" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button> <button style="background:none; border:none; color:#d32f2f; cursor:pointer; font-size:16px;" onclick="excluirRegistro('${r.id}', 'ferias')" aria-label="Excluir"><span class="rh-icon" data-icon="trash-2" aria-hidden="true"></span></button></div></div>`; }); box.innerHTML = html; }
 
     function somarMesesISO(dataStr, meses) {
         if(!dataStr) return '';
@@ -2194,92 +2161,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return dias;
     }
 
-    function getTipoAusenciaResumo(registro) {
-        if(registro.tipo === 'Falta' && registro.descontarDia === false) return 'Falta justificada';
-        if(registro.tipo === 'Atestado') return 'Atestado';
-        return registro.tipo || 'Ausência';
-    }
 
-    function calcularResumoPeriodo(intervalo) {
-        const ativos = db.funcionarios.filter(f => !f.arquivado);
-        const faltas = db.registros.filter(r => r.type === 'falta' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
-        const faltaram = new Set(faltas.map(r => r.funcId));
-        const atrasos = db.registros.filter(r => r.type === 'atraso' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
-        const minutosAtraso = atrasos.reduce((acc, r) => acc + Number(r.minutos || minutosEntreHorarios(r.horaPrevista, r.horaChegada) || 0), 0);
-        const extras = db.registros.filter(r => r.type === 'presenca' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
-        const totalExtrasLancados = extras.reduce((acc, r) => acc + Number(r.valor || 0), 0);
-        const pagamentosExtras = db.registros.filter(r => r.type === 'pagamento_semana' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
-        const totalPagoExtras = pagamentosExtras.reduce((acc, r) => acc + Number(r.valorTotal || 0), 0);
-        const adiantamentos = db.registros.filter(r => r.type === 'adiantamento' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
-        const totalAdiantamentos = adiantamentos.reduce((acc, r) => acc + Number(r.valor || 0), 0);
-        const quinzena = db.registros.filter(r => r.type === 'desconto_quinzena' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim));
-        const porVinculo = new Map();
-        const nomeVinculo = (f) => {
-            const cat = db.categorias.find(c => c.id === f.categoria);
-            return cat ? cat.nome : 'Sem vínculo';
-        };
-        ativos.forEach((f) => {
-            const nome = nomeVinculo(f);
-            if(!porVinculo.has(nome)) porVinculo.set(nome, { nome, funcionarios: 0, pago: 0 });
-            porVinculo.get(nome).funcionarios++;
-        });
-        const somarPagamento = (funcId, valor) => {
-            const f = db.funcionarios.find(x => x.id === funcId);
-            if(!f) return;
-            const nome = nomeVinculo(f);
-            if(!porVinculo.has(nome)) porVinculo.set(nome, { nome, funcionarios: 0, pago: 0 });
-            porVinculo.get(nome).pago += Number(valor || 0);
-        };
-        pagamentosExtras.forEach(r => somarPagamento(r.funcId, r.valorTotal));
-        adiantamentos.forEach(r => somarPagamento(r.funcId, r.valor));
-        quinzena.forEach(r => somarPagamento(r.funcId, r.valor));
-        return { ativos, faltas, faltaram, atrasos, minutosAtraso, extras, totalExtrasLancados, pagamentosExtras, totalPagoExtras, adiantamentos, totalAdiantamentos, quinzena, porVinculo: [...porVinculo.values()].sort((a, b) => a.nome.localeCompare(b.nome)) };
-    }
 
-    function montarResumoGeralWhatsapp(intervalo) {
-        const r = calcularResumoPeriodo(intervalo);
-        const linhas = [
-            `Resumo Alô RH`,
-            `Período: ${intervalo.label}`,
-            '',
-            `Funcionários ativos: ${r.ativos.length}`,
-            `Funcionários com ausência: ${r.faltaram.size} (${r.faltas.length} registros)`,
-            `Atrasos: ${r.atrasos.length}${r.minutosAtraso ? ` (${r.minutosAtraso} min)` : ''}`,
-            `Extras lançados: R$ ${formatMoeda(r.totalExtrasLancados)} (${r.extras.length})`,
-            `Pago para extras: R$ ${formatMoeda(r.totalPagoExtras)} (${r.pagamentosExtras.length})`,
-            `Adiantamentos: R$ ${formatMoeda(r.totalAdiantamentos)} (${r.adiantamentos.length})`,
-            '',
-            `Por vínculo:`
-        ];
-        r.porVinculo.forEach(v => linhas.push(`- ${v.nome}: ${v.funcionarios} funcionário(s) | R$ ${formatMoeda(v.pago)}`));
-        return linhas.join('\n');
-    }
 
-    function montarResumoContadorWhatsapp(intervalo) {
-        const faltas = db.registros
-            .filter(r => r.type === 'falta' && registroNoIntervalo(r, intervalo.inicio, intervalo.fim))
-            .sort((a, b) => String(a.funcId || '').localeCompare(String(b.funcId || '')) || String(a.data || '').localeCompare(String(b.data || '')));
-        const linhas = [`Resumo para contador - Ausências`, `Período: ${intervalo.label}`, ''];
-        if(faltas.length === 0) {
-            linhas.push('Sem ausências registradas no período.');
-            return linhas.join('\n');
-        }
-        let atualFunc = '';
-        faltas.forEach((r) => {
-            const f = db.funcionarios.find(x => x.id === r.funcId);
-            const nome = f ? f.nome : 'Funcionário não encontrado';
-            if(nome !== atualFunc) {
-                if(atualFunc) linhas.push('');
-                linhas.push(nome);
-                atualFunc = nome;
-            }
-            const dias = listarDiasUteisRegistroIntervalo(r, intervalo.inicio, intervalo.fim);
-            const dsr = registroDescontaDSR(r) ? new Set(dias.map(d => chaveSemanaAno(new Date(d + "T00:00:00")))).size : 0;
-            const periodo = r.dataFim ? `${formatDataBR(r.data)} a ${formatDataBR(r.dataFim)}` : formatDataBR(r.data);
-            linhas.push(`- ${periodo}: ${getTipoAusenciaResumo(r)} | ${dias.length} dia(s) | DSR ${dsr} | desc. dia: ${r.descontarDia ? 'sim' : 'não'}`);
-        });
-        return linhas.join('\n');
-    }
+
+
+
+
 
     function enviarResumoWhatsapp(tipo) {
         const intervalo = obterIntervaloResumo();
@@ -2287,25 +2175,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         abrirWhatsappTexto(texto);
     }
 
-    function gerarResumo() {
-        const box = document.getElementById('resultadoResumo'); if(!box) return;
-        const intervalo = obterIntervaloResumo();
-        const resumo = calcularResumoPeriodo(intervalo);
-        const linhasVinculos = resumo.porVinculo.map(v => `<div class="resumo-linha"><span>${escapeHTML(v.nome)}<br><small>${v.funcionarios} funcionário(s)</small></span><strong>R$ ${formatMoeda(v.pago)}</strong></div>`).join('');
-        const textoGeral = montarResumoGeralWhatsapp(intervalo);
-        const textoContador = montarResumoContadorWhatsapp(intervalo);
-        box.innerHTML = `<div class="resumo-periodo-label">${escapeHTML(intervalo.label)}</div><div class="resumo-grid">
-            <div class="resumo-card"><strong>${resumo.ativos.length}</strong><span>funcionários ativos</span></div>
-            <div class="resumo-card"><strong>${resumo.faltaram.size}</strong><span>funcionários com ausência (${resumo.faltas.length} registros)</span></div>
-            <div class="resumo-card"><strong>${resumo.atrasos.length}</strong><span>atrasos registrados${resumo.minutosAtraso ? ` (${resumo.minutosAtraso} min)` : ''}</span></div>
-            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalExtrasLancados)}</strong><span>${resumo.extras.length} extras lançados no período</span></div>
-            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalPagoExtras)}</strong><span>pago para extras (${resumo.pagamentosExtras.length} pagamentos)</span></div>
-            <div class="resumo-card"><strong>R$ ${formatMoeda(resumo.totalAdiantamentos)}</strong><span>adiantamentos (${resumo.adiantamentos.length} lançamentos)</span></div>
-        </div>
-        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Por vínculo</div>${linhasVinculos || '<div style="color:#999;">Nenhum vínculo cadastrado.</div>'}</div>
-        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Resumo geral para WhatsApp</div><div class="resumo-texto-preview">${escapeHTML(textoGeral)}</div><div class="resumo-acoes"><button class="btn-action" onclick="enviarResumoWhatsapp('geral')" style="background:#2E7D32;">Enviar por WhatsApp</button></div></div>
-        <div class="resumo-bloco"><div class="resumo-bloco-titulo">Resumo para contador</div><div class="resumo-texto-preview">${escapeHTML(textoContador)}</div><div class="resumo-acoes"><button class="btn-action" onclick="enviarResumoWhatsapp('contador')" style="background:#0277BD;">Enviar ao contador</button></div></div>`;
-    }
+
 
     function getTipoAusenciaResumo(registro) {
         if(registro.tipo === 'Falta' && registro.descontarDia === false) return 'Falta justificada';
@@ -2882,14 +2752,14 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     ${renderBoxAdiantamentosContracheque(f, mesRef, d.adiantamentosContra, editavel, 'recibo')}
                     ${renderBoxValorReceber(d.liquidoAPagar)}
                 </div>
-                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button>${acaoPagamento}</div>${acaoRecibo}</div>
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span> Pix</button>${acaoPagamento}</div>${acaoRecibo}</div>
             </div>` : '';
             const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(d.liquido)} - R$ ${formatMoedaContracheque(d.adiantamentosContra.total)} = R$ ${formatMoedaContracheque(d.liquidoAPagar)}</strong>` : '';
             html += `<div class="contra-card recibo-mensal ${pago ? 'fechado' : ''}" onclick="toggleDetalhesReciboMensal(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;
         });
         const classeResumo = resumoReciboMensalVisivel ? 'contra-resumo-bar aberto' : 'contra-resumo-bar';
         const classeOlho = resumoReciboMensalVisivel ? 'contra-resumo-toggle' : 'contra-resumo-toggle cortado';
-        box.innerHTML = `<div class="${classeResumo}" style="background:#EFEBE9; color:#4E342E;"><div class="contra-resumo-dados"><span>${funcs.length} funcionário(s) - Líquido: R$ ${formatMoedaContracheque(total)} - A pagar: R$ ${formatMoedaContracheque(totalAPagar)}</span></div><button class="${classeOlho}" onclick="toggleResumoReciboMensal()" title="Mostrar ou ocultar resumo"><span>👁️‍🗨️</span></button></div>${html}`;
+        box.innerHTML = `<div class="${classeResumo}" style="background:#EFEBE9; color:#4E342E;"><div class="contra-resumo-dados"><span>${funcs.length} funcionário(s) - Líquido: R$ ${formatMoedaContracheque(total)} - A pagar: R$ ${formatMoedaContracheque(totalAPagar)}</span></div><button class="${classeOlho}" onclick="toggleResumoReciboMensal()" title="Mostrar ou ocultar resumo"><span><span class="rh-icon" data-icon="eye" aria-hidden="true"></span></span></button></div>${html}`;
     }
 
     function registrarReciboMensalPago(funcId, mesRef, dados) {
@@ -3023,7 +2893,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(!confirm(`Informar pagamento semanal de ${getNomeUsoFuncionario(f)} no valor de R$ ${formatMoedaContracheque(total)}?`)) return;
         const diasIds = [];
         pendentes.forEach(r => { r.status = 'pago'; r.editadoEm = Date.now(); r._syncAtualizadoEm = r.editadoEm; diasIds.push(r.data); });
-        const pagamento = { id: 'reg_'+Date.now(), type: 'pagamento_semana', funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds, adminId: (getAdminAtual() || {}).id || '' };
+        const pagamento = { id: 'reg_'+crypto.randomUUID(), type: 'pagamento_semana', funcId, data: getHojeSTR(), valorTotal: total, dias: diasIds, adminId: (getAdminAtual() || {}).id || '' };
         db.registros.push(pagamento);
         registrarAuditoria('Pagamento semanal confirmado', `${getNomeUsoFuncionario(f)}: R$ ${formatMoeda(total)} (${diasIds.length} dia(s)).`, 'pagamento_semana', pagamento.id);
         salvarBanco();
@@ -3079,7 +2949,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             return `<div class="pendente-card ${item.tipo}">
             <div class="pendente-head"><strong>${escapeHTML(getNomeUsoFuncionario(item.func))}</strong><span>${escapeHTML(item.valor || '')}</span></div>
             <div style="color:#555;"><b>${escapeHTML(item.titulo)}</b><br><small>${escapeHTML(item.detalhe)}</small></div>
-            <div class="pendente-actions-linha"><button class="btn-action" onclick="abrirDocumentoPendente(${jsArg(tipoDoc)}, ${jsArg(item.func.id)}, ${jsArg(mesRef)})">Abrir pagamento</button><button class="btn-pendente-pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(item.func.id)}, event)" title="Copiar Pix"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-pendente-pagar" onclick="${acaoInformar}">Informar pagamento</button><button class="btn-pendente-whats" onclick="abrirWhatsappFuncionarioPorId(${jsArg(item.func.id)}, '', event)" title="WhatsApp">WhatsApp</button></div>
+            <div class="pendente-actions-linha"><button class="btn-action" onclick="abrirDocumentoPendente(${jsArg(tipoDoc)}, ${jsArg(item.func.id)}, ${jsArg(mesRef)})">Abrir pagamento</button><button class="btn-pendente-pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(item.func.id)}, event)" title="Copiar Pix"><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span> Pix</button><button class="btn-pendente-pagar" onclick="${acaoInformar}">Informar pagamento</button><button class="btn-pendente-whats" onclick="abrirWhatsappFuncionarioPorId(${jsArg(item.func.id)}, '', event)" title="WhatsApp">WhatsApp</button></div>
         </div>`;
         }).join('');
     }
@@ -3175,15 +3045,15 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const anoAnterior = refAnterior.getFullYear();
         const mesAnterior = refAnterior.getMonth() + 1;
         const diasBase = contarDiasEmpresaNoMes(ano, mes);
-        const faltasDescontadas = db.registros
-            .filter(r => r.type === 'falta' && r.funcId === f.id && r.descontarPassagem)
-            .reduce((acc, r) => acc + contarDiasUteisRegistroNoMes(r, anoAnterior, mesAnterior), 0);
-        const feriasDescontadas = db.registros
-            .filter(r => r.type === 'ferias' && r.funcId === f.id)
-            .reduce((acc, r) => acc + contarDiasUteisRegistroNoMes(r, ano, mes), 0);
-        const folgasGerais = contarFolgasGeraisNoVT(ano, mes);
+        const inicioAnterior = `${anoAnterior}-${String(mesAnterior).padStart(2,'0')}-01`;
+        const fimAnterior = dataISO(new Date(anoAnterior,mesAnterior,0));
+        const inicioAtual = `${ano}-${String(mes).padStart(2,'0')}-01`, fimAtual=dataISO(new Date(ano,mes,0));
+        const faltas=new Set(db.registros.filter(r=>r.type==='falta'&&r.funcId===f.id&&r.descontarPassagem).flatMap(r=>listarDiasUteisRegistroIntervalo(r,inicioAnterior,fimAnterior)));
+        const ferias=new Set(db.registros.filter(r=>r.type==='ferias'&&r.funcId===f.id).flatMap(r=>listarDiasUteisRegistroIntervalo(r,inicioAtual,fimAtual)));
+        const folgas=new Set((db.configGerais.folgasGerais||[]).filter(r=>r.mesDesconto===inicioAtual.slice(0,7)&&r.data&&db.configGerais.diasFuncionamento.includes(String(new Date(r.data+'T00:00:00').getDay()))).map(r=>r.data));
+        const faltasDescontadas=faltas.size, feriasDescontadas=ferias.size, folgasGerais=folgas.size;
         const passagensBase = diasBase * 2;
-        const passagensDescontadas = (faltasDescontadas + feriasDescontadas + folgasGerais) * 2;
+        const passagensDescontadas = new Set([...faltas,...ferias,...folgas]).size * 2;
         const passagens = Math.max(0, passagensBase - passagensDescontadas);
         const valorUnit = parseMoeda(rotaObj.valor);
         return { passagens, total: passagens * valorUnit, passagensBase, passagensDescontadas, faltasDescontadas, feriasDescontadas, folgasGerais, valorUnit, rota: rotaObj.rota };
@@ -3203,15 +3073,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return db.registros.find(r => r.type === 'contracheque_fechado' && r.funcId === funcId && r.mesRef === mesRef);
     }
 
-    function validarSenhaAdminSimples(senha) {
-        const texto = String(senha || '');
-        return db.administradores.some(a => String(a.senha || '') === texto);
-    }
+    async function validarSenhaAdminSimples(senha) { try { await RHAuth.authenticateProfile(adminSessaoId, senha); return true; } catch(_) { return false; } }
 
-    function getAdminPorSenha(senha) {
-        const texto = String(senha || '');
-        return db.administradores.find(a => String(a.senha || '') === texto) || null;
-    }
+    async function getAdminPorSenha(senha) { try { return (await RHAuth.authenticateProfile(adminSessaoId, senha)).profile; } catch(_) { return null; } }
 
     function toggleDetalhesContracheque(funcId, event) {
         if(event && event.target && event.target.closest('button,input,select,label')) return;
@@ -3233,7 +3097,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('contraSenhaContexto').value = 'contracheque';
         document.getElementById('contraSenhaMesRef').value = document.getElementById('contraMesRef').value || getHojeSTR().substring(0, 7);
         document.getElementById('contraSenhaTitulo').innerText = 'Reabrir Contracheque';
-        document.getElementById('contraSenhaTexto').innerText = 'Digite a senha de um administrador para reabrir e permitir ajustes neste contracheque.';
+        document.getElementById('contraSenhaTexto').innerText = 'Confirme seu PIN para reabrir e permitir ajustes neste contracheque.';
         document.getElementById('contraSenhaAdmin').value = '';
         document.getElementById('contraSenhaErro').style.display = 'none';
         document.getElementById('modalSenhaAdminContracheque').style.display = 'flex';
@@ -3247,17 +3111,17 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         document.getElementById('contraSenhaContexto').value = 'recibo';
         document.getElementById('contraSenhaMesRef').value = document.getElementById('reciboMesRef').value || getHojeSTR().substring(0, 7);
         document.getElementById('contraSenhaTitulo').innerText = 'Reabrir Recibo';
-        document.getElementById('contraSenhaTexto').innerText = 'Digite a senha de um administrador para desmarcar o recibo gerado e permitir ajustes.';
+        document.getElementById('contraSenhaTexto').innerText = 'Confirme seu PIN para desmarcar o recibo gerado e permitir ajustes.';
         document.getElementById('contraSenhaAdmin').value = '';
         document.getElementById('contraSenhaErro').style.display = 'none';
         document.getElementById('modalSenhaAdminContracheque').style.display = 'flex';
         setTimeout(() => document.getElementById('contraSenhaAdmin').focus(), 100);
     }
 
-    function validarSenhaContracheque() {
+    async function validarSenhaContracheque() {
         const funcId = document.getElementById('contraSenhaFuncId').value;
         const senha = document.getElementById('contraSenhaAdmin').value;
-        const admin = getAdminPorSenha(senha);
+        const admin = await getAdminPorSenha(senha);
         if(!admin || !adminTemPermissao(admin, 'gerarContracheque')) {
             document.getElementById('contraSenhaErro').style.display = 'block';
             return;
@@ -3523,7 +3387,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const pagamentoDoc = obterPagamentoDocumento('contracheque', f.id, mesRef);
             const aberto = contrachequesAbertos.has(key);
             const editavel = !fechado;
-            const inssLabel = editavel ? `INSS (${formatPercentual(inssAliquota)}%) <button class="btn-mini-edit" onclick="abrirEdicaoINSSContracheque(${jsArg(f.id)}, ${inssAliquota}, ${inss})" title="Editar INSS">✏️</button>` : `INSS (${formatPercentual(inssAliquota)}%)`;
+            const inssLabel = editavel ? `INSS (${formatPercentual(inssAliquota)}%) <button class="btn-mini-edit" onclick="abrirEdicaoINSSContracheque(${jsArg(f.id)}, ${inssAliquota}, ${inss})" title="Editar INSS" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button>` : `INSS (${formatPercentual(inssAliquota)}%)`;
             const status = pagamentoDoc ? 'Pago' : (fechado ? 'Fechado' : (aberto ? 'Aberto' : 'Tocar para abrir'));
             const acaoPagamento = pagamentoDoc ? `<span class="contra-status">Pago em ${formatDataBR(pagamentoDoc.data)}</span>` : `<button class="btn-fechar-contra" style="background:#F57F17;" onclick="informarPagamentoDocumento('contracheque', ${jsArg(f.id)}, ${jsArg(mesRef)}, event)">Informar pagamento</button>`;
             const detalhes = aberto ? `<div class="contra-detalhes">
@@ -3549,7 +3413,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel, 'contracheque')}
                     ${renderBoxValorReceber(liquidoAPagar)}
                 </div>
-                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="emoji-pix">🔑</span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)">📝 WhatsApp</button>${acaoPagamento}</div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)"><span class="rh-icon" data-icon="list" aria-hidden="true"></span> WhatsApp</button>${acaoPagamento}</div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
             </div>` : '';
             const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(liquido)} - R$ ${formatMoedaContracheque(adiantamentosContra.total)} = R$ ${formatMoedaContracheque(liquidoAPagar)}</strong>` : '';
             html += `<div class="contra-card ${fechado ? 'fechado' : ''}" onclick="toggleDetalhesContracheque(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;
@@ -3557,7 +3421,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
         const classeResumo = resumoContrachequeVisivel ? 'contra-resumo-bar aberto' : 'contra-resumo-bar';
         const classeOlho = resumoContrachequeVisivel ? 'contra-resumo-toggle' : 'contra-resumo-toggle cortado';
-        box.innerHTML = `<div class="${classeResumo}"><div class="contra-resumo-dados"><span>${funcs.length} funcionário(s) - Total líquido: R$ ${formatMoedaContracheque(totalLiquido)}</span></div><button class="${classeOlho}" onclick="toggleResumoContracheque()" title="Mostrar ou ocultar resumo"><span>👁️‍🗨️</span></button></div>${html}`;
+        box.innerHTML = `<div class="${classeResumo}"><div class="contra-resumo-dados"><span>${funcs.length} funcionário(s) - Total líquido: R$ ${formatMoedaContracheque(totalLiquido)}</span></div><button class="${classeOlho}" onclick="toggleResumoContracheque()" title="Mostrar ou ocultar resumo"><span><span class="rh-icon" data-icon="eye" aria-hidden="true"></span></span></button></div>${html}`;
     }
 
     function abrirModalAniversarios() {
