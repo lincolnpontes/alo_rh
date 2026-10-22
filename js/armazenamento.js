@@ -1,6 +1,6 @@
 (function(global){
     'use strict';
-    let connection, state, queue=Promise.resolve(), writable=false,reserving=null;
+    let connection, state, queue=Promise.resolve(), writable=false,reserving=null,legacyPreserved=false;
     const P=RHProtocol;
     function transaction(store,mode,operation){return new Promise((resolve,reject)=>{
         const tx=connection.transaction(store,mode),request=operation(tx.objectStore(store));
@@ -31,6 +31,7 @@
             if(parsed.app_id!=='alorh'||!Array.isArray(parsed.funcionarios)||!Array.isArray(parsed.registros))throw new Error('A cópia antiga está incompleta. Os dados foram preservados.');
             const sanitized=P.clean(RHModel.normalizarBanco(parsed));P.validate(sanitized);
             await transaction('backups','readwrite',store=>store.add({at:Date.now(),reason:'migração-legada',bank:sanitized}));
+            legacyPreserved=true;
             localStorage.removeItem('alorh_v1');
         }
         return state;
@@ -43,5 +44,5 @@
     }
     function backup(bank,reason){return transaction('backups','readwrite',store=>store.add({at:Date.now(),reason,bank:P.clone(bank)}));}
     function backups(){return transaction('backups','readonly',store=>store.getAll());}
-    global.RHStore={init,reserve,save,backup,backups,flush:()=>queue,get:()=>P.clone(state)};
+    global.RHStore={init,reserve,save,backup,backups,legacyPreserved:()=>legacyPreserved,flush:()=>queue,get:()=>P.clone(state)};
 })(window);

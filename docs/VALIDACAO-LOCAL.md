@@ -4,7 +4,7 @@ Branch: `codex/sincronizacao-seguranca`. Base: v1.0.52. Versão local: v1.1.0.
 
 ## Resultado atual
 
-56 testes passaram com dados fictícios: 36 de regras, cálculos e acesso interno; 15 de transporte e fila; quatro do bundle Apps Script com Drive/LockService simulados; um de ponta a ponta via HTTP do servidor Node local. Comando: `node --test tests/*.test.cjs`.
+63 testes passaram com dados fictícios: 36 de regras, cálculos e acesso interno; 15 de transporte e fila; quatro do bundle Apps Script com Drive/LockService simulados; sete de migração e restauração; um de ponta a ponta via HTTP do servidor Node local. Comando: `node --test tests/*.test.cjs`.
 
 O teste HTTP valida seleção pública sem dados de RH, PIN incorreto/correto, leitura protegida, alteração, arquivo persistido, confirmação, repetição sem duplicar, backup, isolamento de arquivos privados, recusa de origem externa e encerramento da sessão.
 
@@ -12,7 +12,11 @@ O login foi corrigido para **pessoa + PIN**, seguindo o acesso interno do Alô C
 
 Os emojis da interface foram substituídos por SVGs simples. Foram verificadas sintaxe JavaScript, estrutura XML dos SVGs, ausência de IDs repetidos, referências de arquivos e recursos do service worker.
 
-**Conferência visual desta revisão pendente:** a ferramenta de navegador recusou a abertura de `http://127.0.0.1:49317/` pela política de URL. Não foi tentado contorno. As capturas anteriores em `.local/auditoria/` pertencem à versão anterior ao ajuste do login/ícones e não comprovam o visual atual.
+**Conferência no navegador concluída nesta revisão:** a cópia local abriu após iniciar o servidor. Foram verificados seleção de pessoa, recusa do PIN incorreto, entrada correta, bloqueio da segunda aba, ícones, navegação, gravação fictícia confirmada e persistência após recarga, confirmação adicional do PIN e acesso às cópias locais. Evidências privadas em `.local/pre-publicacao-2026-10-22/`. Não houve teste em aparelho móvel físico.
+
+No runtime real do Google, um teste em memória, sem acesso ao Drive e com dados fictícios, validou migração, PIN, leitura, alteração, repetição idempotente e saída em 2.143 ms. A sintaxe de atribuição lógica foi substituída por uma forma aceita pelo parser do Apps Script. A versão 7 foi publicada na implantação existente, mantendo suas permissões.
+
+A migração criou um novo estado privado, conferiu a gravação por releitura e preservou os bytes originais. Testes recusam origem alterada durante a migração, cópia gravada incorretamente, falta de gestor com PIN, destino já configurado e bloqueio indisponível. O backup da origem pode ser restaurado sem perda de campos. A cópia antiga de cada navegador é preservada e sua existência é avisada na primeira abertura.
 
 ## Correções da análise anterior
 
@@ -37,6 +41,6 @@ Outras verificações: edição durante envio; ACK perdido; falta de espaço; en
 
 A cópia local preserva os cadastros e lançamentos originais. Dois lançamentos legados continuam sem cadastro correspondente. A tela de vínculos os sinaliza; não foi inventado o vínculo nem excluída a informação. Os detalhes permanecem apenas nos arquivos privados locais.
 
-O teste local não mede CORS, redirecionamentos, latência ou cotas de uma implantação real do Apps Script. Não houve teste desta revisão em APK ou celular físico, nem validação contábil de todas as regras originais de folha.
+Não houve teste desta revisão em APK ou celular físico, teste prolongado de cotas/carga, nem validação contábil de todas as regras originais de folha.
 
-O código é enviado ao GitHub em uma branch de desenvolvimento, sem implantação. Não houve POST no Apps Script de produção, alteração do banco original ou modificação no Alô Cozinha. Nenhum recurso Supabase foi criado ou usado.
+Backups anteriores à implantação foram criados no Drive e no computador, com hashes SHA-256 iguais. O banco original permanece intacto; o serviço novo usa outro arquivo privado. A migração preservou 34 funcionários, 268 lançamentos e dois perfis de acesso existentes, sem ampliar permissões. Não houve modificação no Alô Cozinha nem uso de Supabase.

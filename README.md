@@ -1,4 +1,4 @@
-# Alô RH — desenvolvimento local
+# Alô RH
 
 O backend continua no **Google Apps Script**, com o banco em arquivos privados no **Google Drive**. O acesso é exclusivamente interno: **pessoa + PIN**, seguindo o fluxo de funcionários do Alô Cozinha. Não há conta do aplicativo, login Google, login por e-mail, cadastro de titular ou pareamento de aparelhos.
 
@@ -10,13 +10,13 @@ O backend continua no **Google Apps Script**, com o banco em arquivos privados n
 node scripts/servir-local.cjs
 ```
 
-Abra [a cópia local](http://127.0.0.1:49317/). O servidor escuta somente neste computador e injeta uma API local; conexões externas são bloqueadas por CSP. O endpoint de produção permanece ausente de `js/config.js`.
+Abra [a cópia local](http://127.0.0.1:49317/). O servidor escuta somente neste computador e injeta uma API local; conexões externas são bloqueadas por CSP. A configuração pública em `js/config.js` é usada apenas na versão publicada.
 
 A primeira execução copia `.local/drive/banco.json` para `.local/homologacao/estado.json`, preservando o original. Entre selecionando um dos perfis autorizados já existentes e seu PIN. Não é necessário criar conta nem cadastrar e-mail. Os cadastros de funcionários da folha não recebem automaticamente permissão de acesso.
 
 ## Acesso interno
 
-A tela oferece seleção de pessoa, PIN de quatro a doze dígitos, teclado numérico e entrada pelo teclado físico. Lembra a última pessoa; pede o PIN ao abrir. Operações sensíveis exigem confirmação do PIN e permissão do perfil, verificada novamente no servidor.
+A tela oferece seleção de pessoa, PIN, teclado numérico e entrada pelo teclado físico. PINs novos exigem quatro a doze dígitos; os acessos legados de três dígitos são preservados. Lembra a última pessoa; pede o PIN ao abrir. Operações sensíveis exigem confirmação do PIN e permissão do perfil, verificada novamente no servidor.
 
 PINs são migrados para PBKDF2-SHA256 com salt individual e 120.000 iterações. Credenciais não entram no banco compartilhado ou exportado. Três erros bloqueiam temporariamente novas tentativas para aquela pessoa, mesmo trocando o identificador de aparelho.
 
@@ -51,4 +51,4 @@ Os testes usam dados fictícios, incluindo uma execução HTTP real do servidor 
 
 Fontes principais: `js/protocolo.js` e `js/modelo.js` para dados; `js/armazenamento.js` e `js/sync-seguro.js` para persistência; `js/autenticacao.js` para acesso interno; `server/service.js` para regras do backend. `google-apps-script/Code.gs` é gerado, não editado diretamente.
 
-Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão preparada: v1.1.0, na branch de desenvolvimento `codex/sincronizacao-seguranca`. Sem deploy em produção; nenhum recurso Supabase usado.
+Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.1.0; backend Apps Script versão 7, atualizado em 22/10/2026. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.

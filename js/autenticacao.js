@@ -45,7 +45,7 @@
     function notice(parent){const p=node('p','',{className:'rh-feedback'});p.setAttribute('role','status');parent.append(p);return p;}
     function pinField(parent){
         const group=node('div',undefined,{className:'rh-pin-group'}),label=node('label','PIN'),input=node('input',undefined,{type:'password',required:true,maxLength:12,placeholder:'••••',className:'rh-pin-input'});
-        input.autocomplete='off';input.inputMode='numeric';input.setAttribute('aria-label','PIN');input.setAttribute('enterkeyhint','go');input.pattern='[0-9]{4,12}';
+        input.autocomplete='off';input.inputMode='numeric';input.setAttribute('aria-label','PIN');input.setAttribute('enterkeyhint','go');input.pattern='[0-9]{3,12}';
         input.oninput=()=>{input.value=input.value.replace(/\D/g,'').slice(0,12);};
         label.append(input);group.append(label);
         const keys=node('div',undefined,{className:'rh-pin-keypad'});keys.setAttribute('aria-label','Teclado do PIN');

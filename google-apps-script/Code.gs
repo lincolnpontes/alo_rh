@@ -6966,13 +6966,13 @@ return {criarBancoBase,criarTabelaINSSPadrao,criarPermissoesAdminPadrao,normaliz
     const MINUTE=60000,DAY=86400000,error=(message,code='invalid')=>P.fail(message,code);
     function create(state,env){
         // Retain the existing local database namespace and business data, but discard the former account sessions.
-        state.bankId ||= state.security?.owner?.id || env.random();
+        state.bankId = state.bankId || state.security?.owner?.id || env.random();
         if(state.security?.kind!=='internal-pin')state.security={kind:'internal-pin',credentials:state.security?.credentials||{},sessions:{},attempts:{}};
         state.schema=3;
         const normalized=P.clean(M.normalizarBanco(state.bank));if(!P.equal(normalized,state.bank)){state.bank=normalized;state.revision=(state.revision||1)+1;}
-        state.receipts ||= {};state.versions ||= {};state.revision ||= 1;
+        state.receipts = state.receipts || {};state.versions = state.versions || {};state.revision = state.revision || 1;
         const sec=state.security,now=()=>env.now(),hash=v=>env.digest(String(v));
-        function audit(action,detail=''){state.accessAudit ||= [];state.accessAudit.unshift({at:now(),action,detail:String(detail).slice(0,120)});state.accessAudit=state.accessAudit.slice(0,500);}
+        function audit(action,detail=''){state.accessAudit = state.accessAudit || [];state.accessAudit.unshift({at:now(),action,detail:String(detail).slice(0,120)});state.accessAudit=state.accessAudit.slice(0,500);}
         function limit(key){
             const id=hash(key);let a=sec.attempts[id]||{count:0,since:now(),until:0};
             if(a.until>now())error('Muitas tentativas. Aguarde 30 segundos e tente novamente.','rate_limit');
@@ -6988,7 +6988,7 @@ return {criarBancoBase,criarTabelaINSSPadrao,criarPermissoesAdminPadrao,normaliz
             const a=person(id);if(!a)error('Pessoa ou PIN incorreto.','invalid_credentials');
             // Per-person throttling cannot be bypassed by changing a device identifier.
             limit('pin:'+id);
-            if(!/^\d{4,12}$/.test(String(pin||''))||!sec.credentials[id]||!env.verifyPassword(String(pin),sec.credentials[id]))error('PIN incorreto. Tente novamente.','invalid_credentials');
+            if(!/^\d{3,12}$/.test(String(pin||''))||!sec.credentials[id]||!env.verifyPassword(String(pin),sec.credentials[id]))error('PIN incorreto. Tente novamente.','invalid_credentials');
             clearLimit('pin:'+id);return a;
         }
         function issue(a,secretHash,previous){
@@ -7111,15 +7111,37 @@ function doPost(event) {
     finally {if(locked)lock.releaseLock();}
 }
 function rhJson_(value) {return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON);}
-// Run explicitly in a separate Apps Script project. Source is read-only; a new folder and file are created.
+// Execute somente após suspender a escrita do serviço legado. A origem permanece intacta.
 function prepararCopiaSegura() {
+    const lock=LockService.getScriptLock();if(!lock.tryLock(15000))throw new Error('Servidor ocupado.');
+    try {
     if(rhProperties_().getProperty('RH_STATE_FILE_ID'))throw new Error('Este projeto já possui banco configurado.');
     const source=DriveApp.getFileById(rhRequired_('RH_SOURCE_FILE_ID'));
-    const bank=JSON.parse(source.getBlob().getDataAsString('UTF-8'));
+    const original=source.getBlob().getDataAsString('UTF-8'),bank=JSON.parse(original);
     const state=RHService.migrate(bank,rhEnvironment_());
+    if(!state.bank.administradores.some(a=>a.permissoes?.gerenciarAdministradores&&state.security.credentials[a.id]))throw new Error('A origem precisa de pelo menos um gestor com PIN.');
     const folder=DriveApp.createFolder('Alô RH — Cópia segura '+new Date().toISOString());
-    folder.createFile('original-antes-migracao.json',JSON.stringify(bank),MimeType.PLAIN_TEXT);
+    const backup=folder.createFile('original-antes-migracao.json',original,MimeType.PLAIN_TEXT);
     const backups=folder.createFolder('Backups');
-    const file=folder.createFile('estado-seguro.json',JSON.stringify(state),MimeType.PLAIN_TEXT);
+    const serialized=JSON.stringify(state),file=folder.createFile('estado-seguro.json',serialized,MimeType.PLAIN_TEXT);
+    if(backup.getBlob().getDataAsString('UTF-8')!==original||file.getBlob().getDataAsString('UTF-8')!==serialized)throw new Error('Verificação das cópias falhou; banco não ativado.');
+    if(source.getBlob().getDataAsString('UTF-8')!==original)throw new Error('A origem mudou durante a cópia; banco não ativado.');
     rhProperties_().setProperties({RH_STATE_FILE_ID:file.getId(),RH_BACKUP_FOLDER_ID:backups.getId()});
+    console.log(JSON.stringify({schema:state.schema,revision:state.revision,funcionarios:state.bank.funcionarios.length,registros:state.bank.registros.length,perfis:Object.keys(state.security.credentials).length,originalSHA256:CryptoJS.SHA256(original).toString()}));
+    } finally {lock.releaseLock();}
+}
+
+// Verificação sem Drive: usa apenas dados fictícios e mede o custo real do PIN no Google.
+function validarBackendComDadosFicticios() {
+    const start=Date.now(),env=rhEnvironment_();
+    const bank={app_id:'alorh',empresa:{razao:'Teste fictício'},configGerais:{},categorias:[],funcoes:[],funcionarios:[],registros:[],auditoria:[],administradores:[{id:'teste',nome:'Pessoa de teste',senha:'1234',permissoes:{gerenciarAdministradores:true,dadosEmpresa:true}}]};
+    const state=RHService.migrate(bank,env),service=RHService.create(state,env),secret=env.random();
+    const login=service.handle({action:'login',profileId:'teste',pin:'1234',secret});
+    if(login.bank.administradores[0].senha||state.security.credentials.teste.hash==='1234')throw new Error('Credencial exposta.');
+    const before=service.handle({action:'read',session:login.token,secret}).bank,next=RHProtocol.clone(before);next.empresa.razao='Teste de gravação fictício';
+    const request={action:'commit',session:login.token,secret,requestId:env.random(),operations:RHProtocol.diff(before,next)};
+    const first=service.handle(request),retry=service.handle(request);
+    if(first.revision!==retry.revision||retry.bank.empresa.razao!==next.empresa.razao)throw new Error('Falha de idempotência.');
+    service.handle({action:'signout',session:login.token,secret});
+    console.log(JSON.stringify({ok:true,ambiente:'fictício, sem acesso ao Drive',duracaoMs:Date.now()-start,revision:state.revision}));
 }

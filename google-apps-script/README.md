@@ -1,6 +1,6 @@
 # Backend Google Apps Script — acesso interno
 
-O pacote permanece local. O banco continua no Drive e a autenticação é **pessoa + PIN**, sem Google Identity, e-mail, MailApp ou conta de titular. O cliente antigo com token compartilhado não é compatível com este protocolo.
+O banco continua no Drive e a autenticação é **pessoa + PIN**, sem Google Identity, e-mail, MailApp ou conta de titular. O cliente antigo com token compartilhado não é compatível com este protocolo.
 
 ## Gerar e verificar
 
@@ -11,9 +11,9 @@ node --test tests/*.test.cjs
 
 O bundle inclui modelo, protocolo, serviço, adaptador e CryptoJS 4.2.0; a licença fica em `server/vendor/`. O estado usa esquema 3; o formato de operações por campo continua v2. A migração de estados locais de esquema 2 preserva banco, credenciais internas e identificador de armazenamento, descartando a antiga camada de conta.
 
-## Configuração futura do backend
+## Configuração do backend
 
-Nenhum destes passos foi executado na nuvem nesta tarefa.
+Produção atualizada em 22/10/2026 na versão 7 da implantação existente. O banco de origem foi preservado e o estado seguro foi criado em um novo arquivo privado. A versão 5 e uma cópia local de seu código estão disponíveis para recuperação; restaurar código e dados exige tratar os dois em conjunto.
 
 1. Use inicialmente um projeto Apps Script separado, com runtime V8, e o `Code.gs` gerado.
 2. Defina `RH_SOURCE_FILE_ID` nas propriedades do script com o ID do JSON a copiar.
@@ -24,9 +24,9 @@ Nenhum destes passos foi executado na nuvem nesta tarefa.
 
 A autorização do proprietário para executar um Apps Script é uma configuração do backend; não cria uma tela de login Google no Alô RH.
 
-## Verificações para uma futura implantação
+## Verificações para atualizações
 
-O teste local cobre PIN, sessões, permissões, conflitos, repetição idempotente, backups e falhas de escrita. Ainda é necessário verificar redirecionamentos/CORS, latência, cotas do Drive, custo do PBKDF2 no runtime do Google e recuperação de backups na implantação real. Nada disso depende de login Google ou e-mail no aplicativo.
+O teste local cobre PIN, sessões, permissões, conflitos, repetição idempotente, backups, migração, restauração e falhas de escrita. O teste fictício no runtime real do Google concluiu em 2,143 segundos, incluindo derivação e verificação do PIN. Revalide redirecionamentos, CORS, latência, cotas do Drive e recuperação a cada mudança de implantação. Nada disso depende de login Google ou e-mail no aplicativo.
 
 A seção crítica usa [LockService.getScriptLock](https://developers.google.com/apps-script/reference/lock/lock-service) até finalizar backup e escrita. Os snapshots são arquivos independentes; não há limpeza automática deles nesta versão.
 

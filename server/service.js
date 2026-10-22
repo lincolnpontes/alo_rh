@@ -4,13 +4,13 @@
     const MINUTE=60000,DAY=86400000,error=(message,code='invalid')=>P.fail(message,code);
     function create(state,env){
         // Retain the existing local database namespace and business data, but discard the former account sessions.
-        state.bankId ||= state.security?.owner?.id || env.random();
+        state.bankId = state.bankId || state.security?.owner?.id || env.random();
         if(state.security?.kind!=='internal-pin')state.security={kind:'internal-pin',credentials:state.security?.credentials||{},sessions:{},attempts:{}};
         state.schema=3;
         const normalized=P.clean(M.normalizarBanco(state.bank));if(!P.equal(normalized,state.bank)){state.bank=normalized;state.revision=(state.revision||1)+1;}
-        state.receipts ||= {};state.versions ||= {};state.revision ||= 1;
+        state.receipts = state.receipts || {};state.versions = state.versions || {};state.revision = state.revision || 1;
         const sec=state.security,now=()=>env.now(),hash=v=>env.digest(String(v));
-        function audit(action,detail=''){state.accessAudit ||= [];state.accessAudit.unshift({at:now(),action,detail:String(detail).slice(0,120)});state.accessAudit=state.accessAudit.slice(0,500);}
+        function audit(action,detail=''){state.accessAudit = state.accessAudit || [];state.accessAudit.unshift({at:now(),action,detail:String(detail).slice(0,120)});state.accessAudit=state.accessAudit.slice(0,500);}
         function limit(key){
             const id=hash(key);let a=sec.attempts[id]||{count:0,since:now(),until:0};
             if(a.until>now())error('Muitas tentativas. Aguarde 30 segundos e tente novamente.','rate_limit');
@@ -26,7 +26,7 @@
             const a=person(id);if(!a)error('Pessoa ou PIN incorreto.','invalid_credentials');
             // Per-person throttling cannot be bypassed by changing a device identifier.
             limit('pin:'+id);
-            if(!/^\d{4,12}$/.test(String(pin||''))||!sec.credentials[id]||!env.verifyPassword(String(pin),sec.credentials[id]))error('PIN incorreto. Tente novamente.','invalid_credentials');
+            if(!/^\d{3,12}$/.test(String(pin||''))||!sec.credentials[id]||!env.verifyPassword(String(pin),sec.credentials[id]))error('PIN incorreto. Tente novamente.','invalid_credentials');
             clearLimit('pin:'+id);return a;
         }
         function issue(a,secretHash,previous){
