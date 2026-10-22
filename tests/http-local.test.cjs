@@ -1,0 +1,23 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),{spawn}=require('node:child_process'),net=require('node:net');
+const {fixture,P}=require('./helpers.cjs');
+test('local HTTP adapter: isolated PIN access, persistence, ACK and backup',async t=>{
+ const root=path.resolve(__dirname,'..'),name='teste-http-'+crypto.randomUUID(),dir=path.join(root,'.local',name);
+ fs.mkdirSync(dir,{recursive:true});const seed=path.join(dir,'origem-ficticia.json');fs.writeFileSync(seed,JSON.stringify(fixture()));
+ const port=await new Promise(resolve=>{const socket=net.createServer();socket.listen(0,'127.0.0.1',()=>{const n=socket.address().port;socket.close(()=>resolve(n));});});
+ const child=spawn(process.execPath,['scripts/servir-local.cjs'],{cwd:root,windowsHide:true,env:{...process.env,PORT:String(port),RH_LOCAL_DIR:name,RH_TEST_BANK:seed},stdio:['ignore','pipe','pipe']});
+ t.after(()=>child.kill());
+ await new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Local server startup timeout')),5000);child.once('error',reject);child.once('exit',code=>reject(Error('Local server exit '+code)));child.stdout.once('data',()=>{clearTimeout(timeout);resolve();});});
+ const origin='http://127.0.0.1:'+port,secret=crypto.randomBytes(32).toString('hex');
+ const post=async(action,data={})=>(await fetch(origin+'/__dev__/api',{method:'POST',headers:{'Content-Type':'text/plain',Origin:origin},body:JSON.stringify({action,secret,...data})})).json();
+ const info=await post('info');assert.equal(info.ok,true);assert.deepEqual(info.profiles,[{id:'a',nome:'Titular'}]);assert(!info.bank);
+ assert.equal((await post('read')).ok,false);assert.equal((await post('login',{profileId:'a',pin:'0000'})).code,'invalid_credentials');
+ const login=await post('login',{profileId:'a',pin:'1234'});assert(login.token);assert(!JSON.stringify(login.bank).includes('senha'));
+ const next=P.clone(login.bank);next.empresa.razao='Empresa fictícia atualizada';const requestId=crypto.randomUUID(),operations=P.diff(login.bank,next,login.versions);
+ const saved=await post('commit',{session:login.token,requestId,operations});assert.equal(saved.ok,true);assert.equal(saved.requestId,requestId);
+ const again=await post('commit',{session:login.token,requestId,operations});assert.equal(again.revision,saved.revision);
+ const state=JSON.parse(fs.readFileSync(path.join(dir,'estado.json'),'utf8'));assert.equal(state.bank.empresa.razao,next.empresa.razao);assert.equal(state.schema,3);assert(!state.security.owner);
+ assert(fs.readdirSync(dir).some(f=>f.startsWith('backup-')));assert.equal(fs.readFileSync(seed,'utf8'),JSON.stringify(fixture()));
+ assert.equal((await fetch(origin+'/.local/'+name+'/estado.json')).status,404);
+ assert.equal((await fetch(origin+'/__dev__/api',{method:'POST',headers:{Origin:'https://untrusted.invalid'},body:'{}'})).status,403);
+ await post('signout',{session:login.token});assert.equal((await post('read',{session:login.token})).code,'unauthorized');
+});

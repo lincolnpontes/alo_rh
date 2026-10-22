@@ -4,7 +4,16 @@
     function maskCPF(el) { let v = el.value.replace(/\D/g,""); if (v.length > 11) v = v.substring(0, 11); v = v.replace(/(\d{3})(\d)/,"$1.$2"); v = v.replace(/(\d{3})(\d)/,"$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/,"$1-$2"); el.value = v; }
     function maskCTPS(el) { let v = el.value.replace(/\D/g,""); if (v.length > 12) v = v.substring(0, 12); v = v.replace(/^(\d{7})(\d)/, "$1/$2"); el.value = v; }
     function maskMoeda(el) { let v = el.value.replace(/\D/g, ""); if(!v) { el.value = ""; return; } v = (parseFloat(v) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2}); el.value = v; }
-    function parseMoeda(str) { if(!str) return 0; return parseFloat(String(str).replace(/\./g, "").replace(",", ".")); }
+    function parseMoeda(str) {
+        if(typeof str === 'number') return Number.isFinite(str) ? str : 0;
+        if(str === undefined || str === null || str === '') return 0;
+        let value = String(str).trim().replace(/R\$|\s/g, '');
+        if(value.includes(',')) value = value.replace(/\./g, '').replace(',', '.');
+        else if(/^-?\d{1,3}(\.\d{3})+$/.test(value)) value = value.replace(/\./g, '');
+        const parsed = Number(value);
+        if(!Number.isFinite(parsed)) throw new Error('Valor monetário inválido: ' + str);
+        return parsed;
+    }
     function formatMoeda(val) { return parseFloat(val).toLocaleString('pt-BR', {minimumFractionDigits: 2}); }
     function formatDataBR(dataStr) { if(!dataStr) return ""; const partes = dataStr.split('-'); if(partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`; return dataStr; }
     function formatDataCurta(dataStr) { if(!dataStr) return ""; let p = dataStr.split('-'); if(p.length !== 3) return dataStr; const m = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"]; return `${p[2]}/${m[parseInt(p[1])-1]}`; }
@@ -19,7 +28,7 @@
 
     
 // 2. DADOS BASE E PERSISTENCIA
-    const APP_VERSION = 'v1.0.52';
+    const APP_VERSION = 'v1.1.0-local';
     const STORAGE_KEY = 'alorh_v1';
     const APP_ID = 'alorh';
     const SYNC_DELAY_MS = 900;
@@ -32,127 +41,15 @@
     let origemFormClasse = 'gerenciar'; let origemFormFuncao = 'gerenciar'; let origemFormFuncionario = 'gerenciar'; let origemModalFerias = 'acoes'; let origemModalAdiantamento = 'acoes';
     let assinaturasRegistros = new Map(); let idsRegistrosConhecidos = new Set(); registrarEstadoRegistros();
 
-    function criarBancoBase() {
-        return {
-            app_id: APP_ID,
-            empresa: { logo: "", mostrarLogoTopo: false, razao: "", fantasia: "", cnpj: "", rua: "", numero: "", bairro: "", cidade: "", uf: "PB" },
-            categorias: [],
-            funcoes: [],
-            funcionarios: [],
-            administradores: [],
-            auditoria: [],
-            configGerais: { salarioMinimo: "1621,00", historicoSalarioMinimo: [{ vigencia: "0000-01", valor: "1621,00" }], adiantamentoQuinzena: "500,00", diasAquisitivoFerias: 360, tema: "verde", diasFuncionamento: ['1','2','3','4','5','6'], valesTransporte: [], motivosAdiantamento: [], inssFaixas: criarTabelaINSSPadrao(), folgasGerais: [] },
-            registros: [],
-            configs: { url: "", dadosBaixados: false, ultimaMudancaLocal: 0, ultimaSincronizacao: 0, registrosExcluidos: {}, senhaAdminHash: "", senhaAdminSalt: "", segurancaVersao: 2 }
-        };
-    }
+    function criarBancoBase(...args) { return RHModel.criarBancoBase(...args); }
 
-    function criarTabelaINSSPadrao() {
-        return [
-            { limite: "1621,00", aliquota: "7,5" },
-            { limite: "2902,84", aliquota: "9" },
-            { limite: "4354,27", aliquota: "12" },
-            { limite: "8475,55", aliquota: "14" }
-        ];
-    }
+    function criarTabelaINSSPadrao(...args) { return RHModel.criarTabelaINSSPadrao(...args); }
 
-    function criarPermissoesAdminPadrao() {
-        return {
-            dadosPessoais: true,
-            vinculoHorarios: true,
-            financeiro: true,
-            gerarContracheque: true,
-            gerarQuinzena: true,
-            gerarPonto: true,
-            gerarVT: true,
-            registrarAdiantamentos: true,
-            lancarFerias: true,
-            registrarAusencia: true,
-            registrarAtraso: true,
-            registrarPresencaSemanal: true,
-            acessoResumo: true,
-            auditoria: true,
-            dadosEmpresa: true,
-            configGerais: true,
-            gerenciarAdministradores: true
-        };
-    }
+    function criarPermissoesAdminPadrao(...args) { return RHModel.criarPermissoesAdminPadrao(...args); }
 
-    function normalizarBanco(dados) {
-        let base = criarBancoBase();
-        let origem = (dados && typeof dados === 'object') ? dados : {};
-        let normalizado = {
-            ...base,
-            ...origem,
-            empresa: { ...base.empresa, ...(origem.empresa || {}) },
-            configGerais: { ...base.configGerais, ...(origem.configGerais || {}) },
-            configs: { ...base.configs, ...(origem.configs || {}) }
-        };
-        normalizado.app_id = APP_ID;
-        normalizado.categorias = Array.isArray(normalizado.categorias) ? normalizado.categorias : [];
-        normalizado.funcoes = Array.isArray(normalizado.funcoes) ? normalizado.funcoes : [];
-        normalizado.funcionarios = Array.isArray(normalizado.funcionarios) ? normalizado.funcionarios : [];
-        normalizado.administradores = Array.isArray(normalizado.administradores) ? normalizado.administradores : [];
-        normalizado.administradores = normalizado.administradores.map((admin) => ({ ...admin, permissoes: { ...criarPermissoesAdminPadrao(), ...((admin && admin.permissoes) || {}) } }));
-        normalizado.auditoria = Array.isArray(normalizado.auditoria) ? normalizado.auditoria : [];
-        normalizado.registros = Array.isArray(normalizado.registros) ? normalizado.registros : [];
-        normalizado.configGerais.diasFuncionamento = Array.isArray(normalizado.configGerais.diasFuncionamento) ? normalizado.configGerais.diasFuncionamento : ['1','2','3','4','5','6'];
-        normalizado.configGerais.valesTransporte = Array.isArray(normalizado.configGerais.valesTransporte) ? normalizado.configGerais.valesTransporte : [];
-        normalizado.configGerais.motivosAdiantamento = Array.isArray(normalizado.configGerais.motivosAdiantamento) ? normalizado.configGerais.motivosAdiantamento : [];
-        normalizado.configGerais.inssFaixas = Array.isArray(normalizado.configGerais.inssFaixas) && normalizado.configGerais.inssFaixas.length ? normalizado.configGerais.inssFaixas : criarTabelaINSSPadrao();
-        normalizado.configGerais.folgasGerais = Array.isArray(normalizado.configGerais.folgasGerais) ? normalizado.configGerais.folgasGerais : [];
-        normalizado.configGerais.historicoSalarioMinimo = Array.isArray(normalizado.configGerais.historicoSalarioMinimo) ? normalizado.configGerais.historicoSalarioMinimo.filter(item => item && item.vigencia && item.valor) : [];
-        if(normalizado.configGerais.historicoSalarioMinimo.length === 0) normalizado.configGerais.historicoSalarioMinimo.push({ vigencia: '0000-01', valor: normalizado.configGerais.salarioMinimo || base.configGerais.salarioMinimo });
-        normalizado.configGerais.historicoSalarioMinimo.sort((a, b) => String(a.vigencia).localeCompare(String(b.vigencia)));
-        normalizado.configGerais.diasAquisitivoFerias = Math.max(1, Math.min(370, Number(normalizado.configGerais.diasAquisitivoFerias || 360)));
-        normalizado.configs.ultimaMudancaLocal = Number(normalizado.configs.ultimaMudancaLocal || 0);
-        normalizado.configs.ultimaSincronizacao = Number(normalizado.configs.ultimaSincronizacao || 0);
-        normalizado.configs.registrosExcluidos = normalizarExclusoesRegistros(normalizado.configs.registrosExcluidos);
-        const camposFuncionarioPadrao = { pedirVT: true, pedirGratificacao: true, pedirSalFamilia: true, pedirUnidentis: true, pedirDescontoPassagem: true, pedirINSS: true, pedirINSSProvento: false, temControlePonto: true };
-        normalizado.configGerais.tema = normalizado.configGerais.tema || 'verde';
-        normalizado.categorias = normalizado.categorias.map((categoria) => {
-            const tipoPagamento = (categoria && categoria.tipoPagamento) || ((categoria && categoria.semanal) ? 'semanal' : ((categoria && categoria.recebeContracheque === false) ? 'mensal_sem_carteira' : 'contracheque'));
-            const camposOrigem = (categoria && categoria.camposFuncionario) || {};
-            const camposFuncionario = { ...camposFuncionarioPadrao, ...camposOrigem };
-            if(tipoPagamento === 'mensal_sem_carteira' && camposOrigem.pedirINSSProvento === undefined) camposFuncionario.pedirINSSProvento = camposFuncionario.pedirINSS !== false;
-            return {
-                ...categoria,
-                tipoPagamento,
-                temQuinquenio: categoria && categoria.temQuinquenio === true,
-                temFerias: !(categoria && categoria.semanal) && !(categoria && categoria.temFerias === false),
-                recebeQuinzena: !(categoria && categoria.recebeQuinzena === false),
-                recebeContracheque: !(categoria && categoria.recebeContracheque === false),
-                camposFuncionario
-            };
-        }).map((categoria) => ({ ...categoria, semanal: categoria.tipoPagamento === 'semanal', recebeContracheque: categoria.tipoPagamento === 'contracheque', temFerias: categoria.tipoPagamento !== 'semanal' && categoria.temFerias !== false, gerarInformesContador: categoria.gerarInformesContador === true }));
-        normalizado.funcoes = normalizado.funcoes.map((funcao) => ({ numero: "", ...funcao }));
-        normalizado.funcionarios = normalizado.funcionarios.map((funcionario) => {
-            const f = { nomeSocial: "", habAtrasos: true, arquivado: false, recebeQuinquenio: false, qtdQuinquenios: 1, recebeQuinzena: true, recebeContracheque: true, temGratificacao: true, temSalFamilia: true, temUnidentis: true, descontaPassagem: true, descontaINSS: true, recebeINSSProvento: true, temControlePonto: true, temFerias: true, ...funcionario };
-            f.qtdQuinquenios = Math.max(1, Math.min(9, Number(f.qtdQuinquenios || 1)));
-            f.historicoSalarios = Array.isArray(f.historicoSalarios) ? f.historicoSalarios.filter(item => item && item.vigencia && item.valor) : [];
-            if(f.historicoSalarios.length === 0) f.historicoSalarios.push({ vigencia: '0000-01', valor: f.salario || normalizado.configGerais.salarioMinimo });
-            f.historicoSalarios.sort((a, b) => String(a.vigencia).localeCompare(String(b.vigencia)));
-            return f;
-        });
-        normalizado.registros = normalizado.registros.map((registro) => {
-            const registroNormalizado = { ...registro };
-            if(!registroNormalizado._syncAtualizadoEm) registroNormalizado._syncAtualizadoEm = Number(registroNormalizado.editadoEm || registroNormalizado.criadoEm || 0);
-            return registroNormalizado;
-        });
-        if(normalizado.configs.senhaAdmin && !normalizado.configs.senhaAdminHash) normalizado.configs.senhaAdminLegada = normalizado.configs.senhaAdmin;
-        delete normalizado.configs.senhaAdmin;
-        return normalizado;
-    }
+    function normalizarBanco(...args) { return RHModel.normalizarBanco(...args); }
 
-    function carregarBanco() {
-        let salvo = localStorage.getItem(STORAGE_KEY);
-        if(!salvo) return criarBancoBase();
-        try { return normalizarBanco(JSON.parse(salvo)); }
-        catch(e) {
-            console.warn('Banco local invalido, iniciando base limpa.', e);
-            return criarBancoBase();
-        }
-    }
+    function carregarBanco() { return criarBancoBase(); }
 
     function agendarSincronizacao(delay = SYNC_DELAY_MS) {
         if(!db.configs || !db.configs.url) return;
@@ -163,42 +60,14 @@
     }
 
     function salvarBanco(opcoes = {}) {
-        const deveSincronizar = opcoes.sincronizar !== false;
-        const atualizarMudanca = opcoes.atualizarMudanca !== false;
         db = normalizarBanco(db);
-        if(atualizarMudanca) {
-            marcarAlteracoesRegistros();
-            db.configs.ultimaMudancaLocal = Date.now();
-        }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-        registrarEstadoRegistros();
-        if(deveSincronizar) agendarSincronizacao();
+        if(window.RHSync) { RHSync.changed(); return; }
+        throw new Error('Armazenamento seguro ainda não inicializado.');
     }
 
-    function prepararBancoCompartilhado(origem = db) {
-        const copia = normalizarBanco(JSON.parse(JSON.stringify(origem)));
-        copia.configs = { ...(copia.configs || {}) };
-        delete copia.configs.url;
-        delete copia.configs.senhaAdmin;
-        delete copia.configs.senhaAdminHash;
-        delete copia.configs.senhaAdminSalt;
-        delete copia.configs.senhaAdminLegada;
-        delete copia.configs.segurancaVersao;
-        delete copia.configs.ultimaSincronizacao;
-        copia.configs.dadosBaixados = false;
-        return copia;
-    }
+    function prepararBancoCompartilhado(origem = db) { return RHProtocol.clean(origem); }
 
-    function normalizarExclusoesRegistros(exclusoes) {
-        const limpas = {};
-        if(exclusoes && typeof exclusoes === 'object') {
-            Object.keys(exclusoes).forEach((id) => {
-                const quando = Number(exclusoes[id] || 0);
-                if(id && quando > 0) limpas[id] = quando;
-            });
-        }
-        return limpas;
-    }
+    function normalizarExclusoesRegistros(...args) { return RHModel.normalizarExclusoesRegistros(...args); }
 
     function assinaturaRegistro(registro) {
         const copia = { ...(registro || {}) };
@@ -257,7 +126,7 @@
             if(!registro || !registro.id) return;
             const registroCopia = { ...registro };
             const atualizadoEm = timestampRegistro(registroCopia);
-            if(Number(exclusoes[registroCopia.id] || 0) >= atualizadoEm) return;
+            if(Object.prototype.hasOwnProperty.call(exclusoes, registroCopia.id) && Number(exclusoes[registroCopia.id]) >= atualizadoEm) return;
             const atual = porId.get(registroCopia.id);
             if(!atual || atualizadoEm >= timestampRegistro(atual)) porId.set(registroCopia.id, registroCopia);
         };
@@ -324,44 +193,3 @@
     function safeColor(valor, fallback = '#00695C') { return /^#[0-9A-Fa-f]{6}$/.test(String(valor || '')) ? valor : fallback; }
     function jsArg(valor) { return safeAttr(JSON.stringify(String(valor ?? ''))); }
     function optionHTML(valor, texto, selecionado = false) { return `<option value="${safeAttr(valor)}" ${selecionado ? 'selected' : ''}>${escapeHTML(texto)}</option>`; }
-
-    function exigirCriptoLocal() {
-        if(!window.crypto || !window.crypto.subtle) throw new Error('Este navegador nao suporta a protecao de senha local.');
-    }
-
-    function gerarSaltSenha() {
-        let bytes = new Uint8Array(16);
-        window.crypto.getRandomValues(bytes);
-        return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function hashSenhaAvancada(pin, salt) {
-        exigirCriptoLocal();
-        const dados = new TextEncoder().encode(`${salt}:${pin}`);
-        const digest = await window.crypto.subtle.digest('SHA-256', dados);
-        return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    function senhaAvancadaConfigurada() { return !!(db.configs && db.configs.senhaAdminHash && db.configs.senhaAdminSalt); }
-
-    async function definirSenhaAvancada(pin, opcoes = {}) {
-        if(!/^\d{4,12}$/.test(String(pin || ''))) throw new Error('Use uma senha numerica de 4 a 12 digitos.');
-        const salt = gerarSaltSenha();
-        db.configs.senhaAdminSalt = salt;
-        db.configs.senhaAdminHash = await hashSenhaAvancada(pin, salt);
-        db.configs.segurancaVersao = 2;
-        delete db.configs.senhaAdmin;
-        delete db.configs.senhaAdminLegada;
-        salvarBanco({ sincronizar: opcoes.sincronizar !== false, atualizarMudanca: false });
-    }
-
-    async function validarSenhaAvancada(pin) {
-        if(!senhaAvancadaConfigurada()) return false;
-        return (await hashSenhaAvancada(pin, db.configs.senhaAdminSalt)) === db.configs.senhaAdminHash;
-    }
-
-    async function migrarSenhaAvancadaLegada() {
-        if(db.configs && db.configs.senhaAdminLegada && !senhaAvancadaConfigurada()) {
-            await definirSenhaAvancada(db.configs.senhaAdminLegada, { sincronizar: false });
-        }
-    }

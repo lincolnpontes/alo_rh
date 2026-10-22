@@ -1,0 +1,31 @@
+body.rh-locked > :not(#rhAccess):not(script):not(dialog){display:none!important}
+#rhAccess{box-sizing:border-box;max-width:420px;margin:7vh auto;padding:28px;background:#fff;border:1px solid #e0e8e5;border-radius:18px;color:#243b34}
+#rhAccess h1{font-size:28px;margin:0 0 10px;color:#00695c}
+#rhAccess p{line-height:1.5;color:#53665f}
+#rhAccess form,.rh-dialog form{display:grid;gap:14px}
+#rhAccess label,.rh-dialog label{display:grid;gap:7px;text-align:left;font-size:14px;font-weight:600;margin:12px 0}
+#rhAccess input,#rhAccess select,.rh-dialog input{box-sizing:border-box;width:100%;min-height:46px;border:1px solid #9caea7;border-radius:8px;padding:10px;font:inherit}
+#rhAccess button,.rh-dialog button{min-height:44px;padding:10px 14px;margin:5px 4px 5px 0;border:1px solid #ccd9d4;border-radius:8px;background:#f5f9f7;color:#185747;font:inherit;cursor:pointer}
+#rhAccess button[type=submit],.rh-dialog button[type=submit]{background:#00695c;color:#fff;border-color:#00695c;width:100%}
+#rhAccess button:disabled,.rh-dialog button:disabled{opacity:.55;cursor:wait}
+.rh-dialog{box-sizing:border-box;border:1px solid #c6d7d0;border-radius:14px;padding:24px;max-width:min(560px,94vw);max-height:85vh;overflow:auto;color:#243b34}
+.rh-dialog::backdrop{background:rgb(16 35 28 / .5)}
+.rh-dialog section{padding:14px 0;border-bottom:1px solid #dce4e0}.rh-dialog p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.rh-feedback{min-height:22px;color:#9b3023!important;font-size:14px}.rh-local-label{background:#fff6d8;padding:8px;border-radius:8px;font-size:13px}
+#rhSyncStatus{display:block;width:100%;border:0;border-bottom:1px solid #dce7e1;border-radius:0;background:#edf7f1;color:#255a42;padding:8px 14px;min-height:36px;font:inherit;font-size:12px;text-align:center;cursor:pointer}
+#rhSyncStatus[data-state=error],#rhSyncStatus[data-state=conflict]{background:#fff1dc;color:#7e4100}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #157d6d;outline-offset:3px}
+@media(max-width:480px){#rhAccess{margin:3vh 12px;padding:22px}.rh-dialog{padding:18px}}
+
+.rh-access-brand{font-size:14px;font-weight:800;letter-spacing:.03em;color:#176f62;margin-bottom:16px}
+#rhAccess{max-width:350px;padding:24px;margin:4vh auto}
+#rhAccess h1{font-size:21px}
+#rhAccess .rh-local-label{display:inline-block;margin:0;background:#eef5f2;padding:4px 9px;color:#48685b}
+.rh-pin-group[hidden]{display:none}
+#rhAccess .rh-pin-input,.rh-dialog .rh-pin-input{text-align:center;letter-spacing:.35em;font-size:22px;min-height:48px}
+.rh-pin-keypad{width:min(246px,100%);display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px auto 0}
+#rhAccess .rh-pin-keypad button,.rh-dialog .rh-pin-keypad button{min-height:46px;margin:0;padding:7px;border:1px solid #d2dcde;border-radius:7px;background:#f8fafb;color:#253b42;font-size:19px;font-weight:800;touch-action:manipulation}
+#rhAccess .rh-pin-keypad button:nth-child(10),#rhAccess .rh-pin-keypad button:last-child,.rh-dialog .rh-pin-keypad button:nth-child(10),.rh-dialog .rh-pin-keypad button:last-child{font-size:12px;font-weight:600}
+#rhAccess .rh-pin-keypad button:active,.rh-dialog .rh-pin-keypad button:active{background:#e2efec}
+
+#rhAccess{align-self:flex-start;max-height:90dvh;overflow:auto;width:min(420px,calc(100% - 24px))}#rhSyncStatus{flex-shrink:0}.header-actions button{min-width:44px;min-height:44px}

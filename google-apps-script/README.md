@@ -1,42 +1,33 @@
-# Google Apps Script do Alo RH
+# Backend Google Apps Script — acesso interno
 
-Use este script para criar a URL de sincronizacao do app.
+O banco continua no Drive e a autenticação é **pessoa + PIN**, sem Google Identity, e-mail, MailApp ou conta de titular. O cliente antigo com token compartilhado não é compatível com este protocolo.
 
-## Como publicar
+## Gerar e verificar
 
-1. Acesse `https://script.google.com` e crie um novo projeto.
-2. Apague o conteudo do arquivo `Code.gs` e cole o conteudo deste arquivo: `google-apps-script/Code.gs`.
-3. Salve o projeto com o nome `Alo RH Sync`.
-4. Execute a funcao `criarTokenDeSincronizacao` uma vez e autorize o acesso ao Google Drive.
-5. Abra os registros de execucao e copie o token gerado.
-6. Clique em `Implantar > Nova implantacao`.
-7. Escolha o tipo `App da Web`.
-8. Em `Executar como`, deixe `Eu`.
-9. Em `Quem pode acessar`, selecione `Qualquer pessoa`.
-10. Copie a URL terminada em `/exec`.
-11. No Alo RH, cole a URL assim: `SUA_URL_DO_WEB_APP?token=TOKEN_GERADO`.
+```powershell
+node scripts/build-backend.cjs
+node --test tests/*.test.cjs
+```
 
-## Como a sincronizacao funciona
+O bundle inclui modelo, protocolo, serviço, adaptador e CryptoJS 4.2.0; a licença fica em `server/vendor/`. O estado usa esquema 3; o formato de operações por campo continua v2. A migração de estados locais de esquema 2 preserva banco, credenciais internas e identificador de armazenamento, descartando a antiga camada de conta.
 
-- Ao abrir o app, ele puxa o `banco.json` da nuvem e compara com a copia deste aparelho.
-- Quando voce salva qualquer cadastro ou configuracao, o app salva primeiro neste aparelho e depois envia para a nuvem.
-- Lancamentos de RH, como faltas, adiantamentos, ferias e presencas, tambem sao conferidos automaticamente a cada 10 segundos enquanto o app estiver aberto.
-- O botao `Sincronizar Agora` forca essa conferencia manualmente.
+## Configuração do backend
 
-## Onde os dados ficam
+Produção atualizada em 22/10/2026 na versão 7 da implantação existente. O banco de origem foi preservado e o estado seguro foi criado em um novo arquivo privado. A versão 5 e uma cópia local de seu código estão disponíveis para recuperação; restaurar código e dados exige tratar os dois em conjunto.
 
-O script cria ou usa a pasta `Meu Drive > Apps > Alô RH` e salva o arquivo `banco.json` dentro dela.
+1. Use inicialmente um projeto Apps Script separado, com runtime V8, e o `Code.gs` gerado.
+2. Defina `RH_SOURCE_FILE_ID` nas propriedades do script com o ID do JSON a copiar.
+3. Execute `prepararCopiaSegura()`. A função lê a origem, deriva os verificadores dos PINs existentes e cria uma pasta nova com cópia original, estado seguro e backups. Grava `RH_STATE_FILE_ID` e `RH_BACKUP_FOLDER_ID` e recusa reexecutar sobre estado já configurado.
+4. Confira contagens e mantenha os arquivos privados. O script precisa acessar o Drive. Não exige envio de e-mail nem configuração OAuth para login do usuário.
+5. O app da Web executa com os direitos do proprietário do script. O serviço valida o PIN e as permissões internas antes de retornar dados. A rota pública de seleção retorna somente IDs e nomes dos perfis; GET nunca retorna o banco.
+6. Teste o endpoint novo com uma cópia do frontend. Somente depois de validar a transição, configure a URL `/exec`, sem parâmetros, em `js/config.js`. O servidor Node local continua injetando sua própria API isolada.
 
-No computador, se o Google Drive estiver instalado, essa pasta costuma aparecer como:
+A autorização do proprietário para executar um Apps Script é uma configuração do backend; não cria uma tela de login Google no Alô RH.
 
-`L:\Meu Drive\Apps\Alô RH`
+## Verificações para atualizações
 
-A URL publicada precisa ficar guardada com cuidado, porque o token no final dela funciona como uma chave de acesso.
+O teste local cobre PIN, sessões, permissões, conflitos, repetição idempotente, backups, migração, restauração e falhas de escrita. O teste fictício no runtime real do Google concluiu em 2,143 segundos, incluindo derivação e verificação do PIN. Revalide redirecionamentos, CORS, latência, cotas do Drive e recuperação a cada mudança de implantação. Nada disso depende de login Google ou e-mail no aplicativo.
 
-## O que nao vai para a nuvem
+A seção crítica usa [LockService.getScriptLock](https://developers.google.com/apps-script/reference/lock/lock-service) até finalizar backup e escrita. Os snapshots são arquivos independentes; não há limpeza automática deles nesta versão.
 
-- A senha avancada do app.
-- A URL de sincronizacao.
-- O token separado em algum arquivo do GitHub.
-
-Essas informacoes ficam no aparelho onde o app foi configurado.
+A passagem para produção deve preservar uma cópia atual do banco, suspender clientes legados durante a transição e atualizar frontend/backend de forma coordenada. Nenhuma função procura o banco de produção pelo nome nem sobrescreve automaticamente a origem.
