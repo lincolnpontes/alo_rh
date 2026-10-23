@@ -1,6 +1,7 @@
 (function(global){
     let initial=true;
     function lock(message=''){
+        global.RHCabecalho?.close(false);
         document.body.classList.add('rh-locked');document.getElementById('rhAccess').hidden=false;
         document.querySelectorAll('.modal-overlay').forEach(el=>el.style.display='none');
         if(message)RHSync.status(message,'error');

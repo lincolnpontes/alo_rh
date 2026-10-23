@@ -1,0 +1,52 @@
+/* Mesma estrutura e controles do cabeçalho dos módulos do Alô Cozinha. */
+.header{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:6px;min-height:68px;padding:6px 12px;box-sizing:border-box;align-items:center;position:relative;z-index:10}
+.app-brand-logo{display:block;width:56px;height:56px;object-fit:contain;border-radius:10px}
+.module-operator-chip{justify-self:center;display:flex;align-items:center;gap:6px;box-sizing:border-box;min-width:44px;max-width:220px;width:100%;height:44px;padding:0 9px;border:1px solid rgba(255,255,255,.28);border-radius:7px;background:rgba(255,255,255,.12);color:#fff;cursor:pointer}
+.module-operator-chip svg{width:20px;height:24px;flex:0 0 20px;fill:#e7f3ef;stroke:#d9eeea;stroke-width:1.5}
+.module-operator-chip strong{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-size:14px;font-weight:800}
+.profile-chevron{display:block;width:6px;height:6px;flex:0 0 6px;transform:rotate(45deg);border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;margin:-3px 2px 0}
+.header-actions{display:flex;align-items:center;gap:2px;min-width:0}
+.header-actions>button,.header-more-anchor>button{display:grid;place-items:center;box-sizing:border-box;width:44px;min-width:44px;height:44px;min-height:44px;padding:2px;margin:0;background:transparent;border:0;border-radius:7px;color:#fff;cursor:pointer}
+.app-settings-gear{display:inline-block;width:40px;height:40px;object-fit:contain;vertical-align:middle;flex-shrink:0}
+#btnHeaderMais svg{width:25px;height:25px;fill:currentColor}
+#btnHeaderMais[aria-expanded=true]{background:rgba(255,255,255,.18)}
+.header>button:focus-visible,.header-actions>button:focus-visible,.header-more-anchor>button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.header-more-anchor{position:relative}
+.header-more-menu{position:absolute;right:0;top:calc(100% + 12px);width:220px;max-width:calc(100vw - 24px);padding:6px;box-sizing:border-box;background:#fff;border:1px solid #d6dfe1;border-radius:8px;box-shadow:0 12px 32px #19283033;color:#29483b;z-index:20}
+.header-more-menu[hidden]{display:none}
+.header-actions .header-more-menu button{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;height:auto;box-sizing:border-box;padding:8px 10px;margin:0;border:0;border-radius:6px;background:#fff;color:#29483b;text-align:left;font:600 15px 'Segoe UI',Arial,sans-serif;cursor:pointer}
+.header-actions .header-more-menu .rh-icon{width:30px;height:30px;flex:0 0 30px;background-color:#f2f7f5;border-radius:7px;background-size:25px;padding:0}
+.header-more-menu button:hover,.header-more-menu button:focus-visible{background:#edf5f1}
+.header-more-menu button:focus-visible{outline:2px solid #267961;outline-offset:-2px}
+.action-bar{grid-template-columns:44px minmax(0,1fr) 44px;height:auto;min-height:58px;max-height:none;padding:6px 12px;gap:6px;overflow:visible;background:#f4f7f6;border-bottom:1px solid #dce5e1;color:#29483b}
+.selecao-lista-toolbar,.acoes-massa-toolbar,.dias-filtro-toolbar{min-width:0;height:44px;gap:4px}
+.btn-action-bar{min-width:44px;min-height:44px;padding:8px 7px;border:1px solid #d6e1dc;border-radius:7px;background:#fff;color:#3b5148;font-size:13px;font-weight:700;line-height:1.2}
+.dias-filtro-toolbar .btn-action-bar{flex:1;min-width:0}
+.btn-action-bar.ativo{background:#dceee6;color:#155e48;border-color:#8ebaa9}
+.btn-selecionar-caixa{width:44px;height:44px;flex:0 0 44px;border:1px solid #d6e1dc;background:#fff;border-radius:7px;color:#2f6f5b}
+.btn-selecionar-caixa span{border-color:#789b8e;background:transparent;width:19px;height:19px}
+.btn-selecionar-caixa.selecionado span{background:#207c60;border-color:#207c60}
+.btn-selecionar-caixa.selecionado span::after{left:5px;top:2px}
+.btn-folga-geral{width:44px;height:44px;padding:0;background:#dceee6;border-color:#b8d5c7;color:#22694e;font-size:26px}
+.selection-count{font-size:13px;font-weight:700;color:#425c52;white-space:nowrap}
+.selection-clear{margin-left:auto;min-height:44px;padding:8px;border:0;border-radius:6px;background:transparent;color:#316950;font-size:13px;font-weight:700;cursor:pointer}
+.selection-count[hidden],.selection-clear[hidden]{display:none}
+.action-bar.com-selecao{grid-template-columns:minmax(0,1fr);gap:6px;padding-top:4px;padding-bottom:10px;overflow:visible}
+.action-bar.com-selecao .selecao-lista-toolbar{grid-column:1;gap:10px;height:44px}
+.action-bar.com-selecao .acoes-massa-toolbar{grid-column:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));height:auto;max-width:100%;gap:7px;padding:0;overflow:visible}
+.action-bar.com-selecao .work-action{flex-direction:column;gap:3px;min-width:0;min-height:78px;padding:6px 4px;background:#fff;border:1px solid #d3dfd9;border-radius:8px;color:#29483b;font-size:12px;line-height:1.2;box-shadow:0 1px 2px #233f3105}
+.work-action img{display:block;width:40px;height:40px;object-fit:contain;pointer-events:none}
+.work-action span{white-space:normal;overflow-wrap:anywhere}
+#btnAcaoMassaSemana{grid-column:1/-1}
+.action-bar.com-selecao #btnAcaoMassaSemana{flex-direction:row;gap:10px;min-height:60px}
+.filters{padding:10px 12px;gap:7px;border-color:#e3e9e6}
+.chip{box-sizing:border-box;min-height:38px;display:flex;align-items:center;padding:7px 12px;border-radius:7px;font-size:12px;background:#edf3ef;color:#3f5a4d}
+.chip.active{border-color:#426e5a}
+.item{box-sizing:border-box;padding:12px;border-color:#edf1ef;min-height:68px}
+.item-title{font-size:17px;color:#293c33}
+.item-avatar{width:44px;height:44px;font-size:16px;border-radius:12px}
+body[class*="tema-"] .item.selecionado,.item.selecionado{background:#edf6f1;background:color-mix(in srgb,var(--tema-principal,#00695c) 7%,white);border-color:#dbe7e0}
+.item-avatar-select.selecionado{transform:none;box-shadow:none}
+.field-help{display:block;margin-top:7px;color:#60756b;font-size:12px;line-height:1.4}
+@media(min-width:760px){.header{padding-inline:20px}.module-operator-chip{max-width:240px}.action-bar,.filters{padding-inline:20px}.action-bar.com-selecao{grid-template-columns:minmax(180px,1fr) auto;gap:16px}.action-bar.com-selecao .acoes-massa-toolbar{grid-column:2;min-width:360px}.item{padding-inline:20px}}
+@media(max-width:350px){.header{padding-inline:6px;gap:4px}.module-operator-chip{padding-inline:6px;gap:4px}.module-operator-chip svg{width:17px;flex-basis:17px}.module-operator-chip strong{font-size:13px}.action-bar{padding-inline:8px;gap:4px}.dias-filtro-toolbar{gap:3px}.action-bar.com-selecao .acoes-massa-toolbar{gap:5px}.header-more-menu{right:-44px}}
