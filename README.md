@@ -16,6 +16,8 @@ A primeira execução copia `.local/drive/banco.json` para `.local/homologacao/e
 
 ## Acesso interno
 
+O identificador permanente de instalação é `/alo_rh/`. A v1.3.1 corrige o antigo `./`, que se resolvia para a raiz do domínio e coincidia com o Alô Feira. O manifest usa uma URL versionada para renovar os metadados; a origem, o escopo e os dados continuam iguais. Quem já removeu o app pode tentar instalar pelo site atualizado. Instalações antigas não são removidas automaticamente. Veja [validação e limites da reinstalação](docs/VALIDACAO-LOCAL.md).
+
 A abertura mostra diretamente o modal de acesso do Alô Cozinha, com as mesmas cores, espaçamento e teclado dentro da tela. O campo de PIN é somente leitura, sem abrir o teclado do celular; o teclado físico continua disponível. A última lista de nomes aparece imediatamente e é atualizada em segundo plano. PINs novos exigem quatro a doze dígitos; os acessos legados de três dígitos são preservados. Lembra a última pessoa; pede o PIN ao abrir. Operações sensíveis exigem confirmação do PIN e permissão do perfil, verificada novamente no servidor.
 
 PINs são migrados para PBKDF2-SHA256 com salt individual e 120.000 iterações. Credenciais não entram no banco compartilhado ou exportado. Três erros bloqueiam temporariamente novas tentativas para aquela pessoa, mesmo trocando o identificador de aparelho.
@@ -61,4 +63,4 @@ Os testes usam dados fictícios, incluindo uma execução HTTP real do servidor 
 
 Fontes principais: `js/protocolo.js` e `js/modelo.js` para dados; `js/armazenamento.js` e `js/sync-seguro.js` para persistência; `js/autenticacao.js` para acesso interno; `server/service.js` para regras do backend. `google-apps-script/Code.gs` é gerado, não editado diretamente.
 
-Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.3.0; backend Apps Script permanece na versão 8. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
+Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.3.1; backend Apps Script permanece na versão 8. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
