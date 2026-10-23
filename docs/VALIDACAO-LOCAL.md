@@ -1,4 +1,14 @@
-# Validação local — 22/10/2026
+# Validação local — 23/10/2026
+
+## Revisão v1.1.1
+
+69 testes passaram com dados fictícios. Os seis casos novos cobrem estabilidade do indicador durante checagens, erro e reconexão, espera pela confirmação de gravação, preservação offline, arquivamento dentro do funcionário, cancelamento, restauração, histórico e permissões. Sintaxe JavaScript e XML dos 35 ícones também foram conferidos.
+
+A ficha com os novos símbolos de Pix e WhatsApp foi conferida no navegador local. Na largura de 390 px, o modal permanece dentro da tela sem transbordamento horizontal. O diálogo nativo de confirmação bloqueou a automação do navegador; os caminhos de confirmação e cancelamento foram validados pelos testes automatizados. Nenhum funcionário real foi arquivado. Evidências privadas em `.local/ui-2026-10-23/`.
+
+Esta revisão altera o frontend; não modifica o Apps Script nem o banco em produção. URLs dos scripts, estilos e ícones e a versão do service worker foram atualizadas em conjunto para evitar mistura com arquivos do cache anterior.
+
+## Revisão anterior — v1.1.0
 
 Branch: `codex/sincronizacao-seguranca`. Base: v1.0.52. Versão local: v1.1.0.
 
