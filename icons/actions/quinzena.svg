@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="paper" x1="28" y1="39" x2="81" y2="103" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#eaf3f6"/></linearGradient>
+    <linearGradient id="cash" x1="52" y1="78" x2="109" y2="110" gradientUnits="userSpaceOnUse"><stop stop-color="#7fc5a4"/><stop offset="1" stop-color="#389578"/></linearGradient>
+  </defs>
+  <ellipse cx="65" cy="117" rx="47" ry="6" fill="#173c51" opacity=".12"/>
+  <rect x="17" y="23" width="87" height="82" rx="10" fill="url(#paper)" stroke="#8babb8" stroke-width="2.5"/>
+  <path d="M27 23h67a10 10 0 0 1 10 10v16H17V33a10 10 0 0 1 10-10Z" fill="#428bad"/>
+  <path d="M37 16v17m47-17v17" stroke="#255c72" stroke-width="7" stroke-linecap="round"/>
+  <path d="M37 15v13m47-13v13" stroke="#88bdce" stroke-width="3" stroke-linecap="round"/>
+  <path d="m35 61 7-5v25m18-24h17M61 57l-1 12h10a7 7 0 1 1-8 12" stroke="#2c596a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="49" y="84" width="66" height="31" rx="5" fill="url(#cash)" stroke="#26735d" stroke-width="2.5"/>
+  <path d="M60 90h44a6 6 0 0 0 5 6v4a6 6 0 0 0-5 6H60a6 6 0 0 0-5-6v-4a6 6 0 0 0 5-6Z" stroke="#d4eedc" stroke-width="2"/>
+  <circle cx="82" cy="98" r="8" fill="#d9efdf"/>
+  <path d="M81 94h3m-5 4h6m-5 4h3" stroke="#398468" stroke-width="2" stroke-linecap="round"/>
+</svg>

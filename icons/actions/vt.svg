@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="body" x1="34" y1="19" x2="90" y2="108" gradientUnits="userSpaceOnUse"><stop stop-color="#6fb2ce"/><stop offset="1" stop-color="#2b7da2"/></linearGradient>
+    <linearGradient id="glass" x1="40" y1="40" x2="85" y2="72" gradientUnits="userSpaceOnUse"><stop stop-color="#f5fcff"/><stop offset="1" stop-color="#c9e3ed"/></linearGradient>
+  </defs>
+  <ellipse cx="64" cy="117" rx="42" ry="6" fill="#173c51" opacity=".12"/>
+  <rect x="30" y="96" width="15" height="19" rx="5" fill="#315460"/>
+  <rect x="83" y="96" width="15" height="19" rx="5" fill="#315460"/>
+  <path d="M23 48h-6v21m88-21h6v21" stroke="#436c7d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="25" y="15" width="78" height="91" rx="16" fill="url(#body)" stroke="#28617b" stroke-width="2.5"/>
+  <rect x="44" y="24" width="40" height="7" rx="3.5" fill="#e5f4fa"/>
+  <rect x="34" y="40" width="60" height="31" rx="5" fill="url(#glass)" stroke="#3d7b97" stroke-width="2.5"/>
+  <path d="M64 41v28M40 62l12-15" stroke="#91becd" stroke-width="3" stroke-linecap="round"/>
+  <path d="M35 78h58" stroke="#bde1e9" stroke-width="3" stroke-linecap="round"/>
+  <rect x="35" y="86" width="14" height="8" rx="4" fill="#ffe1a3"/>
+  <rect x="79" y="86" width="14" height="8" rx="4" fill="#ffe1a3"/>
+  <path d="M58 88h12" stroke="#205a72" stroke-width="3" stroke-linecap="round"/>
+  <path d="M34 101h60" stroke="#21556f" stroke-width="5" stroke-linecap="round"/>
+</svg>

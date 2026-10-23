@@ -1,62 +1,69 @@
-const CACHE_NAME = 'alo-rh-v1.2.0';
+const CACHE_NAME = 'alo-rh-v1.3.0';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './js/config.js?v=1.2.0',
-  './js/protocolo.js?v=1.2.0',
-  './js/modelo.js?v=1.2.0',
-  './js/armazenamento.js?v=1.2.0',
-  './js/pin-proof.js?v=1.2.0',
-  './js/autenticacao.js?v=1.2.0',
-  './js/sync-seguro.js?v=1.2.0',
-  './js/app-seguro.js?v=1.2.0',
-  './js/acessibilidade.js?v=1.2.0',
-  './css/seguranca.css?v=1.2.0',
-  './css/icones.css?v=1.2.0',
-  './icons/ui/absence.svg?v=1.2.0',
-  './icons/ui/alert.svg?v=1.2.0',
-  './icons/ui/arrow-down.svg?v=1.2.0',
-  './icons/ui/arrow-up.svg?v=1.2.0',
-  './icons/ui/briefcase.svg?v=1.2.0',
-  './icons/ui/building.svg?v=1.2.0',
-  './icons/ui/bus.svg?v=1.2.0',
-  './icons/ui/cake.svg?v=1.2.0',
-  './icons/ui/calendar.svg?v=1.2.0',
-  './icons/ui/card.svg?v=1.2.0',
-  './icons/ui/chat.svg?v=1.2.0',
-  './icons/ui/clipboard-check.svg?v=1.2.0',
-  './icons/ui/clock.svg?v=1.2.0',
-  './icons/ui/cloud.svg?v=1.2.0',
-  './icons/ui/connection.svg?v=1.2.0',
-  './icons/ui/eye.svg?v=1.2.0',
-  './icons/ui/files.svg?v=1.2.0',
-  './icons/ui/history.svg?v=1.2.0',
-  './icons/ui/import.svg?v=1.2.0',
-  './icons/ui/list.svg?v=1.2.0',
-  './icons/ui/manager-key.svg?v=1.2.0',
-  './icons/ui/package.svg?v=1.2.0',
-  './icons/ui/pencil.svg?v=1.2.0',
-  './icons/ui/people.svg?v=1.2.0',
-  './icons/ui/receipt.svg?v=1.2.0',
-  './icons/ui/refresh.svg?v=1.2.0',
-  './icons/ui/restore.svg?v=1.2.0',
-  './icons/ui/settings.svg?v=1.2.0',
-  './icons/ui/shield.svg?v=1.2.0',
-  './icons/ui/tag.svg?v=1.2.0',
-  './icons/ui/trash-2.svg?v=1.2.0',
-  './icons/ui/umbrella.svg?v=1.2.0',
-  './icons/ui/wallet.svg?v=1.2.0',
-  './icons/ui/pix.svg?v=1.2.0',
-  './icons/ui/whatsapp.svg?v=1.2.0',
+  './js/config.js?v=1.3.0',
+  './js/protocolo.js?v=1.3.0',
+  './js/modelo.js?v=1.3.0',
+  './js/armazenamento.js?v=1.3.0',
+  './js/pin-proof.js?v=1.3.0',
+  './js/autenticacao.js?v=1.3.0',
+  './js/sync-seguro.js?v=1.3.0',
+  './js/app-seguro.js?v=1.3.0',
+  './js/acessibilidade.js?v=1.3.0',
+  './css/seguranca.css?v=1.3.0',
+  './css/icones.css?v=1.3.0',
+  './css/inicio.css?v=1.3.0',
+  './js/cabecalho.js?v=1.3.0',
+  './icons/settings-gear.png',
+  './icons/actions/ponto.svg',
+  './icons/actions/quinzena.svg',
+  './icons/actions/vt.svg',
+  './icons/actions/docs.svg',
+  './icons/ui/absence.svg?v=1.3.0',
+  './icons/ui/alert.svg?v=1.3.0',
+  './icons/ui/arrow-down.svg?v=1.3.0',
+  './icons/ui/arrow-up.svg?v=1.3.0',
+  './icons/ui/briefcase.svg?v=1.3.0',
+  './icons/ui/building.svg?v=1.3.0',
+  './icons/ui/bus.svg?v=1.3.0',
+  './icons/ui/cake.svg?v=1.3.0',
+  './icons/ui/calendar.svg?v=1.3.0',
+  './icons/ui/card.svg?v=1.3.0',
+  './icons/ui/chat.svg?v=1.3.0',
+  './icons/ui/clipboard-check.svg?v=1.3.0',
+  './icons/ui/clock.svg?v=1.3.0',
+  './icons/ui/cloud.svg?v=1.3.0',
+  './icons/ui/connection.svg?v=1.3.0',
+  './icons/ui/eye.svg?v=1.3.0',
+  './icons/ui/files.svg?v=1.3.0',
+  './icons/ui/history.svg?v=1.3.0',
+  './icons/ui/import.svg?v=1.3.0',
+  './icons/ui/list.svg?v=1.3.0',
+  './icons/ui/manager-key.svg?v=1.3.0',
+  './icons/ui/package.svg?v=1.3.0',
+  './icons/ui/pencil.svg?v=1.3.0',
+  './icons/ui/people.svg?v=1.3.0',
+  './icons/ui/receipt.svg?v=1.3.0',
+  './icons/ui/refresh.svg?v=1.3.0',
+  './icons/ui/restore.svg?v=1.3.0',
+  './icons/ui/settings.svg?v=1.3.0',
+  './icons/ui/shield.svg?v=1.3.0',
+  './icons/ui/tag.svg?v=1.3.0',
+  './icons/ui/trash-2.svg?v=1.3.0',
+  './icons/ui/umbrella.svg?v=1.3.0',
+  './icons/ui/wallet.svg?v=1.3.0',
+  './icons/ui/pix.svg?v=1.3.0',
+  './icons/ui/whatsapp.svg?v=1.3.0',
 
 
-  './css/styles.css?v=1.2.0',
-  './js/dados.js?v=1.2.0',
-  './js/calculos.js?v=1.2.0',
-  './js/interface.js?v=1.2.0',
-  './js/impressao.js?v=1.2.0',
-  './js/sincronizacao.js?v=1.2.0',
+  './css/styles.css?v=1.3.0',
+  './js/dados.js?v=1.3.0',
+  './js/calculos.js?v=1.3.0',
+  './js/interface.js?v=1.3.0',
+  './js/impressao.js?v=1.3.0',
+  './js/sincronizacao.js?v=1.3.0',
   './icons/alo-rh-v120-192.png',
   './icons/alo-rh-v120-512.png',
   './icons/icon-maskable-192.png',
@@ -84,6 +91,22 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   if (request.method !== 'GET' || url.origin !== self.location.origin || !url.pathname.startsWith(new URL(self.registration.scope).pathname) || url.pathname.includes('/__dev__/')) return;
+
+  // O instalador precisa dos metadados atuais; o cache é apenas uma cópia offline.
+  if (url.pathname === new URL('./manifest.json', self.registration.scope).pathname) {
+    event.respondWith(
+      fetch(request).then(async response => {
+        if (!response.ok) throw new Error('Manifest indisponível');
+        const copy = response.clone();
+        event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put('./manifest.json', copy)));
+        return response;
+      }).catch(async () => {
+        const cached = await caches.match('./manifest.json');
+        return cached || Response.error();
+      })
+    );
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(

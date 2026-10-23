@@ -35,14 +35,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function atualizarLogoTopo() {
-        const img = document.getElementById('headerLogoEmpresa');
-        const header = document.querySelector('.header');
-        if(!img || !header) return;
-        const mostrar = !!(db.empresa && db.empresa.mostrarLogoTopo && db.empresa.logo);
-        img.style.display = mostrar ? 'block' : 'none';
-        header.classList.toggle('com-logo', mostrar);
-        if(mostrar) img.src = db.empresa.logo;
-        else img.removeAttribute('src');
+        window.RHCabecalho?.update();
     }
 
     function toggleModoSelecao() { 
@@ -78,6 +71,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         return Array.from(itensSelecionados).map(id => db.funcionarios.find(f => f.id === id)).filter(f => f && !f.arquivado);
     }
 
+    function limparSelecaoFuncionarios() {
+        itensSelecionados.clear();atualizarAcoesMassa();renderizarLista();
+    }
+
     function atualizarAcoesMassa() {
         const temSelecionados = itensSelecionados.size > 0;
         const selecionados = obterFuncionariosSelecionados();
@@ -85,6 +82,9 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const visivel = temSelecionados && !somenteSemanais ? 'flex' : 'none';
         const actionBar = document.getElementById('actionBar');
         if(actionBar) actionBar.classList.toggle('com-selecao', temSelecionados);
+        const contador = document.getElementById('contadorSelecao');
+        if(contador){contador.hidden=!temSelecionados;contador.textContent=selecionados.length+' selecionado'+(selecionados.length===1?'':'s');}
+        const limpar = document.getElementById('btnLimparSelecao');if(limpar)limpar.hidden=!temSelecionados;
         document.getElementById('btnAcaoMassa1').style.display = visivel;
         document.getElementById('btnAcaoMassa2').style.display = visivel;
         document.getElementById('btnAcaoMassa3').style.display = visivel;
@@ -93,7 +93,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(btnDocPagamento) {
             const temMensalSemCarteira = selecionados.some(isFuncionarioMensalSemCarteira);
             const temContracheque = selecionados.some(funcionarioRecebeContracheque);
-            btnDocPagamento.innerHTML = temMensalSemCarteira && !temContracheque ? '<span class="rh-icon" data-icon="receipt" aria-hidden="true"></span> Recibo' : (temMensalSemCarteira && temContracheque ? '<span class="rh-icon" data-icon="receipt" aria-hidden="true"></span> Docs' : '<span class="rh-icon" data-icon="receipt" aria-hidden="true"></span> Contracheque');
+            const somenteRecibos = temMensalSemCarteira && !temContracheque;
+            btnDocPagamento.innerHTML = '<img src="icons/actions/docs.svg" alt=""><span>'+(somenteRecibos?'Recibo':'Docs')+'</span>';
+            btnDocPagamento.title = somenteRecibos?'Recibos de pagamento':temMensalSemCarteira?'Recibos e contracheques':'Contracheques';
+            btnDocPagamento.setAttribute('aria-label',btnDocPagamento.title);
             btnDocPagamento.onclick = abrirDocumentosPagamento;
         }
         const btnSemana = document.getElementById('btnAcaoMassaSemana');
@@ -107,6 +110,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const todosListadosSelecionados = funcs.length > 0 && funcs.every(f => itensSelecionados.has(f.id));
             btnSelecionarLista.style.display = funcs.length ? 'flex' : 'none';
             btnSelecionarLista.classList.toggle('selecionado', todosListadosSelecionados);
+            btnSelecionarLista.setAttribute('aria-pressed',String(todosListadosSelecionados));
         }
         if(typeof atualizarVisibilidadePermissoes === 'function') atualizarVisibilidadePermissoes();
     }
@@ -134,8 +138,8 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function renderizarFiltros() { 
         let classTodos = categoriaAtual === null ? "active" : "";
-        let html = `<div class="chip ${classTodos}" onclick="alternarNomesTodos()" title="Alternar nome completo e nome social">TODOS</div>`; 
-        db.categorias.forEach(cat => { html += `<div class="chip ${categoriaAtual === cat.id ? 'active' : ''}" style="background-color: ${safeColor(cat.cor)}; color: ${safeColor(cat.corTexto, '#ffffff')};" onclick="filtrarCat(${jsArg(cat.id)})">${escapeHTML(cat.nome)}</div>`; }); 
+        let html = `<button type="button" class="chip ${classTodos}" aria-pressed="${categoriaAtual === null}" onclick="alternarNomesTodos()" title="Alternar nome completo e nome social">Todos</button>`;
+        db.categorias.forEach(cat => { html += `<button type="button" class="chip ${categoriaAtual === cat.id ? 'active' : ''}" aria-pressed="${categoriaAtual === cat.id}" style="background-color: ${safeColor(cat.cor)}; color: ${safeColor(cat.corTexto, '#ffffff')};" onclick="filtrarCat(${jsArg(cat.id)})">${escapeHTML(cat.nome)}</button>`; });
         document.getElementById('containerFiltros').innerHTML = html; 
     }
 
@@ -513,6 +517,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function atualizarBoxPerfilAdmin() {
+        window.RHCabecalho?.update();
         const box = document.getElementById('perfilAdminBox');
         if(!box) return;
         if(db.administradores.length === 0) {
@@ -627,7 +632,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(permissoesGerenciar[tipo] && !garantirPermissao(permissoesGerenciar[tipo], () => abrirGerenciar(tipo), 'abrir esta área')) return;
         fecharModal('modalPainelUnificado');
         if(tipo === 'configGerais') { document.getElementById('confSalario').value = db.configGerais.salarioMinimo || ''; document.getElementById('confAdiantamento').value = db.configGerais.adiantamentoQuinzena || ''; document.getElementById('confDiasAquisitivoFerias').value = db.configGerais.diasAquisitivoFerias || 360; tempVT = db.configGerais.valesTransporte ? [...db.configGerais.valesTransporte] : []; tempMotivos = db.configGerais.motivosAdiantamento ? [...db.configGerais.motivosAdiantamento] : []; tempINSS = db.configGerais.inssFaixas ? JSON.parse(JSON.stringify(db.configGerais.inssFaixas)) : criarTabelaINSSPadrao(); document.querySelectorAll('.chk-dias-func').forEach(el => el.checked = db.configGerais.diasFuncionamento.includes(el.value)); renderTemasConfig(); renderListasConfig(); renderHistoricoSalarioMinimo(); document.getElementById('modalConfigGerais').style.display = 'flex'; return; }
-        if(tipo === 'empresa') { document.getElementById('empLogoBase64').value = db.empresa.logo || ''; document.getElementById('previewLogo').innerHTML = db.empresa.logo ? `<img src="${db.empresa.logo}" style="max-height:50px;">` : ''; document.getElementById('empMostrarLogoTopo').checked = !!db.empresa.mostrarLogoTopo; document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
+        if(tipo === 'empresa') { document.getElementById('empLogoBase64').value = db.empresa.logo || ''; document.getElementById('previewLogo').innerHTML = db.empresa.logo ? `<img src="${db.empresa.logo}" style="max-height:50px;">` : ''; document.getElementById('empRazao').value = db.empresa.razao || ''; document.getElementById('empFantasia').value = db.empresa.fantasia || ''; document.getElementById('empCNPJ').value = db.empresa.cnpj || ''; document.getElementById('empRua').value = db.empresa.rua || ''; document.getElementById('empNum').value = db.empresa.numero || ''; document.getElementById('empBairro').value = db.empresa.bairro || ''; document.getElementById('empCidade').value = db.empresa.cidade || ''; document.getElementById('empUF').value = db.empresa.uf || 'PB'; document.getElementById('modalFormEmpresa').style.display = 'flex'; return; }
         
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
         if(tipo === 'funcionarios') {
@@ -724,7 +729,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function salvarEmpresa() { 
         let cnpj = document.getElementById('empCNPJ').value; if(cnpj && cnpj.length < 18) return alert("CNPJ incompleto. Digite os 14 números.");
-        db.empresa.logo = document.getElementById('empLogoBase64').value; db.empresa.mostrarLogoTopo = document.getElementById('empMostrarLogoTopo').checked; db.empresa.razao = document.getElementById('empRazao').value; db.empresa.fantasia = document.getElementById('empFantasia').value; db.empresa.cnpj = cnpj; db.empresa.rua = document.getElementById('empRua').value; db.empresa.numero = document.getElementById('empNum').value; db.empresa.bairro = document.getElementById('empBairro').value; db.empresa.cidade = document.getElementById('empCidade').value; db.empresa.uf = document.getElementById('empUF').value; registrarAuditoria('Dados da empresa salvos', db.empresa.razao || db.empresa.fantasia || 'Empresa', 'empresa', 'empresa'); salvarBanco(); atualizarLogoTopo(); fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display = 'flex'; 
+        db.empresa.logo = document.getElementById('empLogoBase64').value; db.empresa.razao = document.getElementById('empRazao').value; db.empresa.fantasia = document.getElementById('empFantasia').value; db.empresa.cnpj = cnpj; db.empresa.rua = document.getElementById('empRua').value; db.empresa.numero = document.getElementById('empNum').value; db.empresa.bairro = document.getElementById('empBairro').value; db.empresa.cidade = document.getElementById('empCidade').value; db.empresa.uf = document.getElementById('empUF').value; registrarAuditoria('Dados da empresa salvos', db.empresa.razao || db.empresa.fantasia || 'Empresa', 'empresa', 'empresa'); salvarBanco(); atualizarLogoTopo(); fecharModal('modalFormEmpresa'); document.getElementById('modalPainelUnificado').style.display = 'flex';
     }
     
     function abrirFormAdmin(id) {

@@ -8,13 +8,14 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.2.0</title>
+    <title>Alô RH v1.3.0</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/alo-rh-v120-192.png">
     <link rel="apple-touch-icon" href="icons/alo-rh-v120-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.2.0">
-<link rel="stylesheet" href="css/seguranca.css?v=1.2.0">
-<link rel="stylesheet" href="css/icones.css?v=1.2.0">
+    <link rel="stylesheet" href="css/styles.css?v=1.3.0">
+<link rel="stylesheet" href="css/seguranca.css?v=1.3.0">
+<link rel="stylesheet" href="css/icones.css?v=1.3.0">
+<link rel="stylesheet" href="css/inicio.css?v=1.3.0">
 </head>
 <body class="rh-locked">
 <main id="rhAccess" aria-label="Acesso ao Alô RH">
@@ -29,7 +30,7 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.2.0</div>
+    <div class="splash-versao">v1.3.0</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;"><span class="rh-icon" data-icon="refresh" aria-hidden="true"></span> Forçar Atualização</button>
 </div>
 
@@ -40,30 +41,41 @@
 </div>
 
 <div class="app-container">
-    <div class="header">
-        <div class="header-title">Alô RH</div>
-        <img id="headerLogoEmpresa" class="header-logo-empresa" alt="Logo da empresa">
+    <header class="header" aria-label="Alô RH">
+        <img class="app-brand-logo" src="icons/alo-rh-v120-192.png" alt="Alô RH" width="56" height="56">
+        <button id="btnPerfilAtivo" class="module-operator-chip" type="button" onclick="trocarPerfilAdmin()" aria-label="Trocar perfil ativo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.5" r="3.5"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg>
+            <strong id="nomePerfilAtivo">Perfil</strong><span class="profile-chevron" aria-hidden="true"></span>
+        </button>
         <div class="header-actions">
-            <button id="btnHeaderAniversarios" aria-label="Aniversários" onclick="abrirModalAniversarios()"><span class="rh-icon" data-icon="cake" aria-hidden="true"></span></button>
-            <button id="btnHeaderFerias" onclick="abrirCalendarioFerias()" title="Férias" aria-label="Férias"><span class="rh-icon" data-icon="umbrella" aria-hidden="true"></span></button>
-            <button id="btnHeaderResumo" class="btn-resumo-header" onclick="abrirModalResumo()" title="Resumo" aria-label="Resumo"><span class="rh-icon" data-icon="list" aria-hidden="true"></span></button>
-            <span class="gear-sync-shell"><button id="rhSyncStatus" type="button" data-state="local" title="Aguardando conexão" aria-label="Sincronização: aguardando conexão"></button><button onclick="abrirMenuPrincipal()" aria-label="Menu principal"><span class="rh-icon" data-icon="settings" aria-hidden="true"></span></button></span>
+            <button id="rhSyncStatus" type="button" data-state="local" title="Aguardando conexão" aria-label="Sincronização: aguardando conexão"></button>
+            <div class="header-more-anchor">
+                <button id="btnHeaderMais" type="button" aria-label="Férias, resumo e aniversariantes" aria-expanded="false" aria-controls="menuHeaderMais" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+                <div id="menuHeaderMais" class="header-more-menu" role="menu" aria-label="Mais opções" hidden>
+                    <button id="btnHeaderFerias" type="button" role="menuitem" onclick="RHCabecalho.close();abrirCalendarioFerias()"><span class="rh-icon" data-icon="umbrella" aria-hidden="true"></span><span>Férias</span></button>
+                    <button id="btnHeaderResumo" type="button" role="menuitem" onclick="RHCabecalho.close();abrirModalResumo()"><span class="rh-icon" data-icon="list" aria-hidden="true"></span><span>Resumo</span></button>
+                    <button id="btnHeaderAniversarios" type="button" role="menuitem" onclick="RHCabecalho.close();abrirModalAniversarios()"><span class="rh-icon" data-icon="cake" aria-hidden="true"></span><span>Aniversariantes</span></button>
+                </div>
+            </div>
+            <button id="btnConfigGear" type="button" onclick="RHCabecalho.close(false);abrirMenuPrincipal()" aria-label="Menu principal"><img class="app-settings-gear" src="icons/settings-gear.png" alt="" width="40" height="40"></button>
         </div>
-    </div>
+    </header>
     
     <div class="area-conteudo">
         <div id="actionBar" class="action-bar">
             <div class="selecao-lista-toolbar">
                 <button class="btn-selecionar-caixa" id="btnSelecionarLista" onclick="toggleSelecionarTodosListados()" title="Selecionar ou limpar seleção" aria-label="Selecionar ou limpar seleção"><span id="marcaSelecionarTodos"></span></button>
+                <span id="contadorSelecao" class="selection-count" aria-live="polite" hidden></span>
+                <button id="btnLimparSelecao" class="selection-clear" type="button" onclick="limparSelecaoFuncionarios()" hidden>Limpar</button>
             </div>
             <div id="boxFiltrosDias" class="dias-filtro-toolbar"></div>
             <div class="acoes-massa-toolbar" id="boxBarraAcoes">
                 <button class="btn-action-bar btn-folga-geral" id="btnFolgaGeral" onclick="abrirMenuAdicionar()" title="Adicionar" aria-label="Adicionar">+</button>
-                <button class="btn-action-bar" id="btnAcaoMassa1" style="display:none; background:#0277BD;" onclick="abrirConfigPonto()"><span class="rh-icon" data-icon="files" aria-hidden="true"></span> Ponto</button>
-                <button class="btn-action-bar" id="btnAcaoMassa2" style="display:none; background:#2E7D32;" onclick="abrirConfigQuinzena()"><span class="rh-icon" data-icon="wallet" aria-hidden="true"></span> Quinzena</button>
-                <button class="btn-action-bar" id="btnAcaoMassa3" style="display:none; background:#F57F17;" onclick="abrirAjusteVT()"><span class="rh-icon" data-icon="bus" aria-hidden="true"></span> VT</button>
-                <button class="btn-action-bar" id="btnAcaoMassa4" style="display:none; background:#6A1B9A;" onclick="abrirDocumentosPagamento()"><span class="rh-icon" data-icon="receipt" aria-hidden="true"></span> Contracheque</button>
-                <button class="btn-action-bar" id="btnAcaoMassaSemana" style="display:none; background:#E65100;" onclick="abrirModalPresencaMassaSemana()"><span class="rh-icon" data-icon="clipboard-check" aria-hidden="true"></span> Registrar Presença</button>
+                <button class="btn-action-bar work-action" id="btnAcaoMassa1" style="display:none" onclick="abrirConfigPonto()"><img src="icons/actions/ponto.svg" alt=""><span>Ponto</span></button>
+                <button class="btn-action-bar work-action" id="btnAcaoMassa2" style="display:none" onclick="abrirConfigQuinzena()"><img src="icons/actions/quinzena.svg" alt=""><span>Quinzena</span></button>
+                <button class="btn-action-bar work-action" id="btnAcaoMassa3" style="display:none" onclick="abrirAjusteVT()" aria-label="Vale-transporte"><img src="icons/actions/vt.svg" alt=""><span>VT</span></button>
+                <button class="btn-action-bar work-action" id="btnAcaoMassa4" style="display:none" onclick="abrirDocumentosPagamento()"><img src="icons/actions/docs.svg" alt=""><span>Docs</span></button>
+                <button class="btn-action-bar work-action" id="btnAcaoMassaSemana" style="display:none" onclick="abrirModalPresencaMassaSemana()"><img src="icons/actions/ponto.svg" alt=""><span>Registrar presença</span></button>
             </div>
         </div>
         
@@ -75,7 +87,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.2.0</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.3.0</small>
         </h2>
         <div id="perfilAdminBox" class="perfil-admin-box"></div>
         <button class="btn-outline menu-perm" data-perm="dadosEmpresa" onclick="abrirGerenciar('empresa')"><span class="rh-icon" data-icon="building" aria-hidden="true"></span> Dados da Empresa</button>
@@ -162,7 +174,7 @@
             <input type="file" id="empLogoInput" accept="image/*" onchange="converterLogo(this)">
             <input type="hidden" id="empLogoBase64">
             <div id="previewLogo" style="margin-top:5px;"></div>
-            <label class="checkbox-inline-empresa"><input type="checkbox" id="empMostrarLogoTopo"> Mostrar logo centralizada no cabeçalho da tela inicial</label>
+            <small class="field-help">Usada nos documentos da empresa.</small>
         </div>
         <div class="form-group"><label>Razão Social:</label><input type="text" id="empRazao"></div>
         <div class="form-group"><label>Nome Fantasia:</label><input type="text" id="empFantasia"></div>
@@ -882,24 +894,25 @@
         </div>
     </div>
 </div>
-<script src="js/config.js?v=1.2.0"></script>
-<script src="js/protocolo.js?v=1.2.0"></script>
-<script src="js/modelo.js?v=1.2.0"></script>
-<script src="js/dados.js?v=1.2.0"></script>
-<script src="js/calculos.js?v=1.2.0"></script>
-<script src="js/interface.js?v=1.2.0"></script>
-<script src="js/impressao.js?v=1.2.0"></script>
-<script src="js/sincronizacao.js?v=1.2.0"></script>
-<script src="js/armazenamento.js?v=1.2.0"></script>
-<script src="js/pin-proof.js?v=1.2.0"></script>
-<script src="js/autenticacao.js?v=1.2.0"></script>
-<script src="js/sync-seguro.js?v=1.2.0"></script>
-<script src="js/app-seguro.js?v=1.2.0"></script>
-<script src="js/acessibilidade.js?v=1.2.0"></script>
+<script src="js/config.js?v=1.3.0"></script>
+<script src="js/protocolo.js?v=1.3.0"></script>
+<script src="js/modelo.js?v=1.3.0"></script>
+<script src="js/dados.js?v=1.3.0"></script>
+<script src="js/calculos.js?v=1.3.0"></script>
+<script src="js/interface.js?v=1.3.0"></script>
+<script src="js/impressao.js?v=1.3.0"></script>
+<script src="js/sincronizacao.js?v=1.3.0"></script>
+<script src="js/armazenamento.js?v=1.3.0"></script>
+<script src="js/pin-proof.js?v=1.3.0"></script>
+<script src="js/autenticacao.js?v=1.3.0"></script>
+<script src="js/sync-seguro.js?v=1.3.0"></script>
+<script src="js/app-seguro.js?v=1.3.0"></script>
+<script src="js/cabecalho.js?v=1.3.0"></script>
+<script src="js/acessibilidade.js?v=1.3.0"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-            navigator.serviceWorker.register('service-worker.js').catch(function(err) {
+            navigator.serviceWorker.register('service-worker.js',{updateViaCache:'none'}).catch(function(err) {
                 console.warn('Service worker nao registrado.', err);
             });
         });

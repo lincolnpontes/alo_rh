@@ -1,5 +1,15 @@
 # Validação local — 23/10/2026
 
+## Revisão v1.3.0
+
+84 testes passaram. Os quatro testes novos verificam que a instalação recebe o manifest atual, preserva a cópia válida sem conexão, não grava uma página de erro no lugar do manifest e não intercepta a instalação de outro app do mesmo domínio. O identificador e o escopo de instalação foram preservados. O registro do service worker solicita atualização sem reutilizar o cache HTTP do script.
+
+O agente de design revisou o código e os assets reais do Alô Cozinha e as capturas do RH. Cabeçalho de 68 px em uma linha, logo do app, perfil ativo, engrenagem original e menu com as três opções. Os quatro atalhos ilustrados ficam em cartões claros e têm 72 px de largura mínima no viewport de 320 px. As linhas de funcionários usam cerca de 69 px e seleção suave, sem perder a marca de seleção.
+
+Conferências no navegador local: perfis fictícios, nome longo, larguras de 320, 390 e 1280 px sem rolagem lateral, seleção/limpeza, menu por mouse e teclado, setas, Escape com retorno do foco, troca de perfil e acesso às três telas. Os atalhos Ponto, Quinzena, VT e Docs abriram seus diálogos corretos; não foram emitidos documentos nem lançados pagamentos. O console não registrou erros ou avisos na conferência final. Um perfil fictício com permissões explicitamente negadas só vê aniversariantes no menu; os atalhos protegidos permanecem ocultos. Nenhum cadastro ou lançamento real foi alterado. Backup adicional do banco no Drive e local, mais bundle Git, preservados antes de publicar. Evidências privadas em `.local/layout-2026-10-23/`.
+
+O aviso Android/Chrome de “já instalado” não foi reproduzido neste computador e não pode ser declarado resolvido. A identidade do app já era a mesma antes da atualização. Há um [registro oficial do Chromium](https://issues.chromium.org/issues/572287931) de instalação de diferentes PWAs no mesmo domínio/subdiretórios, inclusive GitHub Pages, recusada incorretamente como já instalada. Isso é uma hipótese para o relato do usuário; a confirmação depende do estado e da versão do Chrome no celular. A correção do cache de manifest evita metadados antigos, mas não remove registros de instalação do Android. Não foram limpos dados locais nem criadas identidades/domínios alternativos.
+
 ## Revisão v1.2.0
 
 80 testes passaram, incluindo prova do PIN por Web Crypto/HMAC, recusa de repetição, vínculo ao banco/aparelho/pessoa, expiração, mudança e exclusão de credenciais, bloqueio por tentativas, descarte do CacheService e compatibilidade com PIN legado de três dígitos. A preparação do desafio não escreve no arquivo do banco no Apps Script. Sintaxe JavaScript, unicidade de IDs e 75 referências de arquivos HTML/cache foram conferidas.
