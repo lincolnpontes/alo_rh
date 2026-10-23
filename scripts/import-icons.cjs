@@ -24,6 +24,6 @@ const entries=Object.entries(icons).map(([name,[asset,color,weight='duotone']])=
 });
 for(const [name,svg]of entries)fs.writeFileSync(path.join(__dirname,'../icons/ui',name+'.svg'),svg+'\n');
 fs.copyFileSync(path.join(source,'LICENSE'),path.join(__dirname,'../icons/ui/LICENSE-phosphor.txt'));
-const css='.rh-icon{display:inline-block;width:1.4em;height:1.4em;vertical-align:-.3em;flex-shrink:0;background:var(--rh-icon) center/contain no-repeat;print-color-adjust:exact;-webkit-print-color-adjust:exact}\n.header-actions .rh-icon{width:24px;height:24px;padding:3px;border-radius:6px;background-color:#f2f7f5;background-size:24px 24px}.btn-outline>.rh-icon{margin-right:8px}\n'+entries.map(([name])=>'[data-icon="'+name+'"]{--rh-icon:url("../icons/ui/'+name+'.svg?v=1.1.1")}').join('\n')+'\n';
+const css='.rh-icon{display:inline-block;width:1.4em;height:1.4em;vertical-align:-.3em;flex-shrink:0;background:var(--rh-icon) center/contain no-repeat;print-color-adjust:exact;-webkit-print-color-adjust:exact}\n.header-actions .rh-icon{width:24px;height:24px;padding:3px;border-radius:6px;background-color:#f2f7f5;background-size:24px 24px}.btn-outline>.rh-icon{margin-right:8px}\n'+entries.map(([name])=>'[data-icon="'+name+'"]{--rh-icon:url("../icons/ui/'+name+'.svg?v=1.1.2")}').join('\n')+'\n';
 fs.writeFileSync(path.join(__dirname,'../css/icones.css'),css);
 console.log(entries.length+' ícones incorporados.');
