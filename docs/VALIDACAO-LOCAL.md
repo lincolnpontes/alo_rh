@@ -1,5 +1,13 @@
 # Validação local — 23/10/2026
 
+## Revisão v1.3.1 — identidade de instalação
+
+O `id: "./"` era interpretado em relação à origem de `start_url`, conforme o [algoritmo do manifest](https://www.w3.org/TR/appmanifest/#id-member), e resultava em `https://lincolnpontes.github.io/`. A conferência dos manifests públicos em 23/10/2026 encontrou o mesmo identificador no Alô Feira. O teste anterior resolvia `id` incorretamente em relação à pasta `/alo_rh/`, deixando passar a colisão.
+
+O RH agora usa o identificador permanente `/alo_rh/`. A origem, o endereço inicial, o escopo, o armazenamento e a API continuam iguais. O HTML solicita `manifest.json?v=1.3.1` para não reutilizar a resposta HTTP antiga; o service worker conserva uma cópia canônica para uso offline. O Alô Feira e os demais apps não foram alterados. Para navegadores que consideram o `id`, esta é uma nova identidade de instalação: quem ainda tiver a instalação antiga pode ver uma segunda opção, mas os ícones existentes não são removidos automaticamente.
+
+Os dois testes de identidade falharam com o manifest anterior e passaram após a correção. 87 testes passaram, incluindo isolamento da identidade em relação ao Feira/Cozinha, atualização pelo manifest versionado, fallback offline e preservação do escopo. Código anterior preservado em bundle Git e manifest original em `.local/instalacao-2026-10-23/`. No navegador local, a página v1.3.1 solicitou o manifest versionado, abriu o acesso e entrou com o PIN fictício, sem erros de console. Não houve escrita no Apps Script nem no banco. A colisão está comprovada nos arquivos publicados; o resultado da reinstalação depende da confirmação no Android do usuário.
+
 ## Revisão v1.3.0
 
 84 testes passaram. Os quatro testes novos verificam que a instalação recebe o manifest atual, preserva a cópia válida sem conexão, não grava uma página de erro no lugar do manifest e não intercepta a instalação de outro app do mesmo domínio. O identificador e o escopo de instalação foram preservados. O registro do service worker solicita atualização sem reutilizar o cache HTTP do script.
