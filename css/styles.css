@@ -59,7 +59,7 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .item.selecionado .checkbox-selecao::after { content: '✓'; color: #00695C; position: absolute; font-size: 18px; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; }
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
-        .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        .modal { background: white; padding: 20px; border-radius: 10px; box-sizing: border-box; width: calc(100% - 24px); max-width: 490px; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
         .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 2px solid #00695C; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
         .modal-x { border:0; background:#ECEFF1; color:#455A64; border-radius:50%; width:30px; height:30px; font-size:14px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; margin-left:8px; }
         .modal-title-funcionario { min-height:42px; box-sizing:border-box; }

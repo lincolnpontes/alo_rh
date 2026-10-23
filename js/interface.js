@@ -236,7 +236,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         ocultarSemPermissao('btnPagarExtra', 'registrarPresencaSemanal');
         const btnEditar = document.getElementById('btnEditarFuncAcoes');
         if(btnEditar) btnEditar.style.display = temPermissaoAtual('dadosPessoais') ? 'inline-flex' : 'none';
-        configurarAcaoArquivoFuncionario('btnArquivarFuncAcoes', f, 'acoes');
         document.getElementById('modalAcoesFunc').style.display = 'flex';
     }
 

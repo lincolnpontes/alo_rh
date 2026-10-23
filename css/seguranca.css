@@ -1,12 +1,9 @@
 body.rh-locked > :not(#rhAccess):not(script):not(dialog){display:none!important}
-#rhAccess{box-sizing:border-box;max-width:420px;margin:7vh auto;padding:28px;background:#fff;border:1px solid #e0e8e5;border-radius:18px;color:#243b34}
-#rhAccess h1{font-size:28px;margin:0 0 10px;color:#00695c}
-#rhAccess p{line-height:1.5;color:#53665f}
-#rhAccess form,.rh-dialog form{display:grid;gap:14px}
-#rhAccess label,.rh-dialog label{display:grid;gap:7px;text-align:left;font-size:14px;font-weight:600;margin:12px 0}
-#rhAccess input,#rhAccess select,.rh-dialog input{box-sizing:border-box;width:100%;min-height:46px;border:1px solid #9caea7;border-radius:8px;padding:10px;font:inherit}
-#rhAccess button,.rh-dialog button{min-height:44px;padding:10px 14px;margin:5px 4px 5px 0;border:1px solid #ccd9d4;border-radius:8px;background:#f5f9f7;color:#185747;font:inherit;cursor:pointer}
-#rhAccess button[type=submit],.rh-dialog button[type=submit]{background:#00695c;color:#fff;border-color:#00695c;width:100%}
+.rh-dialog form{display:grid;gap:14px}
+.rh-dialog label{display:grid;gap:7px;text-align:left;font-size:14px;font-weight:600;margin:12px 0}
+.rh-dialog input{box-sizing:border-box;width:100%;min-height:46px;border:1px solid #9caea7;border-radius:8px;padding:10px;font:inherit}
+.rh-dialog button{min-height:44px;padding:10px 14px;margin:5px 4px 5px 0;border:1px solid #ccd9d4;border-radius:8px;background:#f5f9f7;color:#185747;font:inherit;cursor:pointer}
+.rh-dialog button[type=submit]{background:#1976d2;color:#fff;border-color:#1976d2;width:100%}
 #rhAccess button:disabled,.rh-dialog button:disabled{opacity:.55;cursor:wait}
 .rh-dialog{box-sizing:border-box;border:1px solid #c6d7d0;border-radius:14px;padding:24px;max-width:min(560px,94vw);max-height:85vh;overflow:auto;color:#243b34}
 .rh-dialog::backdrop{background:rgb(16 35 28 / .5)}
@@ -20,17 +17,49 @@ body.rh-locked > :not(#rhAccess):not(script):not(dialog){display:none!important}
 @media(max-width:520px){.header{flex-wrap:wrap;gap:4px;padding:6px 10px}.header.com-logo .header-logo-empresa{position:static;transform:none;order:3;flex-basis:100%;max-width:100%;width:100%;height:32px;margin:2px 0}.header-title{font-size:18px}}
 .btn-arquivo-funcionario{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;margin-top:14px;padding:10px;border:1px solid #d9c9b9;border-radius:7px;background:#fbf8f4;color:#795438;font:inherit;font-size:14px;cursor:pointer}.btn-arquivo-funcionario[hidden]{display:none}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #157d6d;outline-offset:3px}
-@media(max-width:480px){#rhAccess{margin:3vh 12px;padding:22px}.rh-dialog{padding:18px}}
+@media(max-width:480px){.rh-dialog{padding:18px}}
+#rhSyncStatus{flex-shrink:0}.header-actions button{min-width:44px;min-height:44px}
 
-.rh-access-brand{font-size:14px;font-weight:800;letter-spacing:.03em;color:#176f62;margin-bottom:16px}
-#rhAccess{max-width:350px;padding:24px;margin:4vh auto}
-#rhAccess h1{font-size:21px}
-#rhAccess .rh-local-label{display:inline-block;margin:0;background:#eef5f2;padding:4px 9px;color:#48685b}
-.rh-pin-group[hidden]{display:none}
-#rhAccess .rh-pin-input,.rh-dialog .rh-pin-input{text-align:center;letter-spacing:.35em;font-size:22px;min-height:48px}
-.rh-pin-keypad{width:min(246px,100%);display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px auto 0}
-#rhAccess .rh-pin-keypad button,.rh-dialog .rh-pin-keypad button{min-height:46px;margin:0;padding:7px;border:1px solid #d2dcde;border-radius:7px;background:#f8fafb;color:#253b42;font-size:19px;font-weight:800;touch-action:manipulation}
-#rhAccess .rh-pin-keypad button:nth-child(10),#rhAccess .rh-pin-keypad button:last-child,.rh-dialog .rh-pin-keypad button:nth-child(10),.rh-dialog .rh-pin-keypad button:last-child{font-size:12px;font-weight:600}
-#rhAccess .rh-pin-keypad button:active,.rh-dialog .rh-pin-keypad button:active{background:#e2efec}
+/* Componente de acesso interno reaproveitado do Alô Cozinha (styles.css / modules/kds/app.js). */
+#rhAccess{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:14px 0;overflow-y:auto;overscroll-behavior:contain;background:rgba(0,0,0,.6);color:#333}
+#rhAccess[hidden]{display:none}
+.operator-login-stack{width:min(320px,calc(100vw - 40px));margin:auto;display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+#rhAccess .modal-login-operador{width:100%;margin:0;padding:16px;max-height:none;box-sizing:border-box}
+.modal-login-operador form:focus{outline:none}
+.modal-login-operador .modal-title{font-size:20px;margin:0 0 20px;padding-bottom:10px;color:#333;border-bottom:2px solid #1976d2}
+.modal-login-operador .form-group{margin-bottom:15px}
+.modal-login-operador .form-group label{display:block;margin:0 0 5px;color:#555;font-size:14px;font-weight:bold}
+.modal-login-operador .form-group select{width:100%;padding:10px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:16px;min-height:42px;background:#eee;color:#111}
+.operator-pin-field{position:relative}
+.operator-pin-input{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;margin:0!important;padding:0!important;opacity:0;pointer-events:none}
+.pin-display-dots{min-height:38px;display:flex;align-items:center;justify-content:center;gap:9px;border:1px solid #cbd4d7;border-radius:7px;background:#f7f9fa}
+.pin-display-dots i{width:10px;height:10px;border-radius:50%;background:#176f63}
+.pin-keypad{width:min(246px,100%);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px auto 0}
+.pin-keypad button,.rh-dialog .pin-keypad button{min-height:46px;margin:0;padding:0;border:1px solid #d2dcde;border-radius:7px;background:#f8fafb;color:#253b42;font:850 19px Arial,sans-serif;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.pin-keypad button:active{background:#e2efec}
+.pin-keypad button.pin-key-clear{font-size:14px;color:#9b2c2c}
+.pin-keypad [data-pin-action=backspace]{font-size:23px}
+.modal-login-operador .modal-actions{justify-content:center;margin-top:14px;gap:10px}
+.modal-login-operador .modal-actions button{flex:0 1 auto;min-width:104px;min-height:44px;padding:9px 15px;font-size:15px}
+.modal-login-operador .btn-action{background:#1976d2;color:#fff}
+.senha-feedback{min-height:18px;margin-top:6px;color:#c62828;font-size:13px;font-weight:700;line-height:1.35}
+.operator-login-progress{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 8px;border:1px solid #cbd4d7;border-radius:7px;background:#f7f9fa;color:#28566b;font:600 13px/1.25 Arial,sans-serif}
+.operator-login-progress[hidden]{display:none}
+.operator-login-progress::before{content:'';flex:0 0 16px;width:16px;height:16px;border:2px solid #bfd3df;border-top-color:#286d99;border-radius:50%;animation:operator-login-spin .8s linear infinite}
+@keyframes operator-login-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.operator-login-progress::before{animation:none}}
+#rhAccess .rh-local-label{margin:0;text-align:center;color:#fff;font-size:12px;background:transparent;padding:0}
 
-#rhAccess{align-self:flex-start;max-height:90dvh;overflow:auto;width:min(420px,calc(100% - 24px))}#rhSyncStatus{flex-shrink:0}.header-actions button{min-width:44px;min-height:44px}
+#modalFormFuncionario{box-sizing:border-box;padding:12px 0;overflow-y:auto;overscroll-behavior:contain}
+#modalFormFuncionario>.modal{width:calc(100% - 24px);max-height:calc(100dvh - 24px);min-width:0;overflow-x:hidden}
+#modalFormFuncionario .form-group,#modalFormFuncionario .form-group>div,#modalFormFuncionario .cadastro-func-section>div>div{min-width:0}
+#modalFormFuncionario input,#modalFormFuncionario select{min-width:0;max-width:100%}
+#modalFormFuncionario .switch-grid{grid-template-columns:minmax(0,1fr)}
+#modalFormFuncionario .switch-row{min-width:0}
+#modalFormFuncionario .switch-row>span{min-width:0;overflow-wrap:anywhere}
+.funcionario-horarios{box-sizing:border-box;background:#f9f9f9;padding:10px;border-radius:5px;border:1px solid #eee}
+.funcionario-horarios fieldset{min-width:0;margin:0 0 12px;padding:0;border:0}
+.funcionario-horarios legend{padding:0;margin-bottom:8px;color:#555;font-size:13px;font-weight:700}
+.horarios-par{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#modalFormFuncionario .horarios-par label{min-width:0;font-weight:400}
+#modalFormFuncionario .horarios-par input{display:block;width:100%;height:44px;margin-top:4px;padding:8px 6px;font-size:16px}

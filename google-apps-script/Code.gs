@@ -6991,6 +6991,30 @@ return {criarBancoBase,criarTabelaINSSPadrao,criarPermissoesAdminPadrao,normaliz
             if(!/^\d{3,12}$/.test(String(pin||''))||!sec.credentials[id]||!env.verifyPassword(String(pin),sec.credentials[id]))error('PIN incorreto. Tente novamente.','invalid_credentials');
             clearLimit('pin:'+id);return a;
         }
+        function prepareLogin(body){
+            const secretHash=deviceSecret(body),a=person(body.profileId),credential=a&&sec.credentials[a.id];
+            if(!credential)error('Pessoa não encontrada. Atualize a lista.','invalid_credentials');
+            const attempt=sec.attempts[hash('pin:'+a.id)];
+            if(attempt?.until>now())error('Muitas tentativas. Aguarde 30 segundos e tente novamente.','rate_limit');
+            if(!env.challengeCache){sec.challenges=sec.challenges||{};for(const k of Object.keys(sec.challenges))if(sec.challenges[k].expires<=now())delete sec.challenges[k];}
+            const key=hash(state.bankId+':'+secretHash+':'+a.id),credentialTag=hash(P.stable(credential));
+            let challenge=env.challengeCache?env.challengeCache.get(key):sec.challenges[key];
+            if(!challenge||challenge.expires<=now()||challenge.credentialTag!==credentialTag){
+                challenge={nonce:env.random(),expires:now()+2*MINUTE,credentialTag};
+                if(env.challengeCache)env.challengeCache.set(key,challenge);
+                else {while(Object.keys(sec.challenges).length>=64)delete sec.challenges[Object.keys(sec.challenges)[0]];sec.challenges[key]=challenge;}
+            }
+            return {nonce:challenge.nonce,expires:challenge.expires,salt:credential.salt,iterations:credential.iterations};
+        }
+        function checkProof(body){
+            const secretHash=deviceSecret(body),a=person(body.profileId),credential=a&&sec.credentials[a.id];
+            const key=hash(state.bankId+':'+secretHash+':'+body.profileId),challenge=env.challengeCache?env.challengeCache.get(key):sec.challenges?.[key];
+            if(!credential||!challenge||challenge.nonce!==body.challenge||challenge.expires<=now()||challenge.credentialTag!==hash(P.stable(credential)))error('O acesso preparado expirou. Digite o PIN novamente.','challenge_expired');
+            if(env.challengeCache)env.challengeCache.remove(key);else delete sec.challenges[key];limit('pin:'+a.id);
+            const expected=env.hmac(JSON.stringify(['alorh-pin-proof-v1',state.bankId,a.id,body.secret,challenge.nonce]),credential.hash);
+            if(!/^[a-f0-9]{64}$/.test(body.proof||'')||!env.equal(body.proof,expected))error('PIN incorreto. Tente novamente.','invalid_credentials');
+            clearLimit('pin:'+a.id);return a;
+        }
         function issue(a,secretHash,previous){
             const token=env.random(),refreshToken=env.random(),expires=now()+30*MINUTE;
             for(const k of Object.keys(sec.sessions))if(sec.sessions[k].refreshExpires<=now()||sec.sessions[k].secretHash===secretHash)delete sec.sessions[k];
@@ -7019,9 +7043,10 @@ return {criarBancoBase,criarTabelaINSSPadrao,criarPermissoesAdminPadrao,normaliz
         }
         function handle(body){
             if(!body||typeof body!=='object')error('Requisição inválida.');P.clone(body);const action=body.action;
-            if(action==='info')return {protocol:3,bankId:state.bankId,profiles:state.bank.administradores.filter(a=>!!sec.credentials[a.id]).map(a=>({id:a.id,nome:a.nome}))};
+            if(action==='info')return {protocol:3,loginProtocol:'pin-proof-v1',bankId:state.bankId,profiles:state.bank.administradores.filter(a=>!!sec.credentials[a.id]).map(a=>({id:a.id,nome:a.nome})),...(body.profileId&&person(body.profileId)&&sec.credentials[body.profileId]?{challenge:prepareLogin(body)}:{})};
+            if(action==='prepare-login')return {challenge:prepareLogin(body)};
             if(action==='login'){
-                const secretHash=deviceSecret(body),a=checkPin(body.profileId,body.pin);
+                const secretHash=deviceSecret(body),a=body.proof!==undefined?checkProof(body):checkPin(body.profileId,body.pin);
                 audit('entrada',a.nome);return {...issue(a,secretHash),...envelope()};
             }
             if(action==='refresh'){
@@ -7078,8 +7103,10 @@ function rhRequired_(name) { const value=rhProperties_().getProperty(name);if(!v
 function rhRandom_() { return Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,''); }
 function rhEqual_(a,b) { a=String(a);b=String(b);let diff=a.length^b.length;for(let i=0;i<Math.max(a.length,b.length);i++)diff|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);return diff===0; }
 function rhEnvironment_() {
+    const cache=typeof CacheService!=='undefined'?CacheService.getScriptCache():null;
     return {
-        now:()=>Date.now(),random:rhRandom_,digest:v=>CryptoJS.SHA256(v).toString(),equal:rhEqual_,
+        now:()=>Date.now(),random:rhRandom_,digest:v=>CryptoJS.SHA256(v).toString(),equal:rhEqual_,hmac:(value,key)=>CryptoJS.HmacSHA256(value,CryptoJS.enc.Hex.parse(key)).toString(),
+        challengeCache:cache?{get:key=>JSON.parse(cache.get('pin:'+key)||'null'),set:(key,value)=>cache.put('pin:'+key,JSON.stringify(value),120),remove:key=>cache.remove('pin:'+key)}:null,
         password:value=>{const salt=rhRandom_();return {scheme:'pbkdf2-sha256',iterations:120000,salt,hash:CryptoJS.PBKDF2(value,CryptoJS.enc.Hex.parse(salt),{keySize:8,iterations:120000,hasher:CryptoJS.algo.SHA256}).toString()};},
         verifyPassword:(value,c)=>!!c&&c.scheme==='pbkdf2-sha256'&&c.iterations===120000&&rhEqual_(CryptoJS.PBKDF2(value,CryptoJS.enc.Hex.parse(c.salt),{keySize:8,iterations:c.iterations,hasher:CryptoJS.algo.SHA256}).toString(),c.hash),
         snapshot:state=>rhSnapshot_(JSON.stringify(state))
@@ -7138,10 +7165,17 @@ function validarBackendComDadosFicticios() {
     const state=RHService.migrate(bank,env),service=RHService.create(state,env),secret=env.random();
     const login=service.handle({action:'login',profileId:'teste',pin:'1234',secret});
     if(login.bank.administradores[0].senha||state.security.credentials.teste.hash==='1234')throw new Error('Credencial exposta.');
+    const challenge=service.handle({action:'prepare-login',profileId:'teste',secret}).challenge;
+    const proof=env.hmac(JSON.stringify(['alorh-pin-proof-v1',state.bankId,'teste',secret,challenge.nonce]),state.security.credentials.teste.hash);
+    const proofStart=Date.now(),fast=service.handle({action:'login',profileId:'teste',secret,challenge:challenge.nonce,proof});
+    const proofMs=Date.now()-proofStart;
+    let replayRejected=false;try{service.handle({action:'login',profileId:'teste',secret,challenge:challenge.nonce,proof});}catch(e){replayRejected=e.code==='challenge_expired';}
+    if(!replayRejected)throw new Error('Prova repetida aceita.');
+    login.token=fast.token;
     const before=service.handle({action:'read',session:login.token,secret}).bank,next=RHProtocol.clone(before);next.empresa.razao='Teste de gravação fictício';
     const request={action:'commit',session:login.token,secret,requestId:env.random(),operations:RHProtocol.diff(before,next)};
     const first=service.handle(request),retry=service.handle(request);
     if(first.revision!==retry.revision||retry.bank.empresa.razao!==next.empresa.razao)throw new Error('Falha de idempotência.');
     service.handle({action:'signout',session:login.token,secret});
-    console.log(JSON.stringify({ok:true,ambiente:'fictício, sem acesso ao Drive',duracaoMs:Date.now()-start,revision:state.revision}));
+    console.log(JSON.stringify({ok:true,ambiente:'fictício, sem acesso ao Drive',duracaoMs:Date.now()-start,proofMs,revision:state.revision}));
 }

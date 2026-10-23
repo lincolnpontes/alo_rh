@@ -5,7 +5,7 @@ const privateDir=path.resolve(root,'.local',process.env.RH_LOCAL_DIR||'homologac
 if(!privateDir.startsWith(path.join(root,'.local')+path.sep))throw new Error('Pasta local inválida.');
 fs.mkdirSync(privateDir,{recursive:true});
 const stateFile=path.join(privateDir,'estado.json');
-const env={now:()=>Date.now(),random:()=>crypto.randomBytes(32).toString('hex'),digest:v=>crypto.createHash('sha256').update(v).digest('hex'),equal:(a,b)=>a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b)),
+const env={now:()=>Date.now(),random:()=>crypto.randomBytes(32).toString('hex'),digest:v=>crypto.createHash('sha256').update(v).digest('hex'),equal:(a,b)=>a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b)),hmac:(value,key)=>crypto.createHmac('sha256',Buffer.from(key,'hex')).update(value).digest('hex'),
  password:value=>{const salt=crypto.randomBytes(32).toString('hex');return {scheme:'pbkdf2-sha256',iterations:120000,salt,hash:crypto.pbkdf2Sync(value,Buffer.from(salt,'hex'),120000,32,'sha256').toString('hex')};},
  verifyPassword:(value,c)=>!!c&&c.iterations===120000&&env.equal(crypto.pbkdf2Sync(value,Buffer.from(c.salt,'hex'),c.iterations,32,'sha256').toString('hex'),c.hash),
  snapshot:state=>fs.writeFileSync(path.join(privateDir,'backup-'+Date.now()+'-'+crypto.randomBytes(4).toString('hex')+'.json'),JSON.stringify(state))};
