@@ -1,5 +1,17 @@
 # Validação local — 23/10/2026
 
+## Revisão v1.2.0
+
+80 testes passaram, incluindo prova do PIN por Web Crypto/HMAC, recusa de repetição, vínculo ao banco/aparelho/pessoa, expiração, mudança e exclusão de credenciais, bloqueio por tentativas, descarte do CacheService e compatibilidade com PIN legado de três dígitos. A preparação do desafio não escreve no arquivo do banco no Apps Script. Sintaxe JavaScript, unicidade de IDs e 75 referências de arquivos HTML/cache foram conferidas.
+
+No navegador local foram conferidos: abertura direta no modal do Cozinha; seleção de pessoa; PIN incorreto recusado e correto aceito; teclado na própria tela; campo somente leitura; entrada pelo teclado físico; apagar e limpar; lista de nomes disponível após recarga; indicador verde; arquivamento ausente das ações rápidas e presente apenas no cadastro. O modal de cadastro não tem rolagem horizontal em 320, 390 e 1280 px. Expediente e intervalo ficam em dois pares de campos. Evidências privadas em `.local/login-2026-10-23/`. Não foi testado em celular físico.
+
+A logo usa o nome completo Alô RH. Os PNGs de 192 e 512 px são opacos, quadrados e mantêm todas as letras dentro do círculo de segurança de 40% para máscaras do sistema. Manifest, favicon, atalho Apple e service worker v1.2.0 apontam para os mesmos arquivos novos.
+
+No runtime real do Google, a validação fictícia em memória terminou com sucesso em 2.263 ms; a conferência da prova de uso único levou 68 ms. A versão 8 foi publicada na implantação existente, mantendo URL e permissões. A leitura e as credenciais existentes foram verificadas pela API real: duas entradas completas levaram 4.729 e 6.001 ms, com derivação local de 23 e 21 ms; medições anteriores de login eram 7.363 e 10.079 ms. A preparação antecipada do desafio levou cerca de 2,5 s. São amostras, não garantia de latência: rede, Drive e inicialização do Google continuam influenciando o tempo.
+
+Antes da implantação foram preservados: cópia do estado no Drive, cópia local validada com SHA-256 igual, código anterior do editor e bundle Git. A comparação após publicar confirmou os 34 funcionários, 268 registros e todos os campos de negócio iguais ao backup. Os testes de produção fizeram autenticação, leitura e saída; não editaram funcionários nem lançamentos. Os testes de mutação e sincronização usaram exclusivamente a cópia fictícia. CacheService armazena apenas desafios temporários; sua [documentação oficial](https://developers.google.com/apps-script/reference/cache/cache) não garante retenção até a expiração, por isso a perda do desafio recusa a entrada até nova preparação.
+
 ## Revisão v1.1.2
 
 69 testes passaram com dados fictícios. Os seis casos novos cobrem estabilidade do indicador durante checagens, erro e reconexão, espera pela confirmação de gravação, preservação offline, arquivamento dentro do funcionário, cancelamento, restauração, histórico e permissões. Sintaxe JavaScript e XML dos 35 ícones também foram conferidos.

@@ -29,6 +29,30 @@
             if(!/^\d{3,12}$/.test(String(pin||''))||!sec.credentials[id]||!env.verifyPassword(String(pin),sec.credentials[id]))error('PIN incorreto. Tente novamente.','invalid_credentials');
             clearLimit('pin:'+id);return a;
         }
+        function prepareLogin(body){
+            const secretHash=deviceSecret(body),a=person(body.profileId),credential=a&&sec.credentials[a.id];
+            if(!credential)error('Pessoa não encontrada. Atualize a lista.','invalid_credentials');
+            const attempt=sec.attempts[hash('pin:'+a.id)];
+            if(attempt?.until>now())error('Muitas tentativas. Aguarde 30 segundos e tente novamente.','rate_limit');
+            if(!env.challengeCache){sec.challenges=sec.challenges||{};for(const k of Object.keys(sec.challenges))if(sec.challenges[k].expires<=now())delete sec.challenges[k];}
+            const key=hash(state.bankId+':'+secretHash+':'+a.id),credentialTag=hash(P.stable(credential));
+            let challenge=env.challengeCache?env.challengeCache.get(key):sec.challenges[key];
+            if(!challenge||challenge.expires<=now()||challenge.credentialTag!==credentialTag){
+                challenge={nonce:env.random(),expires:now()+2*MINUTE,credentialTag};
+                if(env.challengeCache)env.challengeCache.set(key,challenge);
+                else {while(Object.keys(sec.challenges).length>=64)delete sec.challenges[Object.keys(sec.challenges)[0]];sec.challenges[key]=challenge;}
+            }
+            return {nonce:challenge.nonce,expires:challenge.expires,salt:credential.salt,iterations:credential.iterations};
+        }
+        function checkProof(body){
+            const secretHash=deviceSecret(body),a=person(body.profileId),credential=a&&sec.credentials[a.id];
+            const key=hash(state.bankId+':'+secretHash+':'+body.profileId),challenge=env.challengeCache?env.challengeCache.get(key):sec.challenges?.[key];
+            if(!credential||!challenge||challenge.nonce!==body.challenge||challenge.expires<=now()||challenge.credentialTag!==hash(P.stable(credential)))error('O acesso preparado expirou. Digite o PIN novamente.','challenge_expired');
+            if(env.challengeCache)env.challengeCache.remove(key);else delete sec.challenges[key];limit('pin:'+a.id);
+            const expected=env.hmac(JSON.stringify(['alorh-pin-proof-v1',state.bankId,a.id,body.secret,challenge.nonce]),credential.hash);
+            if(!/^[a-f0-9]{64}$/.test(body.proof||'')||!env.equal(body.proof,expected))error('PIN incorreto. Tente novamente.','invalid_credentials');
+            clearLimit('pin:'+a.id);return a;
+        }
         function issue(a,secretHash,previous){
             const token=env.random(),refreshToken=env.random(),expires=now()+30*MINUTE;
             for(const k of Object.keys(sec.sessions))if(sec.sessions[k].refreshExpires<=now()||sec.sessions[k].secretHash===secretHash)delete sec.sessions[k];
@@ -57,9 +81,10 @@
         }
         function handle(body){
             if(!body||typeof body!=='object')error('Requisição inválida.');P.clone(body);const action=body.action;
-            if(action==='info')return {protocol:3,bankId:state.bankId,profiles:state.bank.administradores.filter(a=>!!sec.credentials[a.id]).map(a=>({id:a.id,nome:a.nome}))};
+            if(action==='info')return {protocol:3,loginProtocol:'pin-proof-v1',bankId:state.bankId,profiles:state.bank.administradores.filter(a=>!!sec.credentials[a.id]).map(a=>({id:a.id,nome:a.nome})),...(body.profileId&&person(body.profileId)&&sec.credentials[body.profileId]?{challenge:prepareLogin(body)}:{})};
+            if(action==='prepare-login')return {challenge:prepareLogin(body)};
             if(action==='login'){
-                const secretHash=deviceSecret(body),a=checkPin(body.profileId,body.pin);
+                const secretHash=deviceSecret(body),a=body.proof!==undefined?checkProof(body):checkPin(body.profileId,body.pin);
                 audit('entrada',a.nome);return {...issue(a,secretHash),...envelope()};
             }
             if(action==='refresh'){

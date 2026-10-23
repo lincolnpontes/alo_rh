@@ -18,7 +18,7 @@
         if(envelope&&!state.outbox)await receive(envelope);
         initialized=true;await persist();
         status(pending()?'Há alterações aguardando confirmação':envelope?'Dados conferidos · nenhuma alteração pendente':'Sem conexão · cópia deste aparelho',pending()?'pending':envelope?'synced':'offline');
-        render();schedule(100);return db;
+        render();schedule(pending()?100:60000);return db;
     }
     function render(){renderizarFiltros();renderizarLista();aplicarTemaApp();atualizarLogoTopo();atualizarVisibilidadePermissoes();}
     function changed(){

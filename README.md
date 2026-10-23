@@ -16,9 +16,11 @@ A primeira execução copia `.local/drive/banco.json` para `.local/homologacao/e
 
 ## Acesso interno
 
-A tela oferece seleção de pessoa, PIN, teclado numérico e entrada pelo teclado físico. PINs novos exigem quatro a doze dígitos; os acessos legados de três dígitos são preservados. Lembra a última pessoa; pede o PIN ao abrir. Operações sensíveis exigem confirmação do PIN e permissão do perfil, verificada novamente no servidor.
+A abertura mostra diretamente o modal de acesso do Alô Cozinha, com as mesmas cores, espaçamento e teclado dentro da tela. O campo de PIN é somente leitura, sem abrir o teclado do celular; o teclado físico continua disponível. A última lista de nomes aparece imediatamente e é atualizada em segundo plano. PINs novos exigem quatro a doze dígitos; os acessos legados de três dígitos são preservados. Lembra a última pessoa; pede o PIN ao abrir. Operações sensíveis exigem confirmação do PIN e permissão do perfil, verificada novamente no servidor.
 
 PINs são migrados para PBKDF2-SHA256 com salt individual e 120.000 iterações. Credenciais não entram no banco compartilhado ou exportado. Três erros bloqueiam temporariamente novas tentativas para aquela pessoa, mesmo trocando o identificador de aparelho.
+
+Na entrada, o navegador calcula PBKDF2 por Web Crypto e assina uma prova HMAC de uso único. O servidor confere pessoa, aparelho, banco, validade e versão da credencial; o PIN e o verificador derivado não são transmitidos nesse fluxo. A preparação ocorre enquanto a pessoa digita, com desafio de dois minutos em CacheService; descarte do cache exige nova preparação e nunca libera acesso. O fluxo anterior permanece compatível com clientes ainda não atualizados. A confirmação de operações sensíveis continua no servidor. Veja a [validação](docs/VALIDACAO-LOCAL.md).
 
 Sessões opacas são vinculadas à instalação, têm tokens rotativos de 30 minutos e limite absoluto de oito horas. Trocar um PIN invalida as outras sessões daquela pessoa. Excluir um perfil encerra seu acesso; o último administrador de acessos não pode ser removido.
 
@@ -42,7 +44,9 @@ Os controles usam 35 SVGs locais Phosphor, com preenchimento suave em duas tonal
 
 A bolinha ao lado da engrenagem segue o indicador do Alô Cozinha: verde quando o servidor confirmou os dados e não há pendências; vermelha enquanto há alterações pendentes, desconexão ou erro. A checagem periódica mantém a confirmação anterior até receber o resultado, sem exibir uma faixa de sincronização. O botão mantém a descrição acessível e abre a revisão de pendências quando necessário.
 
-Arquivar e restaurar ficam dentro de cada funcionário, com preservação do histórico e verificação das permissões de dados pessoais e vínculo. A lista geral oferece acesso ao cadastro.
+Arquivar e restaurar ficam apenas no formulário de edição do funcionário, com preservação do histórico e verificação das permissões de dados pessoais e vínculo. As ações rápidas da tela inicial não oferecem arquivamento. O cadastro tem largura limitada à tela e pares separados para expediente e intervalo.
+
+A nova logo traz o nome completo **Alô RH**, em branco sobre verde, com margem para máscaras circulares e arredondadas do celular. O manifest e os atalhos Apple usam imagens opacas de 192 e 512 px com URLs novas. Veja [origem e preparação dos arquivos](docs/IDENTIDADE-VISUAL.md).
 
 ## Verificação
 
@@ -55,4 +59,4 @@ Os testes usam dados fictícios, incluindo uma execução HTTP real do servidor 
 
 Fontes principais: `js/protocolo.js` e `js/modelo.js` para dados; `js/armazenamento.js` e `js/sync-seguro.js` para persistência; `js/autenticacao.js` para acesso interno; `server/service.js` para regras do backend. `google-apps-script/Code.gs` é gerado, não editado diretamente.
 
-Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.1.2; backend Apps Script versão 7, atualizado em 22/10/2026. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
+Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.2.0; backend Apps Script versão 8, atualizado em 23/10/2026. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
