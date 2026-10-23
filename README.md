@@ -38,7 +38,11 @@ A migração remove a antiga camada experimental de conta e suas sessões, mante
 
 ## Imagens
 
-Os emojis de interface foram substituídos por 33 SVGs simples, com traços e cores consistentes. Parte dos desenhos é reutilizada do Alô Cozinha; os demais seguem a mesma linguagem. A licença dos ícones Lucide acompanha os arquivos em `icons/ui/`. Os ícones ficam disponíveis no cache do aplicativo e têm rótulos acessíveis nos botões.
+Os controles usam 35 SVGs locais Phosphor, com preenchimento suave em duas tonalidades e símbolos próprios de Pix e WhatsApp. A licença MIT acompanha os arquivos em `icons/ui/LICENSE-phosphor.txt`. Os ícones ficam disponíveis no cache do aplicativo e têm rótulos acessíveis nos botões.
+
+A bolinha ao lado da engrenagem segue o indicador do Alô Cozinha: verde quando o servidor confirmou os dados e não há pendências; vermelha enquanto há alterações pendentes, desconexão ou erro. A checagem periódica mantém a confirmação anterior até receber o resultado, sem exibir uma faixa de sincronização. O botão mantém a descrição acessível e abre a revisão de pendências quando necessário.
+
+Arquivar e restaurar ficam dentro de cada funcionário, com preservação do histórico e verificação das permissões de dados pessoais e vínculo. A lista geral oferece acesso ao cadastro.
 
 ## Verificação
 
@@ -51,4 +55,4 @@ Os testes usam dados fictícios, incluindo uma execução HTTP real do servidor 
 
 Fontes principais: `js/protocolo.js` e `js/modelo.js` para dados; `js/armazenamento.js` e `js/sync-seguro.js` para persistência; `js/autenticacao.js` para acesso interno; `server/service.js` para regras do backend. `google-apps-script/Code.gs` é gerado, não editado diretamente.
 
-Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.1.0; backend Apps Script versão 7, atualizado em 22/10/2026. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
+Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.1.1; backend Apps Script versão 7, atualizado em 22/10/2026. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.

@@ -1,11 +1,12 @@
 (function(global){
     'use strict';
     const P=RHProtocol;
-    let state,initialized=false,running=null,timer,failures=0,storeReady=false,lastPersist=Promise.resolve();
+    let state,initialized=false,running=null,timer,failures=0,storeReady=false,lastPersist=Promise.resolve(),currentStatus='local';
     const clean=value=>P.clean(normalizarBanco(P.clone(value)));
     const pending=()=>!!state&&(!!state.outbox||state.conflicts.length>0||P.diff(state.base,clean(db),state.versions).length>0);
     function status(text,kind='local'){
-        const el=document.getElementById('rhSyncStatus');if(el){el.textContent=text;el.dataset.state=kind;}
+        currentStatus=kind;
+        const el=document.getElementById('rhSyncStatus');if(el){el.dataset.state=kind;el.title=text;el.setAttribute('aria-label','Sincronização: '+text);}
         const detail=document.getElementById('syncStatusTexto');if(detail)detail.textContent=text;
     }
     function persist(){state.working=clean(db);lastPersist=RHStore.save(state);lastPersist.catch(()=>status('Não foi possível salvar neste aparelho. Exporte os dados antes de fechar.','error'));return lastPersist;}
@@ -15,7 +16,9 @@
         if(!state){if(!envelope)throw new Error('Conecte-se à internet para baixar a primeira cópia.');const bank=clean(envelope.bank);state={base:bank,working:bank,versions:envelope.versions,revision:envelope.revision,conflicts:[],outbox:null,lastConfirmed:0};}
         db=normalizarBanco(P.clone(state.working));db.configs.url=RH_CONFIG.endpoint;
         if(envelope&&!state.outbox)await receive(envelope);
-        initialized=true;await persist();render();schedule(100);return db;
+        initialized=true;await persist();
+        status(pending()?'Há alterações aguardando confirmação':envelope?'Dados conferidos · nenhuma alteração pendente':'Sem conexão · cópia deste aparelho',pending()?'pending':envelope?'synced':'offline');
+        render();schedule(100);return db;
     }
     function render(){renderizarFiltros();renderizarLista();aplicarTemaApp();atualizarLogoTopo();atualizarVisibilidadePermissoes();}
     function changed(){
@@ -56,9 +59,11 @@
         running=(async()=>{
             try{
                 await lastPersist;
-                if(!navigator.onLine){status('Sem internet · alterações preservadas neste aparelho','pending');return false;}
+                if(!navigator.onLine){status('Sem internet · alterações preservadas neste aparelho','offline');return false;}
                 if(state.pendingProfile&&state.pendingProfile!==RHAuth.profile().id)throw new Error('Volte ao perfil que criou as alterações pendentes para sincronizar.');
-                status('Sincronizando…','pending');
+                // A consulta periódica não muda uma confirmação válida para "pendente".
+                if(pending())status('Enviando alterações · aguardando confirmação','pending');
+                else if(currentStatus!=='synced')status('Conferindo conexão com o servidor','checking');
                 if(state.outbox?.rejected){status(state.outbox.rejected+' · toque para revisar','conflict');return false;}
                 if(state.outbox)await sendOutbox();
                 const summary=await RHAuth.request('status');
@@ -127,7 +132,7 @@
         const close=document.createElement('button');close.textContent='Fechar';close.onclick=()=>modal.close();modal.append(close);modal.addEventListener('close',()=>modal.remove());document.body.append(modal);modal.showModal();
     }
     global.RHSync={init,changed,sync,pending,status,conflicts,restore,localBackups,integrity,flush:()=>lastPersist,state:()=>P.clone(state),backup:reason=>RHStore.backup(clean(db),reason)};
-    addEventListener('online',()=>schedule(200));addEventListener('offline',()=>status('Sem internet · alterações preservadas neste aparelho','pending'));
+    addEventListener('online',()=>schedule(200));addEventListener('offline',()=>status('Sem internet · alterações preservadas neste aparelho','offline'));
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(200);});
     addEventListener('beforeunload',event=>{if(state&&pending()){event.preventDefault();event.returnValue='';}});
 })(window);

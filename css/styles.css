@@ -300,7 +300,7 @@ html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; margi
         .btn-contra-util { border:1px solid #0277BD; background:#fff; color:#0277BD; border-radius:6px; padding:9px 12px; min-height:34px; font-size:13px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; }
         .btn-contra-util.pix { min-width:74px; }
         .btn-contra-util.whats { border-color:#2E7D32; color:#2E7D32; }
-        .icone-pix { display:inline-block; filter:grayscale(1); opacity:.72; margin-right:4px; }
+        .icone-pix { display:inline-block; margin-right:4px; }
         .btn-pix-app { display:inline-flex; align-items:center; justify-content:center; gap:4px; }
         .btn-fechar-contra { border:none; background:#2E7D32; color:#fff; border-radius:6px; padding:8px 10px; min-height:34px; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; }
         .pix-list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }

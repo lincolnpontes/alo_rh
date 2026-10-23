@@ -26,3 +26,23 @@ test('storage quota error blocks sending and preserves in-memory edit with visib
 test('rejected mutation is not retried forever and can be preserved then discarded explicitly',async()=>{const s=server(),c=await syncClient(s);c.run("db.funcionarios[0].salario='1500,00';salvarBanco()");await c.run('RHSync.flush()');s.state.bank.administradores[0].permissoes.financeiro=false;assert.equal(await c.run('RHSync.sync()'),false);assert(c.saved().outbox.rejected);assert.equal(await c.run('RHSync.sync()'),false);await c.run('RHSync.conflicts()');assert.equal(c.saved().outbox,null);assert.equal(c.get().funcionarios[0].salario,'1000,00');});
 test('incomplete JSON imported through the actual UI handler preserves bank',async()=>{const c=client(),before=c.get();c.ctx.event={target:{value:'backup.json',files:[{size:20,text:async()=>'{"app_id":"alorh"}'}]}};await c.run('importarDados(event)');assert.deepEqual(c.get(),before);assert.match(c.alerts[0],/incompleto/);});
 test('second editor is rejected before changing the backend active profile',async()=>{const c=client();c.ctx.window=c.ctx;c.ctx.RH_CONFIG={local:true,endpoint:'/__dev__/api'};let requests=0;const session={token:'test',expires:Date.now()+600000,bankId:'owner'};c.ctx.localStorage.getItem=k=>k==='alorh_internal_session_v3'?JSON.stringify(session):'a'.repeat(64);c.ctx.RHStore={reserve:async()=>{throw Error('outra aba');}};c.ctx.fetch=async()=>{requests++;};vm.runInContext(fs.readFileSync('js/autenticacao.js','utf8'),c.ctx);await assert.rejects(c.run("RHAuth.authenticateProfile('a','1234')"),/outra aba/);assert.equal(requests,0);});
+
+test('background revision check keeps confirmed indicator stable until a real failure',async()=>{
+ const s=server(),c=await syncClient(s);assert.equal(c.e('rhSyncStatus').dataset.state,'synced');
+ let release,started;const wait=new Promise(r=>started=r),original=c.ctx.RHAuth.request;
+ c.ctx.RHAuth.request=async(action,data)=>{if(action==='status'){started();await new Promise(r=>release=r);}return original(action,data);};
+ const task=c.run('RHSync.sync()');await wait;assert.equal(c.e('rhSyncStatus').dataset.state,'synced');release();assert.equal(await task,true);
+ c.ctx.RHAuth.request=async()=>{throw Error('Falha de conexão');};assert.equal(await c.run('RHSync.sync()'),false);assert.equal(c.e('rhSyncStatus').dataset.state,'error');
+ c.ctx.RHAuth.request=original;assert.equal(await c.run('RHSync.sync()'),true);assert.equal(c.e('rhSyncStatus').dataset.state,'synced');
+});
+test('pending indicator cannot turn green before the commit acknowledgment',async()=>{
+ const s=server(),c=await syncClient(s);c.run("db.funcionarios[0].nome='Aguardando envio';salvarBanco()");await c.run('RHSync.flush()');
+ let release,started;const wait=new Promise(r=>started=r),original=c.ctx.RHAuth.request;
+ c.ctx.RHAuth.request=async(action,data)=>{if(action==='commit'){started();await new Promise(r=>release=r);}return original(action,data);};
+ const task=c.run('RHSync.sync()');await wait;assert.equal(c.e('rhSyncStatus').dataset.state,'pending');assert(c.saved().outbox);release();assert.equal(await task,true);assert.equal(c.e('rhSyncStatus').dataset.state,'synced');
+});
+test('offline indicator stays unconfirmed and preserves pending changes',async()=>{
+ const s=server(),c=await syncClient(s);c.ctx.navigator.onLine=false;c.run("db.funcionarios[0].nome='Offline';salvarBanco()");await c.run('RHSync.flush()');
+ assert.equal(await c.run('RHSync.sync()'),false);assert.equal(c.e('rhSyncStatus').dataset.state,'offline');assert.equal(c.saved().working.funcionarios[0].nome,'Offline');
+ c.ctx.navigator.onLine=true;assert.equal(await c.run('RHSync.sync()'),true);assert.equal(s.state.bank.funcionarios[0].nome,'Offline');
+});

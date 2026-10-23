@@ -236,6 +236,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         ocultarSemPermissao('btnPagarExtra', 'registrarPresencaSemanal');
         const btnEditar = document.getElementById('btnEditarFuncAcoes');
         if(btnEditar) btnEditar.style.display = temPermissaoAtual('dadosPessoais') ? 'inline-flex' : 'none';
+        configurarAcaoArquivoFuncionario('btnArquivarFuncAcoes', f, 'acoes');
         document.getElementById('modalAcoesFunc').style.display = 'flex';
     }
 
@@ -632,17 +633,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const lista = document.getElementById('conteudoListagem'); let htmlLista = '';
         if(tipo === 'funcionarios') {
             const podeVinculoFuncao = temPermissaoAtual('vinculoHorarios');
-            const podeArquivar = temPermissaoAtual('dadosPessoais');
             document.getElementById('tituloListagem').innerText = "Funcionários"; document.getElementById('btnClassesListagem').style.display = podeVinculoFuncao ? 'flex' : 'none'; document.getElementById('btnFuncoesListagem').style.display = podeVinculoFuncao ? 'flex' : 'none'; document.getElementById('btnNovoListagem').onclick = () => abrirFormFunc(null);
             document.getElementById('btnVoltarListagem').onclick = () => { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display='flex'; };
             let funcs = [...db.funcionarios].sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || '')));
             const renderFuncionarioGerenciar = (f) => {
                 let codStr = f.codigo ? `<strong style="color:#00695C;">[${escapeHTML(f.codigo)}]</strong> ` : '';
                 let funName = db.funcoes.find(fn => fn.id === f.funcao); funName = funName ? formatarFuncaoLista(funName) : 'Sem função';
-                let acaoArquivo = !podeArquivar ? '' : (f.arquivado
-                    ? `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#2E7D32;" title="Restaurar" onclick="restaurarFuncionario(${jsArg(f.id)})" aria-label="Restaurar"><span class="rh-icon" data-icon="restore" aria-hidden="true"></span></button>`
-                    : `<button style="background:none; border:none; font-size:18px; cursor:pointer; color:#F57F17;" title="Arquivar" onclick="arquivarFuncionario(${jsArg(f.id)})" aria-label="Arquivar"><span class="rh-icon" data-icon="package" aria-hidden="true"></span></button>`);
-                return `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; opacity:${f.arquivado ? '0.65' : '1'};"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${escapeHTML(f.nome)}</strong>${f.arquivado ? ' <small style="color:#F57F17; font-weight:bold;">(Arquivado)</small>' : ''}<br><small style="color:#666;">${escapeHTML(funName)}</small></div><div style="flex-shrink:0; margin-left:10px; display:flex; gap:4px; align-items:center;"><button style="background:none; border:none; font-size:20px; cursor:pointer;" onclick="abrirFormFunc(${jsArg(f.id)})" aria-label="Editar"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button>${acaoArquivo}</div></div>`;
+                return `<div style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; opacity:${f.arquivado ? '0.65' : '1'};"><div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${codStr}<strong>${escapeHTML(f.nome)}</strong>${f.arquivado ? ' <small style="color:#F57F17; font-weight:bold;">(Arquivado)</small>' : ''}<br><small style="color:#666;">${escapeHTML(funName)}</small></div><button class="btn-editar-func-acoes" onclick="abrirFormFunc(${jsArg(f.id)})" aria-label="Abrir cadastro de ${escapeHTML(f.nome)}"><span class="rh-icon" data-icon="pencil" aria-hidden="true"></span></button></div>`;
             };
             const ativos = funcs.filter(f => !f.arquivado);
             const arquivados = funcs.filter(f => f.arquivado);
@@ -687,8 +684,23 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         salvarBanco(); abrirGerenciar(tipo); renderizarFiltros();
     }
 
-    function arquivarFuncionario(id) {
-        if(!garantirPermissao('dadosPessoais', () => arquivarFuncionario(id), 'arquivar funcionário')) return;
+    function configurarAcaoArquivoFuncionario(buttonId, funcionario, origem) {
+        const button = document.getElementById(buttonId);
+        if(!button) return;
+        button.hidden = !funcionario || !temPermissaoAtual('dadosPessoais') || !temPermissaoAtual('vinculoHorarios');
+        if(button.hidden) { button.onclick = null; return; }
+        const arquivado = !!funcionario.arquivado;
+        button.innerHTML = `<span class="rh-icon" data-icon="${arquivado ? 'restore' : 'package'}" aria-hidden="true"></span><span>${arquivado ? 'Restaurar funcionário' : 'Arquivar funcionário'}</span>`;
+        button.onclick = () => arquivado ? restaurarFuncionario(funcionario.id, origem) : arquivarFuncionario(funcionario.id, origem);
+    }
+    function concluirArquivoFuncionario(origem) {
+        fecharModal('modalAcoesFunc');fecharModal('modalFormFuncionario');
+        if(origem === 'gerenciar' || (origem === 'cadastro' && origemFormFuncionario === 'gerenciar')) abrirGerenciar('funcionarios');
+        renderizarLista();
+    }
+    function arquivarFuncionario(id, origem = 'gerenciar') {
+        if(!garantirPermissao('dadosPessoais', () => arquivarFuncionario(id, origem), 'arquivar funcionário')) return;
+        if(!garantirPermissao('vinculoHorarios', () => arquivarFuncionario(id, origem), 'arquivar funcionário')) return;
         const f = db.funcionarios.find(x => x.id === id);
         if(!f) return;
         if(!confirm(`Arquivar ${f.nome || 'funcionário'}? Ele não aparecerá nas listas, filtros e impressões de ativos.`)) return;
@@ -697,19 +709,18 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         itensSelecionados.delete(id);
         registrarAuditoria('Funcionário arquivado', f.nome || 'Funcionário sem nome', 'funcionario', id);
         salvarBanco();
-        abrirGerenciar('funcionarios');
-        renderizarLista();
+        concluirArquivoFuncionario(origem);
     }
-    function restaurarFuncionario(id) {
-        if(!garantirPermissao('dadosPessoais', () => restaurarFuncionario(id), 'restaurar funcionário')) return;
+    function restaurarFuncionario(id, origem = 'gerenciar') {
+        if(!garantirPermissao('dadosPessoais', () => restaurarFuncionario(id, origem), 'restaurar funcionário')) return;
+        if(!garantirPermissao('vinculoHorarios', () => restaurarFuncionario(id, origem), 'restaurar funcionário')) return;
         const f = db.funcionarios.find(x => x.id === id);
         if(!f) return;
         f.arquivado = false;
         f.arquivadoEm = null;
         registrarAuditoria('Funcionário restaurado', f.nome || 'Funcionário sem nome', 'funcionario', id);
         salvarBanco();
-        abrirGerenciar('funcionarios');
-        renderizarLista();
+        concluirArquivoFuncionario(origem);
     }
 
     function salvarEmpresa() { 
@@ -1039,6 +1050,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         aplicarPermissoesFormularioFuncionario();
         const btnHistorico = document.getElementById('btnHistoricoSalarioFuncionario');
         if(btnHistorico) btnHistorico.style.display = id ? 'inline-flex' : 'none';
+        configurarAcaoArquivoFuncionario('btnArquivoFuncCadastro', db.funcionarios.find(f => f.id === id), 'cadastro');
         renderListaPix(); document.getElementById('modalFormFuncionario').style.display = 'flex';
     }
     function renderListaPix() { const box = document.getElementById('listaPix'); if(tempPix.length === 0) { box.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma chave PIX.</div>'; return; } box.innerHTML = tempPix.map((p, i) => `<div class="list-item-config pix-list-row"><div class="pix-text"><b style="color:#0277BD;">${escapeHTML(p.tipo || 'PIX')}</b> - ${escapeHTML(p.chave || '')}</div><button onclick="removerPix(${i})">X</button></div>`).join(''); }
@@ -1256,7 +1268,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const box = document.getElementById('listaEscolhaPix');
         box.innerHTML = lista.map((pix, i) => {
             const tipo = pix.tipo || 'PIX';
-            return `<button class="btn-outline btn-pix-app" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left; justify-content:flex-start;" onclick="copiarChavePixFuncionario(${i}, ${jsArg(funcId)})"><span><strong><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></span></button>`;
+            return `<button class="btn-outline btn-pix-app" style="margin-bottom:0; border-color:#0277BD; color:#0277BD; text-align:left; justify-content:flex-start;" onclick="copiarChavePixFuncionario(${i}, ${jsArg(funcId)})"><span><strong><span class="rh-icon" data-icon="pix" aria-hidden="true"></span>${escapeHTML(tipo)}</strong><br><span style="font-size:12px; word-break:break-all;">${escapeHTML(pix.chave)}</span></span></button>`;
         }).join('');
         document.getElementById('modalEscolhaPix').style.display = 'flex';
     }
@@ -2752,7 +2764,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     ${renderBoxAdiantamentosContracheque(f, mesRef, d.adiantamentosContra, editavel, 'recibo')}
                     ${renderBoxValorReceber(d.liquidoAPagar)}
                 </div>
-                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span> Pix</button>${acaoPagamento}</div>${acaoRecibo}</div>
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="rh-icon" data-icon="pix" aria-hidden="true"></span> Pix</button>${acaoPagamento}</div>${acaoRecibo}</div>
             </div>` : '';
             const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(d.liquido)} - R$ ${formatMoedaContracheque(d.adiantamentosContra.total)} = R$ ${formatMoedaContracheque(d.liquidoAPagar)}</strong>` : '';
             html += `<div class="contra-card recibo-mensal ${pago ? 'fechado' : ''}" onclick="toggleDetalhesReciboMensal(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;
@@ -2949,7 +2961,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             return `<div class="pendente-card ${item.tipo}">
             <div class="pendente-head"><strong>${escapeHTML(getNomeUsoFuncionario(item.func))}</strong><span>${escapeHTML(item.valor || '')}</span></div>
             <div style="color:#555;"><b>${escapeHTML(item.titulo)}</b><br><small>${escapeHTML(item.detalhe)}</small></div>
-            <div class="pendente-actions-linha"><button class="btn-action" onclick="abrirDocumentoPendente(${jsArg(tipoDoc)}, ${jsArg(item.func.id)}, ${jsArg(mesRef)})">Abrir pagamento</button><button class="btn-pendente-pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(item.func.id)}, event)" title="Copiar Pix"><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span> Pix</button><button class="btn-pendente-pagar" onclick="${acaoInformar}">Informar pagamento</button><button class="btn-pendente-whats" onclick="abrirWhatsappFuncionarioPorId(${jsArg(item.func.id)}, '', event)" title="WhatsApp">WhatsApp</button></div>
+            <div class="pendente-actions-linha"><button class="btn-action" onclick="abrirDocumentoPendente(${jsArg(tipoDoc)}, ${jsArg(item.func.id)}, ${jsArg(mesRef)})">Abrir pagamento</button><button class="btn-pendente-pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(item.func.id)}, event)" title="Copiar Pix"><span class="rh-icon" data-icon="pix" aria-hidden="true"></span> Pix</button><button class="btn-pendente-pagar" onclick="${acaoInformar}">Informar pagamento</button><button class="btn-pendente-whats" onclick="abrirWhatsappFuncionarioPorId(${jsArg(item.func.id)}, '', event)" title="WhatsApp">WhatsApp</button></div>
         </div>`;
         }).join('');
     }
@@ -3413,7 +3425,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
                     ${renderBoxAdiantamentosContracheque(f, mesRef, adiantamentosContra, editavel, 'contracheque')}
                     ${renderBoxValorReceber(liquidoAPagar)}
                 </div>
-                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="icone-pix"><span class="rh-icon" data-icon="manager-key" aria-hidden="true"></span></span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)"><span class="rh-icon" data-icon="list" aria-hidden="true"></span> WhatsApp</button>${acaoPagamento}</div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
+                <div class="contra-actions"><div class="contra-actions-left"><button class="btn-contra-util pix" onclick="abrirEscolhaPixFuncionarioPorId(${jsArg(f.id)}, event)"><span class="rh-icon" data-icon="pix" aria-hidden="true"></span> Pix</button><button class="btn-contra-util whats" onclick="enviarContrachequeWhatsapp(${jsArg(f.id)}, ${jsArg(mesRef)}, ${jsArg(vtMesRef)}, event)"><span class="rh-icon" data-icon="whatsapp" aria-hidden="true"></span> WhatsApp</button>${acaoPagamento}</div>${fechado ? `<button class="btn-fechar-contra" style="background:#2E7D32;" onclick="abrirReaberturaContracheque(${jsArg(f.id)}, event)">Reabrir Contracheque</button>` : `<button class="btn-fechar-contra" onclick="fecharContrachequeFuncionario(${jsArg(f.id)}, event)">Fechar Contracheque</button>`}</div>
             </div>` : '';
             const equacao = aberto ? `<strong class="contra-equacao">R$ ${formatMoedaContracheque(liquido)} - R$ ${formatMoedaContracheque(adiantamentosContra.total)} = R$ ${formatMoedaContracheque(liquidoAPagar)}</strong>` : '';
             html += `<div class="contra-card ${fechado ? 'fechado' : ''}" onclick="toggleDetalhesContracheque(${jsArg(f.id)}, event)"><div class="contra-card-header"><div class="contra-card-top"><div class="contra-nome">${escapeHTML(f.nome || 'Sem nome')}</div><span class="contra-status">${status}</span></div>${equacao}</div>${detalhes}</div>`;
