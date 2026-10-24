@@ -24,6 +24,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 #rhAccess[hidden]{display:none}
 .operator-login-stack{width:min(320px,calc(100vw - 40px));margin:auto;display:flex;flex-direction:column;gap:12px;flex-shrink:0}
 #rhAccess .modal-login-operador{width:100%;margin:0;padding:16px;max-height:none;box-sizing:border-box}
+.rh-dialog.modal-login-operador{width:min(320px,calc(100vw - 40px));max-width:calc(100vw - 40px);max-height:calc(100dvh - 28px);margin:auto;padding:16px;border:0;border-radius:10px;background:#fff;color:#333}
+.rh-dialog.modal-login-operador::backdrop{background:rgba(0,0,0,.6)}
+.rh-dialog.modal-login-operador form{display:block}
+.operator-person-readonly{box-sizing:border-box;min-height:42px;padding:10px;border:1px solid #ccc;border-radius:5px;background:#eee;color:#111;font-size:16px;overflow-wrap:anywhere}
+.rh-dialog.modal-login-operador .modal-actions button{width:auto;margin:0;border:0;border-radius:6px;font-family:Arial,sans-serif;font-weight:bold}
+.rh-dialog.modal-login-operador .modal-actions .btn-cancel{background:#eee;color:#333}
+.rh-dialog.modal-login-operador .modal-actions .btn-action{background:#1976d2;color:#fff}
+body[class*="tema-"] .modal-login-operador .modal-title{border-bottom-color:#1976d2}
 .modal-login-operador form:focus{outline:none}
 .modal-login-operador .modal-title{font-size:20px;margin:0 0 20px;padding-bottom:10px;color:#333;border-bottom:2px solid #1976d2}
 .modal-login-operador .form-group{margin-bottom:15px}

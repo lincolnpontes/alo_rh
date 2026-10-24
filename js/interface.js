@@ -76,14 +76,23 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
     }
 
     function atualizarAcoesMassa() {
-        const temSelecionados = itensSelecionados.size > 0;
         const selecionados = obterFuncionariosSelecionados();
+        const temSelecionados = selecionados.length > 0;
+        const listados = obterFuncionariosListados();
+        const idsListados = new Set(listados.map(f => f.id));
+        const foraDaLista = selecionados.filter(f => !idsListados.has(f.id)).length;
         const somenteSemanais = selecionados.length > 0 && selecionados.every(isFuncionarioSemanal);
         const visivel = temSelecionados && !somenteSemanais ? 'flex' : 'none';
         const actionBar = document.getElementById('actionBar');
         if(actionBar) actionBar.classList.toggle('com-selecao', temSelecionados);
+        document.getElementById('containerFiltros')?.classList.toggle('has-selection', temSelecionados);
         const contador = document.getElementById('contadorSelecao');
-        if(contador){contador.hidden=!temSelecionados;contador.textContent=selecionados.length+' selecionado'+(selecionados.length===1?'':'s');}
+        if(contador){
+            contador.hidden=!temSelecionados;
+            contador.textContent=selecionados.length+' selecionado'+(selecionados.length===1?'':'s');
+            const descricao=contador.textContent+(foraDaLista?'. '+foraDaLista+' fora do filtro atual. As ações incluem todos os selecionados.':' nesta lista.');
+            contador.title=descricao;contador.setAttribute('aria-label',descricao);
+        }
         const limpar = document.getElementById('btnLimparSelecao');if(limpar)limpar.hidden=!temSelecionados;
         document.getElementById('btnAcaoMassa1').style.display = visivel;
         document.getElementById('btnAcaoMassa2').style.display = visivel;
@@ -106,11 +115,16 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(btnFolgaGeral) btnFolgaGeral.style.display = temSelecionados ? 'none' : 'flex';
         const btnSelecionarLista = document.getElementById('btnSelecionarLista');
         if(btnSelecionarLista) {
-            const funcs = obterFuncionariosListados();
-            const todosListadosSelecionados = funcs.length > 0 && funcs.every(f => itensSelecionados.has(f.id));
-            btnSelecionarLista.style.display = funcs.length ? 'flex' : 'none';
+            const quantidadeNaLista = listados.filter(f => itensSelecionados.has(f.id)).length;
+            const todosListadosSelecionados = listados.length > 0 && quantidadeNaLista === listados.length;
+            const selecaoParcial = quantidadeNaLista > 0 && !todosListadosSelecionados;
+            btnSelecionarLista.style.display = 'flex';
+            btnSelecionarLista.disabled = !listados.length;
             btnSelecionarLista.classList.toggle('selecionado', todosListadosSelecionados);
-            btnSelecionarLista.setAttribute('aria-pressed',String(todosListadosSelecionados));
+            btnSelecionarLista.classList.toggle('parcial', selecaoParcial);
+            btnSelecionarLista.setAttribute('aria-pressed',selecaoParcial?'mixed':String(todosListadosSelecionados));
+            const descricao=todosListadosSelecionados?'Desmarcar todos desta lista':'Selecionar todos desta lista';
+            btnSelecionarLista.title=descricao;btnSelecionarLista.setAttribute('aria-label',descricao);
         }
         if(typeof atualizarVisibilidadePermissoes === 'function') atualizarVisibilidadePermissoes();
     }
@@ -136,15 +150,15 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         renderizarFiltros(); renderizarLista();
     }
 
-    function renderizarFiltros() { 
-        let classTodos = categoriaAtual === null ? "active" : "";
-        let html = `<button type="button" class="chip ${classTodos}" aria-pressed="${categoriaAtual === null}" onclick="alternarNomesTodos()" title="Alternar nome completo e nome social">Todos</button>`;
-        db.categorias.forEach(cat => { html += `<button type="button" class="chip ${categoriaAtual === cat.id ? 'active' : ''}" aria-pressed="${categoriaAtual === cat.id}" style="background-color: ${safeColor(cat.cor)}; color: ${safeColor(cat.corTexto, '#ffffff')};" onclick="filtrarCat(${jsArg(cat.id)})">${escapeHTML(cat.nome)}</button>`; });
-        document.getElementById('containerFiltros').innerHTML = html; 
+    function renderizarFiltros() {
+        if(categoriaAtual !== null && !db.categorias.some(cat => cat.id === categoriaAtual)) categoriaAtual = null;
+        window.RHCabecalho?.renderCategories({
+            categories:db.categorias.map(cat => ({id:cat.id,nome:cat.nome,cor:safeColor(cat.cor,'#6b8b7c')})),
+            selected:categoriaAtual,fullNames:modoNomeLista === 'completo'
+        });
     }
 
     function alternarNomesTodos() {
-        categoriaAtual = null;
         modoNomeLista = modoNomeLista === 'social' ? 'completo' : 'social';
         renderizarFiltros();
         renderizarLista();

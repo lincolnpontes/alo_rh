@@ -8,14 +8,14 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.3.1</title>
-    <link rel="manifest" href="manifest.json?v=1.3.1">
+    <title>Alô RH v1.4.0</title>
+    <link rel="manifest" href="manifest.json?v=1.4.0">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/alo-rh-v120-192.png">
     <link rel="apple-touch-icon" href="icons/alo-rh-v120-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.3.1">
-<link rel="stylesheet" href="css/seguranca.css?v=1.3.1">
-<link rel="stylesheet" href="css/icones.css?v=1.3.1">
-<link rel="stylesheet" href="css/inicio.css?v=1.3.1">
+    <link rel="stylesheet" href="css/styles.css?v=1.4.0">
+<link rel="stylesheet" href="css/seguranca.css?v=1.4.0">
+<link rel="stylesheet" href="css/icones.css?v=1.4.0">
+<link rel="stylesheet" href="css/inicio.css?v=1.4.0">
 </head>
 <body class="rh-locked">
 <main id="rhAccess" aria-label="Acesso ao Alô RH">
@@ -30,7 +30,7 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.3.1</div>
+    <div class="splash-versao">v1.4.0</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;"><span class="rh-icon" data-icon="refresh" aria-hidden="true"></span> Forçar Atualização</button>
 </div>
 
@@ -50,7 +50,7 @@
         <div class="header-actions">
             <button id="rhSyncStatus" type="button" data-state="local" title="Aguardando conexão" aria-label="Sincronização: aguardando conexão"></button>
             <div class="header-more-anchor">
-                <button id="btnHeaderMais" type="button" aria-label="Férias, resumo e aniversariantes" aria-expanded="false" aria-controls="menuHeaderMais" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+                <button id="btnHeaderMais" type="button" aria-label="Férias, resumo e aniversariantes" aria-expanded="false" aria-controls="menuHeaderMais" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
                 <div id="menuHeaderMais" class="header-more-menu" role="menu" aria-label="Mais opções" hidden>
                     <button id="btnHeaderFerias" type="button" role="menuitem" onclick="RHCabecalho.close();abrirCalendarioFerias()"><span class="rh-icon" data-icon="umbrella" aria-hidden="true"></span><span>Férias</span></button>
                     <button id="btnHeaderResumo" type="button" role="menuitem" onclick="RHCabecalho.close();abrirModalResumo()"><span class="rh-icon" data-icon="list" aria-hidden="true"></span><span>Resumo</span></button>
@@ -62,12 +62,18 @@
     </header>
     
     <div class="area-conteudo">
+        <div id="containerFiltros" class="category-toolbar" aria-label="Categorias e seleção de funcionários">
+            <button id="btnCategoriaAtual" class="category-picker-button" type="button" aria-label="Categoria: Todos. Escolher categoria" aria-haspopup="listbox" aria-expanded="false" aria-controls="opcoesCategorias"><strong id="nomeCategoriaAtual">Todos</strong><span class="profile-chevron" aria-hidden="true"></span></button>
+            <button class="btn-selecionar-caixa" id="btnSelecionarLista" type="button" onclick="toggleSelecionarTodosListados()" title="Selecionar todos desta lista" aria-label="Selecionar todos desta lista" aria-pressed="false"><span id="marcaSelecionarTodos"></span></button>
+            <span id="contadorSelecao" class="selection-count" role="status" aria-live="polite" hidden></span>
+            <button id="btnLimparSelecao" class="selection-clear" type="button" onclick="limparSelecaoFuncionarios()" hidden>Limpar</button>
+        </div>
+        <div id="popoverCategorias" class="category-popover" hidden>
+            <div class="category-popover-title" id="tituloCategorias">Categorias</div>
+            <div id="opcoesCategorias" class="category-options" role="listbox" aria-labelledby="tituloCategorias"></div>
+            <div class="category-popover-footer"><button id="btnNomeCompleto" class="category-name-toggle" type="button" role="switch" aria-checked="false"><span>Mostrar nome completo</span><span class="category-toggle-track" aria-hidden="true"></span></button></div>
+        </div>
         <div id="actionBar" class="action-bar">
-            <div class="selecao-lista-toolbar">
-                <button class="btn-selecionar-caixa" id="btnSelecionarLista" onclick="toggleSelecionarTodosListados()" title="Selecionar ou limpar seleção" aria-label="Selecionar ou limpar seleção"><span id="marcaSelecionarTodos"></span></button>
-                <span id="contadorSelecao" class="selection-count" aria-live="polite" hidden></span>
-                <button id="btnLimparSelecao" class="selection-clear" type="button" onclick="limparSelecaoFuncionarios()" hidden>Limpar</button>
-            </div>
             <div id="boxFiltrosDias" class="dias-filtro-toolbar"></div>
             <div class="acoes-massa-toolbar" id="boxBarraAcoes">
                 <button class="btn-action-bar btn-folga-geral" id="btnFolgaGeral" onclick="abrirMenuAdicionar()" title="Adicionar" aria-label="Adicionar">+</button>
@@ -79,7 +85,6 @@
             </div>
         </div>
         
-        <div class="filters" id="containerFiltros"></div>
         <div class="scroll-area"><ul class="list" id="listaPrincipal"></ul></div>
     </div>
 </div>
@@ -87,7 +92,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.3.1</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.4.0</small>
         </h2>
         <div id="perfilAdminBox" class="perfil-admin-box"></div>
         <button class="btn-outline menu-perm" data-perm="dadosEmpresa" onclick="abrirGerenciar('empresa')"><span class="rh-icon" data-icon="building" aria-hidden="true"></span> Dados da Empresa</button>
@@ -894,23 +899,24 @@
         </div>
     </div>
 </div>
-<script src="js/config.js?v=1.3.1"></script>
-<script src="js/protocolo.js?v=1.3.1"></script>
-<script src="js/modelo.js?v=1.3.1"></script>
-<script src="js/dados.js?v=1.3.1"></script>
-<script src="js/calculos.js?v=1.3.1"></script>
-<script src="js/interface.js?v=1.3.1"></script>
-<script src="js/impressao.js?v=1.3.1"></script>
-<script src="js/sincronizacao.js?v=1.3.1"></script>
-<script src="js/armazenamento.js?v=1.3.1"></script>
-<script src="js/pin-proof.js?v=1.3.1"></script>
-<script src="js/autenticacao.js?v=1.3.1"></script>
-<script src="js/sync-seguro.js?v=1.3.1"></script>
-<script src="js/app-seguro.js?v=1.3.1"></script>
-<script src="js/cabecalho.js?v=1.3.1"></script>
-<script src="js/acessibilidade.js?v=1.3.1"></script>
+<script src="js/android.js?v=1.4.0"></script>
+<script src="js/config.js?v=1.4.0"></script>
+<script src="js/protocolo.js?v=1.4.0"></script>
+<script src="js/modelo.js?v=1.4.0"></script>
+<script src="js/dados.js?v=1.4.0"></script>
+<script src="js/calculos.js?v=1.4.0"></script>
+<script src="js/interface.js?v=1.4.0"></script>
+<script src="js/impressao.js?v=1.4.0"></script>
+<script src="js/sincronizacao.js?v=1.4.0"></script>
+<script src="js/armazenamento.js?v=1.4.0"></script>
+<script src="js/pin-proof.js?v=1.4.0"></script>
+<script src="js/autenticacao.js?v=1.4.0"></script>
+<script src="js/sync-seguro.js?v=1.4.0"></script>
+<script src="js/app-seguro.js?v=1.4.0"></script>
+<script src="js/cabecalho.js?v=1.4.0"></script>
+<script src="js/acessibilidade.js?v=1.4.0"></script>
 <script>
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && !window.AloRHNative) {
         window.addEventListener('load', function() {
             navigator.serviceWorker.register('service-worker.js',{updateViaCache:'none'}).catch(function(err) {
                 console.warn('Service worker nao registrado.', err);

@@ -63,4 +63,8 @@ Os testes usam dados fictícios, incluindo uma execução HTTP real do servidor 
 
 Fontes principais: `js/protocolo.js` e `js/modelo.js` para dados; `js/armazenamento.js` e `js/sync-seguro.js` para persistência; `js/autenticacao.js` para acesso interno; `server/service.js` para regras do backend. `google-apps-script/Code.gs` é gerado, não editado diretamente.
 
-Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.3.1; backend Apps Script permanece na versão 8. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
+Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.4.0; backend Apps Script permanece na versão 8. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
+
+## APK Android
+
+[Instalar Alô RH](https://lincolnpontes.github.io/alo_rh/instalar.html). Pacote próprio, separado do instalador Chrome, com a mesma pessoa e PIN e o mesmo banco Apps Script. Veja [compilação, assinatura e limites de validação](docs/ANDROID.md).
