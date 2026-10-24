@@ -84,3 +84,12 @@ A cópia local preserva os cadastros e lançamentos originais. Dois lançamentos
 Não houve teste desta revisão em APK ou celular físico, teste prolongado de cotas/carga, nem validação contábil de todas as regras originais de folha.
 
 Backups anteriores à implantação foram criados no Drive e no computador, com hashes SHA-256 iguais. O banco original permanece intacto; o serviço novo usa outro arquivo privado. A migração preservou 34 funcionários, 268 lançamentos e dois perfis de acesso existentes, sem ampliar permissões. Não houve modificação no Alô Cozinha nem uso de Supabase.
+
+
+## v1.4.0 — categorias, confirmação de PIN e APK
+
+102 testes Node aprovados; 3 testes Java aprovados; lint Android sem erros (avisos de versões das bibliotecas, JavaScript necessário à interface e ícone monocromático opcional). APK release assinado e verificado, 70 assets web comparados por SHA-256 com a fonte.
+
+Revisão visual com dados fictícios em 320/390/1280px: barra de categoria/seleção em uma linha, nomes longos no seletor, cards abaixo, seleção entre filtros, Escape/teclado, menu em grade, PIN avançado vazio/incorreto/correto/cancelado. Nenhum overflow horizontal observado. Cancelamento durante resposta de PIN também coberto em teste automatizado.
+
+Banco e Apps Script de produção inalterados nesta entrega; backup privado anterior preservado. APK usa o mesmo endpoint, uma origem local empacotada e armazenamento separado. A instalação física e as integrações nativas de impressão/arquivos precisam de conferência no celular. Veja ANDROID.md.

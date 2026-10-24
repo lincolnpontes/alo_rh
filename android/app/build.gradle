@@ -1,0 +1,42 @@
+plugins { id 'com.android.application' }
+def webRoot = rootProject.projectDir.parentFile
+def generatedWebAssets = layout.buildDirectory.dir('generated/webAssets')
+tasks.register('syncWebAssets', Sync) {
+    from(webRoot) { include 'index.html', 'manifest.json', 'js/**', 'css/**', 'icons/**' }
+    into(generatedWebAssets)
+}
+android {
+    namespace 'io.github.lincolnpontes.alorh'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'io.github.lincolnpontes.alorh'
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName '1.4.0'
+    }
+    signingConfigs {
+        release {
+            if (System.getenv('RH_KEYSTORE_PATH')) {
+                storeFile file(System.getenv('RH_KEYSTORE_PATH'))
+                storePassword System.getenv('RH_KEYSTORE_PASSWORD')
+                keyAlias 'alo-rh'
+                keyPassword System.getenv('RH_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release { signingConfig signingConfigs.release; minifyEnabled true; shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_11; targetCompatibility JavaVersion.VERSION_11 }
+    sourceSets { main.assets.srcDirs = [generatedWebAssets.get().asFile] }
+    lint { abortOnError true }
+}
+tasks.named('preBuild').configure { dependsOn('syncWebAssets') }
+dependencies {
+    implementation 'androidx.activity:activity:1.12.3'
+    implementation 'androidx.webkit:webkit:1.15.0'
+    testImplementation 'junit:junit:4.13.2'
+}

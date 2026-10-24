@@ -77,13 +77,17 @@
     async function settings(){
         if(settingsUntil>Date.now())return true;
         if(!profile)throw new Error('Selecione a pessoa para continuar.');
-        const modal=dialog('Confirmar acesso'),form=node('form');form.append(node('p',profile.nome));
-        const {input,setValue,progress}=pinField(form),feedback=notice(form),submit=node('button','Continuar',{type:'submit'});form.append(submit);modal.append(form);
-        button(modal,'Cancelar',()=>modal.close());
+        const modal=dialog('Confirmar acesso'),form=node('form');
+        modal.classList.add('modal-login-operador');modal.querySelector('h2').className='modal-title';
+        const personGroup=node('div',undefined,{className:'form-group'}),personLabel=node('label','Pessoa:'),person=node('div',profile.nome,{className:'operator-person-readonly'});
+        person.setAttribute('aria-label','Pessoa: '+profile.nome);personGroup.append(personLabel,person);form.append(personGroup);
+        const {input,setValue,progress}=pinField(form),feedback=node('div','',{className:'senha-feedback'}),actions=node('div',undefined,{className:'modal-actions'});
+        feedback.setAttribute('role','alert');button(actions,'Cancelar',()=>modal.close()).className='btn-cancel';
+        actions.append(node('button','Continuar',{type:'submit',className:'btn-action'}));form.append(feedback,actions);modal.append(form);
         return new Promise(resolve=>{
             let accepted=false,inFlight=false;modal.addEventListener('close',()=>{setValue('');resolve(accepted);},{once:true});
-            form.onsubmit=async e=>{e.preventDefault();if(inFlight)return;inFlight=true;busy(form,true);progress.hidden=false;feedback.textContent='';
-                try{const r=await request('verify-pin',{pin:input.value});settingsUntil=r.expires;accepted=true;modal.close();}
+            form.onsubmit=async e=>{e.preventDefault();if(inFlight)return;if(!/^\d{3,12}$/.test(input.value)){feedback.textContent='Digite seu PIN.';form.focus();return;}inFlight=true;busy(form,true);progress.hidden=false;feedback.textContent='';
+                try{const r=await request('verify-pin',{pin:input.value});if(!modal.open)return;settingsUntil=r.expires;accepted=true;modal.close();}
                 catch(err){setValue('');feedback.textContent=err.message;}finally{inFlight=false;busy(form,false);progress.hidden=true;}};
             form.focus();
         });
