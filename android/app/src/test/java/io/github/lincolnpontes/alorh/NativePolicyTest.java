@@ -15,4 +15,15 @@ public class NativePolicyTest {
         assertEquals("arquivo-alorh",NativePolicy.filename(".."));
         assertEquals(120,NativePolicy.filename("a".repeat(150)).length());
     }
+    @Test public void onlyBoundedPdfExportsCanBeShared(){
+        assertTrue(NativePolicy.pdf("%PDF-1.7\nexample".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        assertFalse(NativePolicy.pdf(null));assertFalse(NativePolicy.pdf(new byte[7]));
+        assertFalse(NativePolicy.pdf("<html>Not a PDF</html>".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        byte[] oversized=new byte[NativePolicy.MAX_BYTES+1];System.arraycopy("%PDF-".getBytes(java.nio.charset.StandardCharsets.US_ASCII),0,oversized,0,5);assertFalse(NativePolicy.pdf(oversized));
+    }
+    @Test public void textSharingRejectsEmptyAndOversizedSummaries(){
+        assertTrue(NativePolicy.shareText("Resumo: R$ 2.000,00"));
+        assertFalse(NativePolicy.shareText(null));assertFalse(NativePolicy.shareText(" \n "));
+        assertFalse(NativePolicy.shareText("x".repeat(131073)));
+    }
 }

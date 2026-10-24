@@ -2562,9 +2562,10 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         if(event) event.stopPropagation();
         const f = db.funcionarios.find(x => x.id === funcId);
         if(!f) return alert('Funcionário não encontrado.');
+        const texto = montarMensagemContrachequeFuncionario(f, mesRef, vtMesRef);
+        if(window.RHAndroid){window.RHAndroid.shareText(texto);return;}
         const telefone = normalizarTelefoneWhatsapp(f.telefone);
         if(!telefone) return alert('Cadastre um WhatsApp válido para este funcionário.');
-        const texto = montarMensagemContrachequeFuncionario(f, mesRef, vtMesRef);
         window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank');
     }
 
@@ -2860,13 +2861,13 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             </section>`;
         });
         html += '</body></html>';
-        const w = window.open('', '_blank');
+        const w = RHDocuments.open();
         w.document.write(html);
         w.document.close();
         registrarAuditoria('Recibo mensal gerado', `${funcs.length} funcionário(s) - ${mesRef}.`, 'recibo_mensal', mesRef);
         salvarBanco();
         gerarPreviaReciboMensal();
-        setTimeout(() => { w.print(); }, 500);
+        w.print();
     }
 
     function linhaPrintRecibo(label, valor, total = false) {

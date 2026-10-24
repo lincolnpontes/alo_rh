@@ -97,7 +97,7 @@
             : `<div class="logo-vt-texto">${escapeHTML(db.empresa.fantasia || '')}</div>`;
         const itensOrdenados = [...arrVTParaImprimir].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
         const paginas = quebrarPaginas(itensOrdenados, 16);
-        let w = window.open('','_blank'); let html = `<html><head><title>Recibo VT</title><style>
+        let w = RHDocuments.open(); let html = `<html><head><title>Recibo VT</title><style>
             @page{size:A4 portrait;margin:12mm;}
             body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:16px;}
             .vt-folha{height:273mm;border:4px double #000;box-sizing:border-box;padding:3mm 6mm 5mm;display:flex;flex-direction:column;page-break-after:always;}
@@ -128,7 +128,7 @@
             });
             html += `</div><div class="rodape-vt"><div class="data-vt">${escapeHTML(formatDataExtensoPrint(dataFolha, cidade))}</div><div class="assinatura-diretor-vt">Assinatura do Diretor</div></div></section>`;
         });
-        html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintVT');
+        html += '</body></html>'; w.document.write(html); w.document.close(); w.print(); fecharModal('modalPrintVT');
     }
 
     function obterItensQuinzenaSelecionados() {
@@ -229,7 +229,7 @@
         registrarDescontosQuinzena(itensQuinzena, mesRef, dataPgto);
         const paginas = quebrarPaginas(itensQuinzena, 16);
         let logoHtml = db.empresa.logo ? `<img class="logo-quinzena" src="${db.empresa.logo}">` : `<div class="logo-quinzena-texto">${escapeHTML(db.empresa.fantasia || 'NOME DA EMPRESA')}</div>`;
-        let w = window.open('','_blank'); 
+        let w = RHDocuments.open();
         let html = `<html><head><title>Quinzena</title><style>
             @page{size:A4 portrait;margin:10mm 12mm;}
             body{font-family:"Times New Roman",serif;color:#000;margin:0;font-size:16px;}
@@ -262,14 +262,14 @@
             html += `</div><div class="rodape-data">${escapeHTML(formatDataExtensoPrint(dataPgto, cidade))}</div></section>`;
         });
         html += `</body></html>`;
-        w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintQuinzena');
+        w.document.write(html); w.document.close(); w.print(); fecharModal('modalPrintQuinzena');
     }
 
     function abrirConfigPonto() { if(typeof garantirPermissao === 'function' && !garantirPermissao('gerarPonto', () => abrirConfigPonto(), 'gerar ponto')) return; if(itensSelecionados.size === 0) return alert("Selecione funcionários!"); document.getElementById('pontoMesRef').value = getHojeSTR().substring(0,7); document.getElementById('modalPrintPonto').style.display = 'flex'; }
     function executarPrintPonto() {
         if(typeof garantirPermissao === 'function' && !garantirPermissao('gerarPonto', () => executarPrintPonto(), 'gerar ponto')) return;
         let mesRef = document.getElementById('pontoMesRef').value; if(!mesRef) return; let ano = parseInt(mesRef.split('-')[0]); let mes = parseInt(mesRef.split('-')[1]); let diasNoMes = new Date(ano, mes, 0).getDate();
-        let w = window.open('','_blank'); let html = `<html><head><title>Folha de Ponto</title><style>
+        let w = RHDocuments.open(); let html = `<html><head><title>Folha de Ponto</title><style>
             @page{size:A4 portrait;margin:10mm 8mm 8mm 8mm;}
             html,body{margin:0;padding:0;color:#000;}
             body{font-family:"Times New Roman",serif;font-size:12px;line-height:1.15;}
@@ -342,5 +342,5 @@
             html += `</tbody></table><div class="rodape-ponto"><div>Reconheço a exatidão destas anotações.</div><div class="rodape-linhas"><div class="data-ponto"><b>Data:</b><span class="data-campo curto"></span>/<span class="data-campo curto"></span>/<span class="data-campo longo"></span></div><div class="diretor-ponto"><span class="linha-diretor"></span><div>Assinatura do Diretor</div></div></div></div></section>`;
         });
         if(folhasGeradas === 0) { w.close(); return alert("Nenhum funcionário selecionado está com controle de ponto ativo."); }
-        html += '</body></html>'; w.document.write(html); w.document.close(); setTimeout(() => { w.print(); }, 500); fecharModal('modalPrintPonto');
+        html += '</body></html>'; w.document.write(html); w.document.close(); w.print(); fecharModal('modalPrintPonto');
     }

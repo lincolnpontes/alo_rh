@@ -6,6 +6,11 @@ import java.net.URI;
 final class NativePolicy {
     static final String ORIGIN = "https://appassets.androidplatform.net";
     static final int MAX_BYTES = 8 * 1024 * 1024;
+    static boolean pdf(byte[] bytes) {
+        return bytes!=null&&bytes.length>=8&&bytes.length<=MAX_BYTES
+            &&bytes[0]=='%'&&bytes[1]=='P'&&bytes[2]=='D'&&bytes[3]=='F'&&bytes[4]=='-';
+    }
+    static boolean shareText(String text) { return text!=null&&!text.trim().isEmpty()&&text.length()<=131072; }
     static boolean internal(String url) {
         try {
             URI uri = new URI(url);

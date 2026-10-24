@@ -5,12 +5,6 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.CancellationSignal;
-import android.os.ParcelFileDescriptor;
-import android.print.PageRange;
-import android.print.PrintAttributes;
-import android.print.PrintDocumentAdapter;
-import android.print.PrintManager;
 import android.util.Base64;
 import android.webkit.*;
 import android.widget.FrameLayout;
@@ -32,6 +26,7 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends ComponentActivity {
     private static final int OPEN_FILE = 41, SAVE_FILE = 42;
     private WebView web;
+    private NativeShares shares;
     private ValueCallback<Uri[]> fileCallback;
     private byte[] pendingFile;
     private JavaScriptReplyProxy pendingReply;
@@ -40,6 +35,7 @@ public final class MainActivity extends ComponentActivity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        shares=new NativeShares(this,files);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.rgb(0,105,92));
         ViewCompat.setOnApplyWindowInsetsListener(root,(view,insets)-> {
@@ -105,7 +101,8 @@ public final class MainActivity extends ComponentActivity {
                 JSONObject value=new JSONObject(data);String id=value.optString("id");
                 switch(value.getString("action")){
                     case "external":openExternal(value.getString("url"));break;
-                    case "print":printHtml(value.getString("html"));break;
+                    case "share-pdf":shares.pdf(value.getString("base64"),value.getString("name"),(ok,error)->reply(reply,id,ok,error));break;
+                    case "share-text":shares.text(value.getString("text"));break;
                     case "save":save(value,id,reply);break;
                     default:throw new IllegalArgumentException();
                 }
@@ -153,28 +150,6 @@ public final class MainActivity extends ComponentActivity {
                 }catch(Exception error){runOnUiThread(()->reply(proxy,id,false,"Não foi possível salvar o arquivo. Tente novamente."));}
             });
         }
-    }
-    private void printHtml(String html){
-        if(html.length()>NativePolicy.MAX_BYTES){message("Documento muito grande para imprimir.");return;}
-        WebView printView=new WebView(this);
-        printView.getSettings().setJavaScriptEnabled(false);printView.getSettings().setAllowFileAccess(false);
-        printView.getSettings().setAllowContentAccess(false);printView.getSettings().setBlockNetworkLoads(true);
-        printView.setWebViewClient(new WebViewClient(){
-            private boolean started;
-            @Override public void onPageFinished(WebView view,String url){
-                if(started)return;started=true;
-                PrintDocumentAdapter delegate=view.createPrintDocumentAdapter("Alô RH");
-                PrintDocumentAdapter adapter=new PrintDocumentAdapter(){
-                    @Override public void onStart(){delegate.onStart();}
-                    @Override public void onLayout(PrintAttributes old,PrintAttributes next,CancellationSignal signal,LayoutResultCallback callback,Bundle extras){delegate.onLayout(old,next,signal,callback,extras);}
-                    @Override public void onWrite(PageRange[] pages,ParcelFileDescriptor destination,CancellationSignal signal,WriteResultCallback callback){delegate.onWrite(pages,destination,signal,callback);}
-                    @Override public void onFinish(){delegate.onFinish();view.destroy();}
-                };
-                PrintManager manager=(PrintManager)getSystemService(PRINT_SERVICE);
-                manager.print("Alô RH",adapter,new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build());
-            }
-        });
-        printView.loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
     }
     @Override protected void onResume(){super.onResume();if(web!=null)web.evaluateJavascript("window.dispatchEvent(new Event('online'))",null);}
     @Override protected void onDestroy(){

@@ -106,3 +106,14 @@ Banco e Apps Script de produção inalterados nesta entrega; backup privado ante
 - Backup privado do estado completo e do código anterior preservado antes da implantação. Banco com 34 funcionários e 268 lançamentos. O teste em produção lê o banco e valida apenas o ciclo de autenticação/renovação/saída; não grava dados de RH.
 
 Rollback: a versão 8 permanece no histórico do Apps Script, o APK 1.4.0 permanece em downloads e há bundle Git privado anterior. Não restaurar o banco por cima de lançamentos posteriores; a atualização altera apenas código e metadados de sessão.
+
+## v1.4.2 — PDF e compartilhamento nativo
+
+- 127 testes Node aprovados: quatro geradores reais de documentos, valores e acentos, nomes longos, múltiplas páginas, logo PNG, serialização DOM do navegador, popup bloqueado, cancelamento, bytes do PDF, retorno da ponte e resumo de WhatsApp nos dois ambientes.
+- Cinco testes Java aprovados; lint Android com zero erros e quatro avisos (dependências, JavaScript necessário à interface e ícone monocromático opcional). APK versionCode 3, assinado com o mesmo certificado da v1.4.1. Os 77 assets públicos do pacote foram comparados byte a byte às fontes.
+- Oito páginas de PDFs fictícios renderizadas com Poppler e inspecionadas: VT, quinzena, ponto e recibo mensal, incluindo nomes longos, férias e continuação de listas. Texto vetorial, tabelas A4, valores e assinaturas legíveis. Evidências privadas em .local/compartilhar-v142/.
+- Fluxo real de login, seleção e geração conferido no Chrome: abriu nova aba intitulada Folha de Ponto com URL de PDF local; sem erros no console. A automação não permite inspecionar abas blob, portanto a conferência visual do conteúdo foi feita nos PDFs de teste renderizados localmente. A primeira tentativa detectou uso indevido de Document.toString(); corrigido para outerHTML e coberto por teste de regressão.
+- Compartilhamento Android usa ACTION_SEND e seletor nativo; PDF via FileProvider não exportado, restrito ao cache shared-pdf, com permissão temporária de leitura. Resumo é compartilhado como texto, sem envio automático e sem exigir telefone cadastrado. No site, continua o link WhatsApp com telefone.
+- Ícone adaptativo e legado sem camada branca ou recuo adicional. A imagem Alô RH permanece a mesma.
+- Nenhum aparelho conectado: instalação por cima, aparência final do launcher e escolha de WhatsApp/impressora precisam da conferência no celular. Nenhum dado real foi enviado por WhatsApp ou usado nos PDFs de teste.
+- Web e APK publicados juntos. Apps Script e registros de produção inalterados; backup Git anterior e backups privados do banco preservados.
