@@ -1,7 +1,7 @@
 (function(global){
     'use strict';
     const P=RHProtocol;
-    let state,initialized=false,running=null,timer,failures=0,storeReady=false,lastPersist=Promise.resolve(),currentStatus='local';
+    let state,initialized=false,running=null,timer,failures=0,storeReady=false,lastPersist=Promise.resolve(),currentStatus='local',paused=false,generation=0;
     const clean=value=>P.clean(normalizarBanco(P.clone(value)));
     const pending=()=>!!state&&(!!state.outbox||state.conflicts.length>0||P.diff(state.base,clean(db),state.versions).length>0);
     function status(text,kind='local'){
@@ -12,6 +12,7 @@
     function persist(){state.working=clean(db);lastPersist=RHStore.save(state);lastPersist.catch(()=>status('Não foi possível salvar neste aparelho. Exporte os dados antes de fechar.','error'));return lastPersist;}
     function schedule(delay=1200){clearTimeout(timer);timer=setTimeout(()=>sync().catch(()=>{}),delay);}
     async function init(envelope){
+        generation++;paused=false;running=null;
         if(!storeReady){state=await RHStore.init(RHAuth.bankId());storeReady=true;}
         if(!state){if(!envelope)throw new Error('Conecte-se à internet para baixar a primeira cópia.');const bank=clean(envelope.bank);state={base:bank,working:bank,versions:envelope.versions,revision:envelope.revision,conflicts:[],outbox:null,lastConfirmed:0};}
         db=normalizarBanco(P.clone(state.working));db.configs.url=RH_CONFIG.endpoint;
@@ -54,11 +55,13 @@
         }
     }
     async function sync(){
-        if(!initialized||!RHAuth.profile())return false;
+        if(!initialized||paused||!RHAuth.profile())return false;
         if(running)return running;
+        const version=generation;
         running=(async()=>{
             try{
                 await lastPersist;
+                if(version!==generation||paused)return false;
                 if(!navigator.onLine){status('Sem internet · alterações preservadas neste aparelho','offline');return false;}
                 if(state.pendingProfile&&state.pendingProfile!==RHAuth.profile().id)throw new Error('Volte ao perfil que criou as alterações pendentes para sincronizar.');
                 // A consulta periódica não muda uma confirmação válida para "pendente".
@@ -66,7 +69,8 @@
                 else if(currentStatus!=='synced')status('Conferindo conexão com o servidor','checking');
                 if(state.outbox?.rejected){status(state.outbox.rejected+' · toque para revisar','conflict');return false;}
                 if(state.outbox)await sendOutbox();
-                const summary=await RHAuth.request('status');
+                const summary=await RHAuth.request('status',{prepareLogin:true});
+                if(version!==generation||paused)return false;
                 if(summary.revision!==state.revision)await receive(await RHAuth.request('read'));
                 if(state.conflicts.length){status(state.conflicts.length+' conflito(s) · toque para revisar','conflict');render();return false;}
                 const operations=P.diff(state.base,clean(db),state.versions);
@@ -74,8 +78,8 @@
                     state.outbox={id:crypto.randomUUID(),operations,snapshot:clean(db)};await persist();await sendOutbox();
                 }
                 failures=0;status(pending()?'Salvo neste aparelho · envio pendente':state.lastConfirmed?'Confirmado às '+new Date(state.lastConfirmed).toLocaleTimeString('pt-BR'):'Dados conferidos · nenhuma alteração pendente',pending()?'pending':'synced');render();return !pending();
-            }catch(error){failures++;status(error.message,'error');return false;}
-            finally{running=null;schedule(Math.min(300000,failures?5000*Math.pow(2,Math.min(failures,6)):document.hidden?300000:60000));}
+            }catch(error){if(version===generation&&error.code!=='session_changed'){failures++;status(error.message,'error');}return false;}
+            finally{if(version===generation){running=null;if(!paused)schedule(Math.min(300000,failures?5000*Math.pow(2,Math.min(failures,6)):document.hidden?300000:60000));}}
         })();return running;
     }
     async function conflicts(){
@@ -131,7 +135,7 @@
         missing.forEach(r=>{const row=document.createElement('p');row.textContent=(r.tipo||r.type)+' · '+formatDataBR(r.data)+' · referência '+r.funcId;modal.append(row);});
         const close=document.createElement('button');close.textContent='Fechar';close.onclick=()=>modal.close();modal.append(close);modal.addEventListener('close',()=>modal.remove());document.body.append(modal);modal.showModal();
     }
-    global.RHSync={init,changed,sync,pending,status,conflicts,restore,localBackups,integrity,flush:()=>lastPersist,state:()=>P.clone(state),backup:reason=>RHStore.backup(clean(db),reason)};
+    global.RHSync={init,changed,sync,pending,status,conflicts,restore,localBackups,integrity,pause:()=>{paused=true;generation++;clearTimeout(timer);},flush:()=>lastPersist,state:()=>P.clone(state),backup:reason=>RHStore.backup(clean(db),reason)};
     addEventListener('online',()=>schedule(200));addEventListener('offline',()=>status('Sem internet · alterações preservadas neste aparelho','offline'));
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(200);});
     addEventListener('beforeunload',event=>{if(state&&pending()){event.preventDefault();event.returnValue='';}});

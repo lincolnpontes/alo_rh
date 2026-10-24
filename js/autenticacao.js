@@ -1,7 +1,7 @@
 (function(global){
     'use strict';
     const SESSION='alorh_internal_session_v3',SECRET='alorh_device_secret_v2',LAST='alorh_last_person',DIRECTORY='alorh_person_directory';
-    let session=null,refreshing,settingsUntil=0,profile=null,bankId=null,profiles=[],challengeTask=null,challengeProfile=null,challengeMode=false;
+    let session=null,refreshing,settingsUntil=0,profile=null,bankId=null,profiles=[],challengeTask=null,challengeProfile=null,challengeValue=null,challengeMode=false,profilesAt=0,generation=0;
     try{session=JSON.parse(localStorage.getItem(SESSION)||'null');bankId=session?.bankId||null;}catch(_){}
     // The previous local account prototype has no authority over internal access.
     localStorage.removeItem('alorh_session_v2');
@@ -25,18 +25,43 @@
         finally{clearTimeout(timer);}
     }
     function saveSession(value){session=value;localStorage.setItem(SESSION,JSON.stringify(value));}
+    const changed=()=>Object.assign(new Error('O perfil mudou. A operação anterior foi interrompida.'),{code:'session_changed'});
+    function checkGeneration(value){if(value!==generation)throw changed();}
+    function rememberChallenge(next){
+        if(!next?.challenge)return;challengeMode=true;challengeProfile=next.profileId;challengeValue=next.challenge;challengeTask=Promise.resolve(next.challenge);
+    }
+    function clearSession(){generation++;session=null;profile=null;settingsUntil=0;refreshing=null;localStorage.removeItem(SESSION);}
     async function refresh(){
-        if(!refreshing)refreshing=transport({action:'refresh',refreshToken:session?.refreshToken}).then(data=>{
-            const {token,refreshToken,expires,profile:person}=data;saveSession({...session,token,refreshToken,expires,profile:person});if(profile)profile=person;
-        }).finally(()=>{refreshing=null;});
-        await refreshing;
+        if(refreshing)return refreshing;
+        const current=session,version=generation;
+        if(!current)throw Object.assign(new Error('Informe seu PIN novamente.'),{code:'unauthorized'});
+        const requestId=current.renewalRequest||crypto.randomUUID();saveSession({...current,renewalRequest:requestId});
+        const task=transport({action:'refresh',refreshToken:current.refreshToken,requestId}).then(data=>{
+            checkGeneration(version);const {token,refreshToken,expires,profile:person}=data;
+            saveSession({...current,token,refreshToken,expires,profile:person,renewalRequest:undefined});if(profile)profile=person;
+        }).finally(()=>{if(refreshing===task)refreshing=null;});refreshing=task;return task;
     }
     async function request(action,data={},publicRequest=false){
+        if(publicRequest)return transport({action,...data});
+        const version=generation;
         try{
-            if(!publicRequest){if(!session)throw Object.assign(new Error('Selecione a pessoa e informe o PIN.'),{code:'unauthorized'});if(session.expires<Date.now()+60000)await refresh();}
-            return await transport({action,...data,...(!publicRequest?{session:session.token}:{})});
+            if(!session)throw Object.assign(new Error('Selecione a pessoa e informe o PIN.'),{code:'unauthorized'});
+            if(refreshing)await refreshing;
+            if(session.expires<Date.now()+60000)await refresh();checkGeneration(version);
+            const token=session.token;
+            const accept=result=>{checkGeneration(version);rememberChallenge(result.nextLogin);return result;};
+            try{return accept(await transport({action,...data,session:token}));}
+            catch(error){
+                checkGeneration(version);
+                if(error.code!=='unauthorized')throw error;
+                // An old request can arrive after a concurrent token rotation. Retry with the current
+                // session before treating it as revoked; never let it clear another person's login.
+                if(token===session?.token)await refresh();else if(refreshing)await refreshing;
+                checkGeneration(version);return accept(await transport({action,...data,session:session.token}));
+            }
         }catch(error){
-            if(error.code==='unauthorized'){profile=null;settingsUntil=0;session=null;localStorage.removeItem(SESSION);global.RHApp?.expired(error.message);}throw error;
+            if(version!==generation)throw changed();
+            if(error.code==='unauthorized'){clearSession();global.RHApp?.expired(error.message);}throw error;
         }
     }
     function node(tag,text,props={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;Object.assign(el,props);return el;}
@@ -96,25 +121,26 @@
     function prepareLogin(id,force=false){
         if(!id||!challengeMode)return Promise.resolve(null);
         if(!force&&challengeProfile===id&&challengeTask)return challengeTask;
-        challengeProfile=id;challengeTask=request('prepare-login',{profileId:id},true).then(r=>r.challenge);
+        challengeProfile=id;challengeValue=null;challengeTask=request('prepare-login',{profileId:id},true).then(r=>{if(challengeProfile===id)challengeValue=r.challenge;return r.challenge;});
         challengeTask.catch(()=>{});return challengeTask;
     }
     async function loginCredentials(id,pin){
         if(!challengeMode)return {pin}; // Compatibilidade com a implantação anterior durante a atualização.
         let challenge=await prepareLogin(id);
         if(!challenge||challenge.expires<=Date.now()+3000)challenge=await prepareLogin(id,true);
-        challengeTask=null;challengeProfile=null;
+        challengeTask=null;challengeProfile=null;challengeValue=null;
         return RHPinProof.sign(pin,{bankId,profileId:id,secret},challenge);
     }
     async function authenticateProfile(id,pin){
         if(!bankId)throw new Error('Carregue a lista de pessoas antes de entrar.');
         await RHStore.reserve(bankId);
-        const salt=crypto.getRandomValues(new Uint8Array(16)),credentials=await loginCredentials(id,pin);
-        const [result,offlineHash]=await Promise.all([request('login',{profileId:id,...credentials},true),pinHash(pin,salt)]);
+        const version=++generation,salt=crypto.getRandomValues(new Uint8Array(16));
+        const [credentials,offlineHash]=await Promise.all([loginCredentials(id,pin),pinHash(pin,salt)]);
+        checkGeneration(version);const result=await request('login',{profileId:id,...credentials},true);checkGeneration(version);
         if(result.bankId!==bankId)throw new Error('A origem dos dados mudou. Reabra o aplicativo.');
         profile=result.profile;settingsUntil=0;
         saveSession({token:result.token,refreshToken:result.refreshToken,expires:result.expires,bankId,profile,offlineCredential:{salt:Array.from(salt),hash:offlineHash},offlineUntil:Date.now()+8*3600000});
-        localStorage.setItem(LAST,id);return result;
+        rememberChallenge(result.nextLogin);localStorage.setItem(LAST,id);return result;
     }
     function accessShell(){
         const host=document.getElementById('rhAccess');host.replaceChildren();
@@ -138,16 +164,17 @@
         const actions=node('div',undefined,{className:'modal-actions'}),cancel=button(actions,'Cancelar',()=>{setValue('');feedback.textContent='';form.focus();}),submit=node('button','Entrar',{type:'submit',className:'btn-action'});
         cancel.className='btn-cancel';actions.append(submit);form.append(feedback,actions);host.append(form);
         let offline=false,inFlight=false,loadError=null;
-        try{const cached=JSON.parse(localStorage.getItem(DIRECTORY)||'null');if(cached?.endpoint===endpoint()&&Array.isArray(cached.profiles)){profiles=cached.profiles;bankId=cached.bankId;}}catch(_){}
+        try{const cached=JSON.parse(localStorage.getItem(DIRECTORY)||'null');if(cached?.endpoint===endpoint()&&Array.isArray(cached.profiles)){profiles=cached.profiles;bankId=cached.bankId;profilesAt=cached.at||0;challengeMode=challengeMode||cached.loginProtocol==='pin-proof-v1';}}catch(_){}
         if(!profiles.length&&session?.profile){profiles=[{id:session.profile.id,nome:session.profile.nome}];bankId=session.bankId;}
         const fillPeople=()=>{const selected=select.value||localStorage.getItem(LAST);select.replaceChildren(node('option',profiles.length?'Selecione a pessoa':'Buscando pessoas…',{value:''}));profiles.forEach(p=>select.append(node('option',p.nome,{value:p.id})));if(profiles.some(p=>p.id===selected))select.value=selected;};
         fillPeople();
         select.onchange=()=>{setValue('');feedback.textContent='';prepareLogin(select.value);form.focus();};
         const initialPerson=select.value;
-        const ready=request('info',{profileId:initialPerson||undefined},true).then(result=>{
+        const prepared=challengeProfile===initialPerson&&challengeValue?.expires>Date.now()+3000&&profilesAt>Date.now()-300000;
+        const ready=prepared?Promise.resolve():request('info',{profileId:initialPerson||undefined},true).then(result=>{
             bankId=result.bankId;profiles=result.profiles;challengeMode=result.loginProtocol==='pin-proof-v1';
-            if(result.challenge&&select.value===initialPerson){challengeProfile=initialPerson;challengeTask=Promise.resolve(result.challenge);}
-            try{localStorage.setItem(DIRECTORY,JSON.stringify({endpoint:endpoint(),bankId,profiles}));}catch(_){}
+            if(result.challenge&&select.value===initialPerson)rememberChallenge({profileId:initialPerson,challenge:result.challenge});
+            profilesAt=Date.now();try{localStorage.setItem(DIRECTORY,JSON.stringify({endpoint:endpoint(),bankId,profiles,at:profilesAt,loginProtocol:result.loginProtocol}));}catch(_){}
             // Não trocar a pessoa nem apagar o PIN enquanto a pessoa já está digitando.
             if(!inFlight){fillPeople();if(!profiles.length)feedback.textContent='Nenhuma pessoa possui acesso interno configurado.';else if(select.value!==initialPerson)prepareLogin(select.value);}
         }).catch(error=>{
@@ -163,9 +190,11 @@
         };
         form.focus();await ready;
     }
-    async function leave(){
-        try{if(session)await transport({action:'signout',session:session.token});}catch(_){/* Local locking remains possible without a server response. */}
-        finally{session=null;profile=null;settingsUntil=0;localStorage.removeItem(SESSION);}
+    function leave(){
+        const previous=session;clearSession();
+        // Lock locally first. A delayed signout only refers to this captured token, never a new login.
+        if(previous)transport({action:'signout',session:previous.token}).catch(()=>{});
+        return Promise.resolve();
     }
     async function signout(){if(global.RHSync?.pending())return alert('Sincronize ou resolva as alterações pendentes antes de sair.');await leave();location.reload();}
     async function accessHistory(){

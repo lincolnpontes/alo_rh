@@ -1,6 +1,6 @@
 # Alô RH para Android
 
-APK independente do instalador WebAPK/Chrome. Pacote permanente `io.github.lincolnpontes.alorh`, versão inicial 1.4.0, versionCode 1. Interface web empacotada localmente com WebViewAssetLoader, seguindo a estrutura do Alô Cozinha. Backend, autorização por pessoa/PIN e protocolo de sincronização permanecem no Google Apps Script.
+APK independente do instalador WebAPK/Chrome. Pacote permanente `io.github.lincolnpontes.alorh`, versão 1.4.1, versionCode 2. Interface web empacotada localmente com WebViewAssetLoader, seguindo a estrutura do Alô Cozinha. Backend, autorização por pessoa/PIN e protocolo de sincronização permanecem no Google Apps Script.
 
 ## Instalação e atualizações
 
@@ -10,7 +10,7 @@ Atualizações nativas exigem outro APK, assinado com **a mesma chave** e versio
 
 ## Compilação neste computador
 
-Execute `./build-apk.ps1` na raiz. Requer Android Studio JBR, SDK 36 e build-tools 36.0.0. O script executa testes Java, lint, build release e verificação da assinatura; copia o resultado para `dist/Alo-RH-v1.4.0.apk`.
+Execute `./build-apk.ps1` na raiz. Requer Android Studio JBR, SDK 36 e build-tools 36.0.0. O script executa testes Java, lint, build release e verificação da assinatura; copia o resultado para `dist/Alo-RH-v1.4.1.apk`.
 
 A chave própria e sua configuração ficam apenas em `.local/android-signing/`, ignorada pelo Git. O arquivo privado `signing.json` contém `keystore` (caminho absoluto) e `password`. A chave inicial foi gerada com RSA 3072 e validade de 10.000 dias. Nunca publicar esses arquivos nem incluí-los nos assets. Há uma segunda cópia privada em `.local/apk-2026-10-23/signing-backup/`. Para outro computador, transferir a chave por meio privado e ajustar somente o caminho no JSON.
 
@@ -27,6 +27,6 @@ O script copia uma lista explícita de fontes públicas para uma pasta temporár
 
 ## Validação desta entrega
 
-102 testes Node, 3 testes Java de política de navegação/arquivos, lint Android sem erros e APK release com assinatura verificada. Assets extraídos do pacote comparados com os arquivos locais. Interface revisada em 320, 390 e 1280 pixels com banco fictício; login, PIN avançado, categorias, seleção e menus conferidos no navegador.
+116 testes Node, 3 testes Java de política de navegação/arquivos, lint Android sem erros e APK release com assinatura verificada. Assets extraídos do pacote comparados com os arquivos locais. Interface revisada em 320, 390 e 1280 pixels com banco fictício; login, PIN avançado, categorias, seleção e menus conferidos no navegador.
 
 O aparelho do usuário não estava conectado: instalação física, impressora Android e seletores de arquivo nativos ainda precisam da conferência no celular. Não afirmar que o erro do instalador Chrome foi corrigido: o APK usa outro caminho de instalação.

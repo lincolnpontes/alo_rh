@@ -35,6 +35,13 @@ test('background revision check keeps confirmed indicator stable until a real fa
  c.ctx.RHAuth.request=async()=>{throw Error('Falha de conexão');};assert.equal(await c.run('RHSync.sync()'),false);assert.equal(c.e('rhSyncStatus').dataset.state,'error');
  c.ctx.RHAuth.request=original;assert.equal(await c.run('RHSync.sync()'),true);assert.equal(c.e('rhSyncStatus').dataset.state,'synced');
 });
+
+test('locking during a delayed revision poll prevents stale data from replacing the new profile view',async()=>{
+ const s=server(),c=await syncClient(s);let release,arrived;const started=new Promise(r=>arrived=r),original=c.ctx.RHAuth.request;let first=true,reads=0;
+ c.ctx.RHAuth.request=async(action,data)=>{if(action==='read')reads++;if(action==='status'&&first){first=false;arrived();await new Promise(r=>release=r);return {revision:999};}return original(action,data);};
+ const old=c.run('RHSync.sync()');await started;c.run('RHSync.pause()');assert.equal(await c.run('RHSync.sync()'),false);
+ c.ctx.next=s.call('read');await c.run('RHSync.init(next)');release();assert.equal(await old,false);assert.equal(reads,0);assert.equal(c.e('rhSyncStatus').dataset.state,'synced');assert.equal(await c.run('RHSync.sync()'),true);
+});
 test('pending indicator cannot turn green before the commit acknowledgment',async()=>{
  const s=server(),c=await syncClient(s);c.run("db.funcionarios[0].nome='Aguardando envio';salvarBanco()");await c.run('RHSync.flush()');
  let release,started;const wait=new Promise(r=>started=r),original=c.ctx.RHAuth.request;

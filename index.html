@@ -8,14 +8,14 @@
     <meta name="apple-mobile-web-app-title" content="Alô RH">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#00695C" id="metaThemeColor">
-    <title>Alô RH v1.4.0</title>
-    <link rel="manifest" href="manifest.json?v=1.4.0">
+    <title>Alô RH v1.4.1</title>
+    <link rel="manifest" href="manifest.json?v=1.4.1">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/alo-rh-v120-192.png">
     <link rel="apple-touch-icon" href="icons/alo-rh-v120-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=1.4.0">
-<link rel="stylesheet" href="css/seguranca.css?v=1.4.0">
-<link rel="stylesheet" href="css/icones.css?v=1.4.0">
-<link rel="stylesheet" href="css/inicio.css?v=1.4.0">
+    <link rel="stylesheet" href="css/styles.css?v=1.4.1">
+<link rel="stylesheet" href="css/seguranca.css?v=1.4.1">
+<link rel="stylesheet" href="css/icones.css?v=1.4.1">
+<link rel="stylesheet" href="css/inicio.css?v=1.4.1">
 </head>
 <body class="rh-locked">
 <main id="rhAccess" aria-label="Acesso ao Alô RH">
@@ -30,7 +30,7 @@
 
 <div id="splashScreen">
     <div class="splash-titulo">Alô RH</div>
-    <div class="splash-versao">v1.4.0</div>
+    <div class="splash-versao">v1.4.1</div>
     <button onclick="forcarAtualizacao()" style="margin-top: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; pointer-events: auto;"><span class="rh-icon" data-icon="refresh" aria-hidden="true"></span> Forçar Atualização</button>
 </div>
 
@@ -50,11 +50,14 @@
         <div class="header-actions">
             <button id="rhSyncStatus" type="button" data-state="local" title="Aguardando conexão" aria-label="Sincronização: aguardando conexão"></button>
             <div class="header-more-anchor">
-                <button id="btnHeaderMais" type="button" aria-label="Férias, resumo e aniversariantes" aria-expanded="false" aria-controls="menuHeaderMais" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+                <button id="btnHeaderMais" type="button" aria-label="Ferramentas do RH" title="Ferramentas do RH" aria-expanded="false" aria-controls="menuHeaderMais" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
                 <div id="menuHeaderMais" class="header-more-menu" role="menu" aria-label="Mais opções" hidden>
                     <button id="btnHeaderFerias" type="button" role="menuitem" onclick="RHCabecalho.close();abrirCalendarioFerias()"><span class="rh-icon" data-icon="umbrella" aria-hidden="true"></span><span>Férias</span></button>
                     <button id="btnHeaderResumo" type="button" role="menuitem" onclick="RHCabecalho.close();abrirModalResumo()"><span class="rh-icon" data-icon="list" aria-hidden="true"></span><span>Resumo</span></button>
                     <button id="btnHeaderAniversarios" type="button" role="menuitem" onclick="RHCabecalho.close();abrirModalAniversarios()"><span class="rh-icon" data-icon="cake" aria-hidden="true"></span><span>Aniversariantes</span></button>
+                    <button id="btnHeaderInformes" type="button" role="menuitem" onclick="RHCabecalho.close();abrirInformesContador()"><span class="rh-icon" data-icon="files" aria-hidden="true"></span><span>Informes ao Contador</span></button>
+                    <button id="btnHeaderFolga" type="button" role="menuitem" onclick="RHCabecalho.close();abrirModalFolgaGeral()"><span class="rh-icon" data-icon="calendar" aria-hidden="true"></span><span>Cadastrar Folga Geral</span></button>
+                    <button id="btnHeaderPendentes" type="button" role="menuitem" onclick="RHCabecalho.close();abrirPagamentosPendentes()"><span class="rh-icon" data-icon="card" aria-hidden="true"></span><span>Pagamentos Pendentes</span></button>
                 </div>
             </div>
             <button id="btnConfigGear" type="button" onclick="RHCabecalho.close(false);abrirMenuPrincipal()" aria-label="Menu principal"><img class="app-settings-gear" src="icons/settings-gear.png" alt="" width="40" height="40"></button>
@@ -66,7 +69,6 @@
             <button id="btnCategoriaAtual" class="category-picker-button" type="button" aria-label="Categoria: Todos. Escolher categoria" aria-haspopup="listbox" aria-expanded="false" aria-controls="opcoesCategorias"><strong id="nomeCategoriaAtual">Todos</strong><span class="profile-chevron" aria-hidden="true"></span></button>
             <button class="btn-selecionar-caixa" id="btnSelecionarLista" type="button" onclick="toggleSelecionarTodosListados()" title="Selecionar todos desta lista" aria-label="Selecionar todos desta lista" aria-pressed="false"><span id="marcaSelecionarTodos"></span></button>
             <span id="contadorSelecao" class="selection-count" role="status" aria-live="polite" hidden></span>
-            <button id="btnLimparSelecao" class="selection-clear" type="button" onclick="limparSelecaoFuncionarios()" hidden>Limpar</button>
         </div>
         <div id="popoverCategorias" class="category-popover" hidden>
             <div class="category-popover-title" id="tituloCategorias">Categorias</div>
@@ -76,12 +78,11 @@
         <div id="actionBar" class="action-bar">
             <div id="boxFiltrosDias" class="dias-filtro-toolbar"></div>
             <div class="acoes-massa-toolbar" id="boxBarraAcoes">
-                <button class="btn-action-bar btn-folga-geral" id="btnFolgaGeral" onclick="abrirMenuAdicionar()" title="Adicionar" aria-label="Adicionar">+</button>
                 <button class="btn-action-bar work-action" id="btnAcaoMassa1" style="display:none" onclick="abrirConfigPonto()"><img src="icons/actions/ponto.svg" alt=""><span>Ponto</span></button>
                 <button class="btn-action-bar work-action" id="btnAcaoMassa2" style="display:none" onclick="abrirConfigQuinzena()"><img src="icons/actions/quinzena.svg" alt=""><span>Quinzena</span></button>
                 <button class="btn-action-bar work-action" id="btnAcaoMassa3" style="display:none" onclick="abrirAjusteVT()" aria-label="Vale-transporte"><img src="icons/actions/vt.svg" alt=""><span>VT</span></button>
                 <button class="btn-action-bar work-action" id="btnAcaoMassa4" style="display:none" onclick="abrirDocumentosPagamento()"><img src="icons/actions/docs.svg" alt=""><span>Docs</span></button>
-                <button class="btn-action-bar work-action" id="btnAcaoMassaSemana" style="display:none" onclick="abrirModalPresencaMassaSemana()"><img src="icons/actions/ponto.svg" alt=""><span>Registrar presença</span></button>
+                <button class="btn-action-bar work-action" id="btnAcaoMassaSemana" style="display:none" onclick="abrirModalPresencaMassaSemana()"><img src="icons/actions/presenca.svg" alt=""><span>Presença na semana</span></button>
             </div>
         </div>
         
@@ -92,7 +93,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal" style="padding-top: 25px;">
         <h2 style="display:flex; justify-content:center; align-items:baseline; gap:8px; color:#00695C; margin-top:0; margin-bottom:20px;">
-            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.4.0</small>
+            <span>Alô RH</span><small style="font-size:12px; color:#78909C; font-weight:800;">v1.4.1</small>
         </h2>
         <div id="perfilAdminBox" class="perfil-admin-box"></div>
         <button class="btn-outline menu-perm" data-perm="dadosEmpresa" onclick="abrirGerenciar('empresa')"><span class="rh-icon" data-icon="building" aria-hidden="true"></span> Dados da Empresa</button>
@@ -110,14 +111,8 @@
 <div class="modal-overlay" id="modalConfigAvancadas">
     <div class="modal" style="max-height: 90vh; overflow-y: auto;">
         <div class="modal-title" style="color:#d32f2f;">Dados e recuperação</div>
-        <div class="section-title">Seguranca dos Dados</div>
-        <p style="font-size:12px; color:#555; margin-top:0;">Os dados ficam neste aparelho e no banco do Google Apps Script. A barra superior informa o que está pendente e o que foi confirmado. Backups exportados não incluem senhas nem sessões.</p>
+        <div class="section-title">Segurança dos dados</div>
         <button class="btn-outline" style="width: 100%; text-align: center; margin-bottom: 12px;" onclick="abrirHistoricoAcessos()">Histórico de acessos</button>
-        <div class="form-group">
-            <label>Servidor Google Apps Script:</label>
-            <input type="text" id="configUrlApp" readonly placeholder="https://script.google.com/macros/s/.../exec">
-            <div id="syncStatusTexto" style="font-size:11px; color:#666; margin-top:8px;">Ao abrir o app, a sincronizacao confere a nuvem automaticamente.</div>
-        </div>
         <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
             <button class="btn-outline" style="margin: 0; width: 100%; font-size: 15px; border-color:#0277BD; color:#0277BD; text-align:center;" onclick="forcarSincronizacaoManual()"><span class="rh-icon" data-icon="refresh" aria-hidden="true"></span> Sincronizar Agora</button>
             <button class="btn-outline" style="margin: 0; width: 100%; font-size: 15px; border-color:#00695C; color:#00695C; text-align:center;" onclick="testarSincronizacao()"><span class="rh-icon" data-icon="connection" aria-hidden="true"></span> Testar Sincronização</button>
@@ -138,8 +133,6 @@
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 13px; color: #555; margin-bottom: 5px;">Uma cópia local será preservada antes de excluir o histórico.</p>
         <div class="form-group"><label>Para apagar todo o histórico de lançamentos, digite: <b>quero excluir todo o histórico</b></label><input type="text" id="inputExcluirTudo" placeholder="digite a frase exata"><button class="btn-danger" style="margin-top: 10px; width: 100%;" onclick="excluirTodoHistorico()"><span class="rh-icon" data-icon="trash-2" aria-hidden="true"></span> Apagar Todo o Histórico</button></div>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <div class="form-group"><label>App travou ou quer puxar versão nova?</label><button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; width: 100%; text-align: center;" onclick="forcarAtualizacao()"><span class="rh-icon" data-icon="refresh" aria-hidden="true"></span> Forçar Atualização do App</button></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalConfigAvancadas'); document.getElementById('modalPainelUnificado').style.display='flex';">Voltar</button></div>
     </div>
 </div>
@@ -500,8 +493,8 @@
             <button class="btn-outline" style="border-color:#2E7D32; color:#2E7D32; margin-bottom:0; text-align:center;" onclick="abrirWhatsappFuncionario()"><span class="rh-icon" data-icon="whatsapp" aria-hidden="true"></span> WhatsApp</button>
         </div>
         
-        <div id="btnPagarExtra" style="display:none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
-            <button class="btn-action" style="width: 100%; background:#E65100;" onclick="abrirModalPresencaSemana()"><span class="rh-icon" data-icon="clipboard-check" aria-hidden="true"></span> Presença na Semana</button>
+        <div id="btnPagarExtra" style="display:none; margin-top: 8px;">
+            <button class="btn-outline btn-presenca-semana" onclick="abrirModalPresencaSemana()"><img src="icons/actions/presenca.svg" alt=""><span>Presença na semana</span></button>
         </div>
 
         <div class="modal-actions"><button class="btn-cancel" style="width: 100%;" onclick="fecharModal('modalAcoesFunc')">Voltar</button></div>
@@ -700,19 +693,9 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="modalMenuAdicionar">
-    <div class="modal">
-        <div class="modal-title">Adicionar</div>
-        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirModalFolgaGeral()"><span style="font-size:20px;">+</span><span>Folga Geral</span></button>
-        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirPagamentosPendentes()"><span style="font-size:20px;"><span class="rh-icon" data-icon="card" aria-hidden="true"></span></span><span>Pagamentos Pendentes</span></button>
-        <button class="add-menu-opcao" onclick="fecharModal('modalMenuAdicionar'); abrirInformesContador()"><span style="font-size:20px;"><span class="rh-icon" data-icon="list" aria-hidden="true"></span></span><span>Informes Contador</span></button>
-        <div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalMenuAdicionar')" style="width: 100%;">Fechar</button></div>
-    </div>
-</div>
-
 <div class="modal-overlay" id="modalInformesContador">
     <div class="modal" style="width:95%; max-width:720px;">
-        <div class="modal-title">Informes Contador<button class="modal-x" onclick="fecharModal('modalInformesContador')">X</button></div>
+        <div class="modal-title">Informes ao Contador<button class="modal-x" onclick="fecharModal('modalInformesContador')">X</button></div>
         <div class="form-group"><label>Mês de referência:</label><input type="month" id="informesContadorMes" onchange="renderInformesContador()"></div>
         <div id="textoInformesContador" class="resumo-texto-preview" style="max-height:45vh;"></div>
         <div class="modal-actions">
@@ -899,22 +882,22 @@
         </div>
     </div>
 </div>
-<script src="js/android.js?v=1.4.0"></script>
-<script src="js/config.js?v=1.4.0"></script>
-<script src="js/protocolo.js?v=1.4.0"></script>
-<script src="js/modelo.js?v=1.4.0"></script>
-<script src="js/dados.js?v=1.4.0"></script>
-<script src="js/calculos.js?v=1.4.0"></script>
-<script src="js/interface.js?v=1.4.0"></script>
-<script src="js/impressao.js?v=1.4.0"></script>
-<script src="js/sincronizacao.js?v=1.4.0"></script>
-<script src="js/armazenamento.js?v=1.4.0"></script>
-<script src="js/pin-proof.js?v=1.4.0"></script>
-<script src="js/autenticacao.js?v=1.4.0"></script>
-<script src="js/sync-seguro.js?v=1.4.0"></script>
-<script src="js/app-seguro.js?v=1.4.0"></script>
-<script src="js/cabecalho.js?v=1.4.0"></script>
-<script src="js/acessibilidade.js?v=1.4.0"></script>
+<script src="js/android.js?v=1.4.1"></script>
+<script src="js/config.js?v=1.4.1"></script>
+<script src="js/protocolo.js?v=1.4.1"></script>
+<script src="js/modelo.js?v=1.4.1"></script>
+<script src="js/dados.js?v=1.4.1"></script>
+<script src="js/calculos.js?v=1.4.1"></script>
+<script src="js/interface.js?v=1.4.1"></script>
+<script src="js/impressao.js?v=1.4.1"></script>
+<script src="js/sincronizacao.js?v=1.4.1"></script>
+<script src="js/armazenamento.js?v=1.4.1"></script>
+<script src="js/pin-proof.js?v=1.4.1"></script>
+<script src="js/autenticacao.js?v=1.4.1"></script>
+<script src="js/sync-seguro.js?v=1.4.1"></script>
+<script src="js/app-seguro.js?v=1.4.1"></script>
+<script src="js/cabecalho.js?v=1.4.1"></script>
+<script src="js/acessibilidade.js?v=1.4.1"></script>
 <script>
     if ('serviceWorker' in navigator && !window.AloRHNative) {
         window.addEventListener('load', function() {

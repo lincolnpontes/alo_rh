@@ -53,10 +53,11 @@
             if(!/^[a-f0-9]{64}$/.test(body.proof||'')||!env.equal(body.proof,expected))error('PIN incorreto. Tente novamente.','invalid_credentials');
             clearLimit('pin:'+a.id);return a;
         }
-        function issue(a,secretHash,previous){
-            const token=env.random(),refreshToken=env.random(),expires=now()+30*MINUTE;
+        function renewedTokens(oldToken,nonce){return {token:env.hmac('alorh-access:'+nonce,oldToken),refreshToken:env.hmac('alorh-refresh:'+nonce,oldToken)};}
+        function issue(a,secretHash,previous,renewal,oldToken){
+            const {token,refreshToken}=renewal?renewedTokens(oldToken,renewal.nonce):{token:env.random(),refreshToken:env.random()},expires=now()+30*MINUTE;
             for(const k of Object.keys(sec.sessions))if(sec.sessions[k].refreshExpires<=now()||sec.sessions[k].secretHash===secretHash)delete sec.sessions[k];
-            sec.sessions[hash(token)]={secretHash,profileId:a.id,expires,refreshHash:hash(refreshToken),refreshExpires:previous?.refreshExpires||now()+8*60*MINUTE,settingsUntil:previous?.settingsUntil||0};
+            sec.sessions[hash(token)]={secretHash,profileId:a.id,expires,refreshHash:hash(refreshToken),refreshExpires:previous?.refreshExpires||now()+8*60*MINUTE,settingsUntil:previous?.settingsUntil||0,...(renewal?{renewal}:{})};
             return {token,refreshToken,expires,bankId:state.bankId,profile:P.clone(a)};
         }
         function auth(body,permission,settings=false){
@@ -85,12 +86,20 @@
             if(action==='prepare-login')return {challenge:prepareLogin(body)};
             if(action==='login'){
                 const secretHash=deviceSecret(body),a=body.proof!==undefined?checkProof(body):checkPin(body.profileId,body.pin);
-                audit('entrada',a.nome);return {...issue(a,secretHash),...envelope()};
+                audit('entrada',a.nome);return {...issue(a,secretHash),...envelope(),nextLogin:{profileId:a.id,challenge:prepareLogin(body)}};
             }
             if(action==='refresh'){
+                const id=body.requestId;if(id!==undefined&&!/^[a-zA-Z0-9_-]{16,100}$/.test(id))error('Identificador de renovação inválido.');
+                // A lost reply may repeat the exact same rotation briefly. Store only hashes and a nonce,
+                // never raw access/refresh tokens. A new request ID cannot replay the previous token.
+                if(id){
+                    const prior=Object.values(sec.sessions).find(s=>s.renewal?.previousHash===hash(body.refreshToken||'')&&s.renewal.requestHash===hash(id));
+                    if(prior&&prior.renewal.until>now()&&prior.refreshExpires>now()&&prior.expires>now()&&prior.secretHash===deviceSecret(body)&&person(prior.profileId))return {...renewedTokens(body.refreshToken,prior.renewal.nonce),expires:prior.expires,bankId:state.bankId,profile:P.clone(person(prior.profileId))};
+                }
                 const s=Object.values(sec.sessions).find(s=>s.refreshHash===hash(body.refreshToken||'')),a=s&&person(s.profileId);
                 if(!s||!a||s.refreshExpires<=now()||s.secretHash!==deviceSecret(body))error('Informe seu PIN novamente.','unauthorized');
-                return issue(a,s.secretHash,s);
+                const renewal=id?{previousHash:hash(body.refreshToken),requestHash:hash(id),nonce:env.random(),until:now()+2*MINUTE}:null;
+                return issue(a,s.secretHash,s,renewal,body.refreshToken);
             }
             const {s,a,actor:operator}=auth(body);
             if(action==='signout'){delete sec.sessions[hash(body.session)];audit('saída',a.nome);return {};}
@@ -115,7 +124,7 @@
                 if(!next.some(x=>x.permissoes?.gerenciarAdministradores&&sec.credentials[x.id]))error('Mantenha pelo menos uma pessoa com PIN e permissão para gerenciar os acessos.');
                 state.bank.administradores=next;delete sec.credentials[body.profileId];revokeProfile(body.profileId);state.revision++;audit('acesso removido',body.profileId);return {};
             }
-            if(action==='status')return {revision:state.revision};
+            if(action==='status')return {revision:state.revision,...(body.prepareLogin?{nextLogin:{profileId:a.id,challenge:prepareLogin({...body,profileId:a.id})}}:{})};
             if(action==='read')return envelope();
             if(action==='commit'){
                 if(Array.isArray(body.operations)&&body.operations.filter(o=>o.entity==='registros'&&o.after===null).length>10)auth(body,'configGerais',true);
