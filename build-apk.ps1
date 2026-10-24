@@ -27,8 +27,8 @@ try {
     & "$buildTools/apksigner.bat" verify --verbose --print-certs $apk
     if ($LASTEXITCODE -ne 0) { throw 'Assinatura APK inválida.' }
     New-Item -ItemType Directory -Force "$PSScriptRoot/dist" | Out-Null
-    Copy-Item -LiteralPath $apk -Destination "$PSScriptRoot/dist/Alo-RH-v1.4.1.apk"
-    Get-FileHash "$PSScriptRoot/dist/Alo-RH-v1.4.1.apk" -Algorithm SHA256
+    Copy-Item -LiteralPath $apk -Destination "$PSScriptRoot/dist/Alo-RH-v1.4.2.apk"
+    Get-FileHash "$PSScriptRoot/dist/Alo-RH-v1.4.2.apk" -Algorithm SHA256
 } finally {
     Remove-Item Env:RH_KEYSTORE_PASSWORD -ErrorAction SilentlyContinue
     Remove-Item Env:RH_KEYSTORE_PATH -ErrorAction SilentlyContinue

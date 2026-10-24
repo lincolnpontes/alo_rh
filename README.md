@@ -57,6 +57,7 @@ A nova logo traz o nome completo **Alô RH**, em branco sobre verde, com margem 
 ## Verificação
 
 ```powershell
+pnpm install --frozen-lockfile --ignore-scripts
 node scripts/build-backend.cjs
 node --test tests/*.test.cjs
 ```
@@ -65,7 +66,15 @@ Os testes usam dados fictícios, incluindo uma execução HTTP real do servidor 
 
 Fontes principais: `js/protocolo.js` e `js/modelo.js` para dados; `js/armazenamento.js` e `js/sync-seguro.js` para persistência; `js/autenticacao.js` para acesso interno; `server/service.js` para regras do backend. `google-apps-script/Code.gs` é gerado, não editado diretamente.
 
-Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.4.1; backend Apps Script na versão 9. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
+## PDF e compartilhamento
+
+Ponto, quinzena, VT e recibo mensal produzem PDFs A4 com texto e tabelas locais, inclusive offline. `js/documentos.js` reutiliza os cálculos e textos existentes; jsPDF e AutoTable estão empacotados, com versões e licenças em `js/vendor/README.md`. A logo cadastrada da empresa é incorporada ao arquivo.
+
+No APK, gerar PDF abre o compartilhamento nativo do Android. No PC, abre uma nova aba com o PDF e a impressão fica disponível no visualizador do navegador. Se o navegador bloquear a aba, o app informa como liberar. O botão WhatsApp do resumo do contracheque usa a seleção nativa de destino no APK e mantém o link WhatsApp na web. Nada é enviado automaticamente.
+
+Manter web e APK na mesma versão em cada publicação. Atualizar `index.html`, cache do service worker, assets e `versionName`/`versionCode`; compilar o APK com a chave existente e atualizar a página de instalação. Atualizar o site sozinho não atualiza a interface já empacotada no celular.
+
+Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.4.2; backend Apps Script na versão 9. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
 
 ## APK Android
 

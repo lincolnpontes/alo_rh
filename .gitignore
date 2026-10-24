@@ -11,3 +11,5 @@ android/local.properties
 dist/
 *.keystore
 *.jks
+
+node_modules/
