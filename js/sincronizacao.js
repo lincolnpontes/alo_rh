@@ -2,7 +2,6 @@
     async function solicitarAcessoAvancado() {
         if(!await RHAuth.settings()) return;
         fecharModal('modalPainelUnificado');
-        document.getElementById('configUrlApp').value = RH_CONFIG.endpoint;
         document.getElementById('modalConfigAvancadas').style.display = 'flex';
     }
     function abrirHistoricoAcessos() { return RHAuth.accessHistory(); }

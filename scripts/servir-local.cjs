@@ -34,7 +34,7 @@ const server=http.createServer(async(req,res)=>{
  const relative=pathname==='/'?'index.html':decodeURIComponent(pathname.slice(1));
  if(!/^(index\.html|manifest\.json|(?:js|css|icons)\/[a-zA-Z0-9_.\/-]+)$/.test(relative)||relative.includes('..'))return send(res,404,'{}');
  const file=path.join(root,relative);if(!fs.existsSync(file)||!fs.statSync(file).isFile())return send(res,404,'{}');
- let content=fs.readFileSync(file);if(relative==='index.html')content=content.toString().replace('<script src="js/config.js','<script src="/__dev__/config.js"></script>\n<script src="js/config.js').replace("if ('serviceWorker' in navigator)",'if (false)');
+ let content=fs.readFileSync(file);if(relative==='index.html')content=content.toString().replace('<script src="js/config.js','<script src="/__dev__/config.js"></script>\n<script src="js/config.js').replace(/if \('serviceWorker' in navigator(?: && !window\.AloRHNative)?\)/,'if (false)');
  send(res,200,req.method==='HEAD'?'':content,types[path.extname(file)]||'application/octet-stream');
 });
 server.listen(port,'127.0.0.1',()=>console.log('Alô RH local: http://127.0.0.1:'+port+' — cópia isolada; acesso interno por pessoa e PIN'));

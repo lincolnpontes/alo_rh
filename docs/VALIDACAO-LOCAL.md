@@ -93,3 +93,16 @@ Backups anteriores à implantação foram criados no Drive e no computador, com 
 Revisão visual com dados fictícios em 320/390/1280px: barra de categoria/seleção em uma linha, nomes longos no seletor, cards abaixo, seleção entre filtros, Escape/teclado, menu em grade, PIN avançado vazio/incorreto/correto/cancelado. Nenhum overflow horizontal observado. Cancelamento durante resposta de PIN também coberto em teste automatizado.
 
 Banco e Apps Script de produção inalterados nesta entrega; backup privado anterior preservado. APK usa o mesmo endpoint, uma origem local empacotada e armazenamento separado. A instalação física e as integrações nativas de impressão/arquivos precisam de conferência no celular. Veja ANDROID.md.
+
+## v1.4.1 — resposta do acesso, sessão e ferramentas
+
+- Troca de perfil abre o modal imediatamente; a revogação do token capturado segue em segundo plano. Fechar o app/alternar perfil não permite que uma resposta antiga derrube o novo acesso.
+- Requisições concorrentes compartilham uma renovação. Resposta perdida usa o mesmo identificador persistido por até dois minutos; o servidor guarda somente hashes e nonce. Repetição com outro identificador/aparelho, fora da janela ou após saída permanece recusada.
+- Login e consulta de revisão preparam o próximo desafio de PIN. Quando válido, a troca rápida de perfil reaproveita a preparação e a lista recente; a prova de PIN e a credencial offline são derivadas em paralelo. A verificação continua no Google, sem desbloqueio antecipado. Tokens de 30 minutos e limite absoluto de oito horas mantidos.
+- Menu com seis ferramentas, sem botão `+`; categoria compacta, seleção por quadradinho e contador condicional. Presença semanal com calendário simples. Configurações avançadas sem URL, atualização forçada e parágrafo auxiliar.
+- 116 testes Node aprovados, incluindo nove cenários de sessão, pausa de sincronização com resposta atrasada, permissões das ferramentas, transporte e preservação do histórico. Validação fictícia no Google concluída: 5.326 ms no total, 83 ms para prova de PIN.
+- Interface conferida em 320, 390 e 1280 pixels, com dados fictícios; filtros, selecionar/desmarcar, três novos atalhos, presença semanal, confirmação de PIN e perfil restrito. Sem erros no console. Troca de perfil + captura do estado local: 371 ms, incluindo a automação; isso não mede a latência do Google.
+- APK release 1.4.1 (versionCode 2), 829.033 bytes; três testes Java aprovados, lint com zero erros e quatro avisos já existentes. Mesma assinatura da v1.4.0; todos os 71 assets públicos comparados com as fontes. Nenhum aparelho conectado para validar a instalação física.
+- Backup privado do estado completo e do código anterior preservado antes da implantação. Banco com 34 funcionários e 268 lançamentos. O teste em produção lê o banco e valida apenas o ciclo de autenticação/renovação/saída; não grava dados de RH.
+
+Rollback: a versão 8 permanece no histórico do Apps Script, o APK 1.4.0 permanece em downloads e há bundle Git privado anterior. Não restaurar o banco por cima de lançamentos posteriores; a atualização altera apenas código e metadados de sessão.

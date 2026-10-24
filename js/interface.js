@@ -93,7 +93,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
             const descricao=contador.textContent+(foraDaLista?'. '+foraDaLista+' fora do filtro atual. As ações incluem todos os selecionados.':' nesta lista.');
             contador.title=descricao;contador.setAttribute('aria-label',descricao);
         }
-        const limpar = document.getElementById('btnLimparSelecao');if(limpar)limpar.hidden=!temSelecionados;
         document.getElementById('btnAcaoMassa1').style.display = visivel;
         document.getElementById('btnAcaoMassa2').style.display = visivel;
         document.getElementById('btnAcaoMassa3').style.display = visivel;
@@ -111,8 +110,6 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         const btnSemana = document.getElementById('btnAcaoMassaSemana');
         if(btnSemana) btnSemana.style.display = temSelecionados && somenteSemanais ? 'flex' : 'none';
         document.getElementById('boxFiltrosDias').style.display = temSelecionados ? 'none' : 'flex';
-        const btnFolgaGeral = document.getElementById('btnFolgaGeral');
-        if(btnFolgaGeral) btnFolgaGeral.style.display = temSelecionados ? 'none' : 'flex';
         const btnSelecionarLista = document.getElementById('btnSelecionarLista');
         if(btnSelecionarLista) {
             const quantidadeNaLista = listados.filter(f => itensSelecionados.has(f.id)).length;
@@ -299,11 +296,7 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
 
     function abrirMenuAdicionar() {
         if(!garantirAlgumaPermissao(['gerarVT', 'gerarContracheque', 'registrarPresencaSemanal', 'acessoResumo'], () => abrirMenuAdicionar(), 'abrir opções adicionais')) return;
-        const opcoes = document.querySelectorAll('#modalMenuAdicionar .add-menu-opcao');
-        if(opcoes[0]) opcoes[0].style.display = temPermissaoAtual('gerarVT') ? 'flex' : 'none';
-        if(opcoes[1]) opcoes[1].style.display = (temPermissaoAtual('gerarContracheque') || temPermissaoAtual('registrarPresencaSemanal')) ? 'flex' : 'none';
-        if(opcoes[2]) opcoes[2].style.display = temPermissaoAtual('acessoResumo') ? 'flex' : 'none';
-        document.getElementById('modalMenuAdicionar').style.display = 'flex';
+        window.RHCabecalho?.openTools();
     }
 
     function abrirModalFolgaGeral() {
@@ -560,15 +553,15 @@ function toggleDiv(id) { let el = document.getElementById(id); el.style.display 
         });
         aplicarDisplayPermissao('btnHeaderFerias', 'lancarFerias');
         aplicarDisplayPermissao('btnHeaderResumo', 'acessoResumo', 'flex');
+        aplicarDisplayPermissao('btnHeaderInformes', 'acessoResumo', 'flex');
+        aplicarDisplayPermissao('btnHeaderFolga', 'gerarVT', 'flex');
+        const pendentes = document.getElementById('btnHeaderPendentes');
+        if(pendentes) pendentes.style.display = (temPermissaoAtual('gerarContracheque') || temPermissaoAtual('registrarPresencaSemanal')) ? 'flex' : 'none';
         aplicarDisplayPermissao('btnAcaoMassa1', 'gerarPonto', document.getElementById('btnAcaoMassa1').style.display === 'none' ? 'none' : 'flex');
         aplicarDisplayPermissao('btnAcaoMassa2', 'gerarQuinzena', document.getElementById('btnAcaoMassa2').style.display === 'none' ? 'none' : 'flex');
         aplicarDisplayPermissao('btnAcaoMassa3', 'gerarVT', document.getElementById('btnAcaoMassa3').style.display === 'none' ? 'none' : 'flex');
         aplicarDisplayPermissao('btnAcaoMassa4', 'gerarContracheque', document.getElementById('btnAcaoMassa4').style.display === 'none' ? 'none' : 'flex');
         aplicarDisplayPermissao('btnAcaoMassaSemana', 'registrarPresencaSemanal', document.getElementById('btnAcaoMassaSemana').style.display === 'none' ? 'none' : 'flex');
-        const btnMais = document.getElementById('btnFolgaGeral');
-        if(btnMais && btnMais.style.display !== 'none') {
-            btnMais.style.display = (temPermissaoAtual('gerarVT') || temPermissaoAtual('gerarContracheque') || temPermissaoAtual('registrarPresencaSemanal')) ? 'flex' : 'none';
-        }
     }
 
     function trocarPerfilAdmin() { return RHApp.switchProfile(); }

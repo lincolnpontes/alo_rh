@@ -120,5 +120,5 @@
     global.visualViewport?.addEventListener('scroll',positionCategories);
     new MutationObserver(()=>{if(document.body.classList.contains('rh-locked'))close(false);}).observe(document.body,{attributes:true,attributeFilter:['class']});
     profileButton.addEventListener('click',()=>close(false));
-    global.RHCabecalho={close,update,renderCategories};
+    global.RHCabecalho={close,update,renderCategories,openTools:open};
 })(window);
