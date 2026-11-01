@@ -117,3 +117,13 @@ Rollback: a versão 8 permanece no histórico do Apps Script, o APK 1.4.0 perman
 - Ícone adaptativo e legado sem camada branca ou recuo adicional. A imagem Alô RH permanece a mesma.
 - Nenhum aparelho conectado: instalação por cima, aparência final do launcher e escolha de WhatsApp/impressora precisam da conferência no celular. Nenhum dado real foi enviado por WhatsApp ou usado nos PDFs de teste.
 - Web e APK publicados juntos. Apps Script e registros de produção inalterados; backup Git anterior e backups privados do banco preservados.
+
+## v1.4.3 — recuperação da sincronização de pagamentos
+
+- Corrigida a chave de validação dos pagamentos semanais: `dias` contém datas, portanto a exclusividade é por funcionário + data. A mesma data em pagamentos de pessoas diferentes não bloqueia o banco inteiro; a mesma pessoa ainda não pode receber duas vezes pelo mesmo dia.
+- Um lote persistido com a mensagem dessa falha recebe uma única tentativa automática após a atualização. O app guarda uma cópia local antes, mantém o identificador e as operações originais e só remove a pendência depois da confirmação do servidor. Rejeições verdadeiras continuam paradas; não há repetição infinita.
+- Tocar na pendência abre uma explicação e permite tentar o envio novamente. Foi retirada a oferta imediata de substituir as alterações locais pelos dados do servidor.
+- 131 testes Node aprovados, incluindo recuperação após reabertura, perda de resposta sem duplicação, convergência de dois dispositivos e preservação de alterações recusadas. A validação com dados fictícios também foi executada no Google e aprovou pagamentos por pessoa, idempotência e autenticação.
+- Backup privado do estado atual do banco e do código do servidor realizado antes da atualização. A cópia real foi validada localmente sem alterações. Após publicar a versão 10 do Apps Script no mesmo endereço, leitura autenticada confirmou os mesmos 34 funcionários e 268 registros; conteúdo de negócio idêntico ao backup. Nenhum lançamento de teste foi enviado ao banco de produção.
+- APK 1.4.3, versionCode 4, 983.796 bytes, certificado original preservado. Cinco testes Java aprovados; lint com zero erros e quatro avisos preexistentes. Os 77 arquivos públicos empacotados foram comparados byte a byte às fontes. SHA-256 disponível ao lado do APK.
+- Limite: o celular não está conectado a este computador. A chegada das alterações que estão somente nele depende de instalar esta atualização por cima do APK atual e abrir o app com internet, no perfil que criou as pendências. Não desinstalar nem limpar armazenamento.

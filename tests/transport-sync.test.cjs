@@ -23,7 +23,46 @@ test('edit made during commit survives response and is sent later',async()=>{con
 test('revision polling pulls new employee and salary structure',async()=>{const s=server(),c=await syncClient(s);const base=s.call('read'),next=P.clone(base.bank);next.funcionarios.push({id:'f2',nome:'Nova pessoa'});s.call('commit',{requestId:require('node:crypto').randomUUID(),operations:P.diff(base.bank,next,base.versions)});await c.run('RHSync.sync()');assert.equal(c.get().funcionarios.length,2);});
 test('same field conflict is preserved for review instead of silently overwriting',async()=>{const s=server(),c=await syncClient(s);c.run("db.funcionarios[0].salario='1800,00';salvarBanco()");await c.run('RHSync.flush()');const read=s.call('read'),next=P.clone(read.bank);next.funcionarios[0].salario='1900,00';s.call('commit',{requestId:require('node:crypto').randomUUID(),operations:P.diff(read.bank,next,read.versions)});assert.equal(await c.run('RHSync.sync()'),false);assert.equal(c.saved().conflicts[0].after,'1800,00');assert.equal(s.state.bank.funcionarios[0].salario,'1900,00');});
 test('storage quota error blocks sending and preserves in-memory edit with visible error',async()=>{const s=server(),c=await syncClient(s);c.quota();c.run("db.funcionarios[0].nome='Ainda não salvo';salvarBanco()");await assert.rejects(c.run('RHSync.flush()'));assert.equal(await c.run('RHSync.sync()'),false);assert.equal(s.state.bank.funcionarios[0].nome,'Pessoa fictícia');assert.equal(c.get().funcionarios[0].nome,'Ainda não salvo');assert.equal(c.e('rhSyncStatus').dataset.state,'error');});
-test('rejected mutation is not retried forever and can be preserved then discarded explicitly',async()=>{const s=server(),c=await syncClient(s);c.run("db.funcionarios[0].salario='1500,00';salvarBanco()");await c.run('RHSync.flush()');s.state.bank.administradores[0].permissoes.financeiro=false;assert.equal(await c.run('RHSync.sync()'),false);assert(c.saved().outbox.rejected);assert.equal(await c.run('RHSync.sync()'),false);await c.run('RHSync.conflicts()');assert.equal(c.saved().outbox,null);assert.equal(c.get().funcionarios[0].salario,'1000,00');});
+test('rejected mutation stays local; opening its dialog never replaces it with the server copy',async()=>{
+ const s=server(),c=await syncClient(s);c.run("db.funcionarios[0].salario='1500,00';salvarBanco()");await c.run('RHSync.flush()');s.state.bank.administradores[0].permissoes.financeiro=false;
+ assert.equal(await c.run('RHSync.sync()'),false);const packet=c.saved().outbox;assert(packet.rejected);assert.equal(await c.run('RHSync.sync()'),false);
+ const {document}=require('linkedom').parseHTML('<html><body></body></html>'),create=document.createElement.bind(document);
+ document.createElement=name=>{const el=create(name);if(name==='dialog'){el.showModal=()=>el.setAttribute('open','');el.close=()=>el.remove();}return el;};
+ c.ctx.document.createElement=document.createElement;c.ctx.document.body=document.body;
+ await c.run('RHSync.conflicts()');assert.equal(c.saved().outbox.id,packet.id);assert.equal(c.get().funcionarios[0].salario,'1500,00');assert.doesNotMatch(document.body.textContent,/voltar aos dados|descartar/i);
+ const buttons=[...document.querySelectorAll('button')];assert.deepEqual(buttons.map(b=>b.textContent),['Tentar sincronizar','Fechar']);
+ let backups=0;c.ctx.RHStore.backup=async()=>backups++;s.state.bank.administradores[0].permissoes.financeiro=true;
+ await buttons[0].onclick();assert.equal(backups,1);assert.equal(c.saved().outbox,null);assert.equal(s.state.bank.funcionarios[0].salario,'1500,00');
+});
+
+test('upgrade recovers the exact payment-rejected packet and syncs it to a second device',async()=>{
+ const s=server(),phone=await syncClient(s),pc=await syncClient(s);
+ phone.run("db.funcionarios[0].nome='Alteração pendente no celular';salvarBanco()");await phone.run('RHSync.flush()');
+ const request=phone.ctx.RHAuth.request;phone.ctx.RHAuth.request=async(action,data)=>{if(action==='commit')throw Object.assign(new Error('Uma presença já está incluída em outro pagamento.'),{code:'duplicate'});return request(action,data);};
+ await phone.run('RHSync.sync()');const stored=phone.saved(),id=stored.outbox.id,operations=stored.outbox.operations;
+ assert(stored.outbox.rejected);assert.equal(pc.get().funcionarios[0].nome,'Pessoa fictícia');
+ const upgraded=await syncClient(s,stored);assert.equal(upgraded.saved().outbox.rejected,undefined);assert.equal(upgraded.saved().outbox.id,id);assert.deepEqual(upgraded.saved().outbox.operations,operations);
+ assert.equal(await upgraded.run('RHSync.sync()'),true);assert.equal(await pc.run('RHSync.sync()'),true);
+ assert.equal(pc.get().funcionarios[0].nome,'Alteração pendente no celular');assert.equal(upgraded.saved().outbox,null);assert.equal(upgraded.e('rhSyncStatus').dataset.state,'synced');
+});
+
+test('a real duplicate remains rejected after the one-time upgrade retry, including another reload',async()=>{
+ const s=server(),c=await syncClient(s);
+ c.run("db.registros.push({id:'w1',type:'pagamento_semana',funcId:'f',dias:['2026-11-01']},{id:'w2',type:'pagamento_semana',funcId:'f',dias:['2026-11-01','2026-11-02']});salvarBanco()");await c.run('RHSync.flush()');
+ assert.equal(await c.run('RHSync.sync()'),false);const upgraded=await syncClient(s,c.saved());assert.equal(await upgraded.run('RHSync.sync()'),false);
+ const stored=upgraded.saved();assert(stored.outbox.rejected);assert.equal(stored.working.registros.length,2);const reloaded=await syncClient(s,stored);
+ let commits=0;const request=reloaded.ctx.RHAuth.request;reloaded.ctx.RHAuth.request=async(action,data)=>{if(action==='commit')commits++;return request(action,data);};
+ assert.equal(await reloaded.run('RHSync.sync()'),false);assert.equal(commits,0);assert.equal(s.state.bank.registros.length,0);
+});
+
+test('recovered rejected packet remains idempotent when its acknowledgment is lost',async()=>{
+ const s=server(),c=await syncClient(s);c.run("db.funcionarios[0].nome='Preservado';salvarBanco()");await c.run('RHSync.flush()');const request=c.ctx.RHAuth.request;
+ c.ctx.RHAuth.request=async(action,data)=>{if(action==='commit')throw Object.assign(new Error('Uma presença já está incluída em outro pagamento.'),{code:'duplicate'});return request(action,data);};
+ await c.run('RHSync.sync()');const upgraded=await syncClient(s,c.saved()),send=upgraded.ctx.RHAuth.request;
+ upgraded.ctx.RHAuth.request=async(action,data)=>{const result=await send(action,data);if(action==='commit')throw Error('ACK perdido');return result;};
+ assert.equal(await upgraded.run('RHSync.sync()'),false);const revision=s.state.revision,reloaded=await syncClient(s,upgraded.saved());
+ assert.equal(await reloaded.run('RHSync.sync()'),true);assert.equal(s.state.revision,revision);assert.equal(reloaded.get().funcionarios[0].nome,'Preservado');
+});
 test('incomplete JSON imported through the actual UI handler preserves bank',async()=>{const c=client(),before=c.get();c.ctx.event={target:{value:'backup.json',files:[{size:20,text:async()=>'{"app_id":"alorh"}'}]}};await c.run('importarDados(event)');assert.deepEqual(c.get(),before);assert.match(c.alerts[0],/incompleto/);});
 test('second editor is rejected before changing the backend active profile',async()=>{const c=client();c.ctx.window=c.ctx;c.ctx.RH_CONFIG={local:true,endpoint:'/__dev__/api'};let requests=0;const session={token:'test',expires:Date.now()+600000,bankId:'owner'};c.ctx.localStorage.getItem=k=>k==='alorh_internal_session_v3'?JSON.stringify(session):'a'.repeat(64);c.ctx.RHStore={reserve:async()=>{throw Error('outra aba');}};c.ctx.fetch=async()=>{requests++;};vm.runInContext(fs.readFileSync('js/autenticacao.js','utf8'),c.ctx);await assert.rejects(c.run("RHAuth.authenticateProfile('a','1234')"),/outra aba/);assert.equal(requests,0);});
 

@@ -136,7 +136,9 @@
             if(k && seen.has(k) && seen.get(k)!==r.id) fail('Já existe um lançamento para este funcionário e período. Atualize os dados antes de continuar.','duplicate');
             if(k) seen.set(k,r.id);
             if(r.type==='pagamento_semana')for(const day of r.dias||[]){
-                if(paidDays.has(day)&&paidDays.get(day)!==r.id)fail('Uma presença já está incluída em outro pagamento.','duplicate');paidDays.set(day,r.id);
+                // dias contains calendar dates, shared by different employees.
+                const employeeDay=JSON.stringify([r.funcId,day]);
+                if(paidDays.has(employeeDay)&&paidDays.get(employeeDay)!==r.id)fail('Uma presença já está incluída em outro pagamento.','duplicate');paidDays.set(employeeDay,r.id);
             }
         }
         // Preserve legacy orphans, but never introduce new dangling references.
