@@ -1,6 +1,8 @@
 (function(global){
     'use strict';
     const P=RHProtocol;
+    const paymentValidationFix='employee-day-v1';
+    const duplicatePaymentMessage='Uma presença já está incluída em outro pagamento.';
     let state,initialized=false,running=null,timer,failures=0,storeReady=false,lastPersist=Promise.resolve(),currentStatus='local',paused=false,generation=0;
     const clean=value=>P.clean(normalizarBanco(P.clone(value)));
     const pending=()=>!!state&&(!!state.outbox||state.conflicts.length>0||P.diff(state.base,clean(db),state.versions).length>0);
@@ -17,6 +19,12 @@
         if(!state){if(!envelope)throw new Error('Conecte-se à internet para baixar a primeira cópia.');const bank=clean(envelope.bank);state={base:bank,working:bank,versions:envelope.versions,revision:envelope.revision,conflicts:[],outbox:null,lastConfirmed:0};}
         db=normalizarBanco(P.clone(state.working));db.configs.url=RH_CONFIG.endpoint;
         if(envelope&&!state.outbox)await receive(envelope);
+        // Older servers rejected valid payments belonging to different employees.
+        // Retry the original durable packet once; keep its id for idempotency.
+        if(state.outbox?.rejected===duplicatePaymentMessage&&state.outbox.validationRetry!==paymentValidationFix){
+            await RHStore.backup(clean(db),'antes-de-reenviar-pagamento');
+            state.outbox.validationRetry=paymentValidationFix;delete state.outbox.rejected;
+        }
         initialized=true;await persist();
         status(pending()?'Há alterações aguardando confirmação':envelope?'Dados conferidos · nenhuma alteração pendente':'Sem conexão · cópia deste aparelho',pending()?'pending':envelope?'synced':'offline');
         render();schedule(pending()?100:60000);return db;
@@ -85,10 +93,18 @@
     async function conflicts(){
         if(state?.outbox?.needsSettings){if(await RHAuth.settings()){delete state.outbox.needsSettings;await sync();}return;}
         if(state?.outbox?.rejected){
-            if(!confirm(state.outbox.rejected+'\n\nGuardar uma cópia destas alterações e voltar aos dados confirmados do servidor?'))return;
-            await RHStore.backup(clean(db),'envio-recusado');const remote=await RHAuth.request('read');P.validate(remote.bank);
-            state.base=clean(remote.bank);state.versions=remote.versions;state.revision=remote.revision;state.outbox=null;state.conflicts=[];state.pendingProfile=null;
-            db=normalizarBanco(P.clone(state.base));await persist();render();await sync();return;
+            const modal=document.createElement('dialog');modal.className='rh-dialog';modal.setAttribute('aria-label','Envio pendente');
+            const heading=document.createElement('h2');heading.textContent='Alterações preservadas';modal.append(heading);
+            const message=document.createElement('p');message.textContent=state.outbox.rejected+'\n\nSuas alterações continuam salvas neste aparelho. Ainda não chegaram aos outros dispositivos.';modal.append(message);
+            const retry=document.createElement('button');retry.textContent='Tentar sincronizar';retry.onclick=async()=>{
+                retry.disabled=true;
+                try{
+                    await RHStore.backup(clean(db),'antes-de-reenviar');
+                    delete state.outbox.rejected;await persist();modal.close();await sync();
+                }catch(error){message.textContent=error.message+'\nSuas alterações foram mantidas.';retry.disabled=false;}
+            };modal.append(retry);
+            const close=document.createElement('button');close.textContent='Fechar';close.onclick=()=>modal.close();modal.append(close);
+            modal.addEventListener('close',()=>modal.remove());document.body.append(modal);modal.showModal();return;
         }
         if(!state?.conflicts.length){await sync();return;}
         const modal=document.createElement('dialog');modal.className='rh-dialog';modal.setAttribute('aria-label','Revisar conflitos');

@@ -6798,7 +6798,9 @@
             if(k && seen.has(k) && seen.get(k)!==r.id) fail('Já existe um lançamento para este funcionário e período. Atualize os dados antes de continuar.','duplicate');
             if(k) seen.set(k,r.id);
             if(r.type==='pagamento_semana')for(const day of r.dias||[]){
-                if(paidDays.has(day)&&paidDays.get(day)!==r.id)fail('Uma presença já está incluída em outro pagamento.','duplicate');paidDays.set(day,r.id);
+                // dias contains calendar dates, shared by different employees.
+                const employeeDay=JSON.stringify([r.funcId,day]);
+                if(paidDays.has(employeeDay)&&paidDays.get(employeeDay)!==r.id)fail('Uma presença já está incluída em outro pagamento.','duplicate');paidDays.set(employeeDay,r.id);
             }
         }
         // Preserve legacy orphans, but never introduce new dangling references.
@@ -7185,6 +7187,12 @@ function validarBackendComDadosFicticios() {
     const request={action:'commit',session:login.token,secret,requestId:env.random(),operations:RHProtocol.diff(before,next)};
     const first=service.handle(request),retry=service.handle(request);
     if(first.revision!==retry.revision||retry.bank.empresa.razao!==next.empresa.razao)throw new Error('Falha de idempotência.');
+    const payments=RHProtocol.clone(before);payments.funcionarios=[{id:'f1',nome:'Teste um'},{id:'f2',nome:'Teste dois'}];
+    payments.registros=[{id:'w1',type:'pagamento_semana',funcId:'f1',dias:['2026-11-01']},{id:'w2',type:'pagamento_semana',funcId:'f2',dias:['2026-11-01']}];
+    RHProtocol.apply(payments,[],{},1,null,false);
+    payments.registros.push({id:'w3',type:'pagamento_semana',funcId:'f1',dias:['2026-11-01','2026-11-02']});
+    let duplicateRejected=false;try{RHProtocol.apply(payments,[],{},1,null,false);}catch(e){duplicateRejected=e.code==='duplicate';}
+    if(!duplicateRejected)throw new Error('Pagamento duplicado para a mesma pessoa aceito.');
     service.handle({action:'signout',session:login.token,secret});
-    console.log(JSON.stringify({ok:true,ambiente:'fictício, sem acesso ao Drive',duracaoMs:Date.now()-start,proofMs,revision:state.revision}));
+    console.log(JSON.stringify({ok:true,ambiente:'fictício, sem acesso ao Drive',duracaoMs:Date.now()-start,proofMs,revision:state.revision,pagamentosPorPessoa:true}));
 }

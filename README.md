@@ -74,7 +74,7 @@ No APK, gerar PDF abre o compartilhamento nativo do Android. No PC, abre uma nov
 
 Manter web e APK na mesma versão em cada publicação. Atualizar `index.html`, cache do service worker, assets e `versionName`/`versionCode`; compilar o APK com a chave existente e atualizar a página de instalação. Atualizar o site sozinho não atualiza a interface já empacotada no celular.
 
-Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.4.2; backend Apps Script na versão 9. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
+Origem: [lincolnpontes/alo_rh](https://github.com/lincolnpontes/alo_rh), base `2605212f756ccb25d88c143c337e87d2fe44acbe` (v1.0.52). Versão v1.4.3; backend Apps Script na versão 10. O banco anterior e seus backups permanecem privados e preservados. Nenhum recurso Supabase usado.
 
 ## APK Android
 
